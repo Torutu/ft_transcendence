@@ -12,7 +12,9 @@
 ## Team Responsibilities
 
 ### pchennia – User Management and Cybersecurity
--
+- Standard user management, authentication, users across
+- Implementing a remote authentication
+- Implement Two-Factor Authentication (2FA) and JWT
 ### ttero – Web and Backend
 - 
 ### walnaimi – Gameplay and User Experience
