@@ -1,0 +1,26 @@
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: "file:./dev.db"
+    command: sh -c "npm install && npx prisma generate && npx tsc && node dist/index.js"
+    depends_on:
+      - frontend
+
+  frontend:
+    build: ./frontend
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+ 
+volumes:
+  db:
+
