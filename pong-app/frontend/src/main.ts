@@ -44,15 +44,17 @@ class PingPongGame {
     private initScene(): void {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x333333);
-        
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 10, 20);
-        this.camera.lookAt(0, 0, 0);
+        // Camera
+        this.camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 8, 3);
+        this.camera.lookAt(0, 0, 1);
+        this.camera.up.set(0, 0, 0);
+
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(this.renderer.domElement);
-        
+        // Lights
         const ambientLight = new THREE.AmbientLight(0x404040);
         this.scene.add(ambientLight);
         
@@ -62,25 +64,40 @@ class PingPongGame {
     }
 
     private createObjects(): void {
-        // Table
-        const tableGeometry = new THREE.BoxGeometry(20, 0.5, 10);
-        const tableMaterial = new THREE.MeshPhongMaterial({ color: 0x006600 });
-        const table = new THREE.Mesh(tableGeometry, tableMaterial);
-        table.position.y = -0.25;
-        this.scene.add(table);
-        
-        // Net
-        const netGeometry = new THREE.PlaneGeometry(20, 2);
-        const netMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xffffff, 
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.7
-        });
-        const net = new THREE.Mesh(netGeometry, netMaterial);
-        net.rotation.x = Math.PI / 2;
-        this.scene.add(net);
-        
+        // Walls
+        const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
+        const wallThickness = 0.1;
+        const wallHeight = 0.2;
+        const wallDepth = 9.3;
+
+        const leftWall = new THREE.Mesh(
+            new THREE.BoxGeometry(wallThickness, wallHeight, wallDepth),
+            wallMaterial
+        );
+        leftWall.position.set(-10.25, 0, 0);
+        this.scene.add(leftWall);
+
+        const rightWall = new THREE.Mesh(
+            new THREE.BoxGeometry(wallThickness, wallHeight, wallDepth),
+            wallMaterial
+        );
+        rightWall.position.set(10.25, 0, 0);
+        this.scene.add(rightWall);
+
+        const topWall = new THREE.Mesh(
+            new THREE.BoxGeometry(20.5, wallHeight, wallThickness),
+            wallMaterial
+        );
+        topWall.position.set(0, 0, -4.65);
+        this.scene.add(topWall);
+
+        const bottomWall = new THREE.Mesh(
+            new THREE.BoxGeometry(20.5, wallHeight, wallThickness),
+            wallMaterial
+        );
+        bottomWall.position.set(0, 0, 4.65);
+        this.scene.add(bottomWall);
+
         // Paddles
         const paddleGeometry = new THREE.BoxGeometry(0.5, 0.5, 2);
         const paddleMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
@@ -125,41 +142,48 @@ class PingPongGame {
 
     private update(): void {
         // Player 1 controls (W/S)
-        if (this.keys['w'] && this.paddle1.position.z < 3.5) {
+        if (this.keys['s'] && this.paddle1.position.z < 3.5) {
             this.paddle1.position.z += this.paddleSpeed;
         }
-        if (this.keys['s'] && this.paddle1.position.z > -3.5) {
+        if (this.keys['w'] && this.paddle1.position.z > -3.5) {
             this.paddle1.position.z -= this.paddleSpeed;
         }
         
         // Player 2 controls (up/down arrows)
-        if (this.keys['ArrowUp'] && this.paddle2.position.z < 3.5) {
+        if (this.keys['ArrowDown'] && this.paddle2.position.z < 3.5) {
             this.paddle2.position.z += this.paddleSpeed;
         }
-        if (this.keys['ArrowDown'] && this.paddle2.position.z > -3.5) {
+        if (this.keys['ArrowUp'] && this.paddle2.position.z > -3.5) {
             this.paddle2.position.z -= this.paddleSpeed;
         }
         
         this.ball.position.add(this.ballVelocity);
         
-        if (this.ball.position.z > 4 || this.ball.position.z < -4) {
+        // ball collisions with walls
+        if (this.ball.position.z > 4) {
+            this.ball.position.z = 4;        
+            this.ballVelocity.z *= -1;
+        } else if (this.ball.position.z < -4) {
+            this.ball.position.z = -4;           
             this.ballVelocity.z *= -1;
         }
-        
+        // ball collisions with each paddle
         if (
             this.ball.position.x < -8.5 && 
             this.ball.position.x > -9.5 &&
             Math.abs(this.ball.position.z - this.paddle1.position.z) < 1.5
         ) {
+            this.ball.position.x = -8.5;
             this.ballVelocity.x *= -1;
             this.ballVelocity.z = (this.ball.position.z - this.paddle1.position.z) * 0.3;
         }
-        
+
         if (
             this.ball.position.x > 8.5 && 
             this.ball.position.x < 9.5 &&
             Math.abs(this.ball.position.z - this.paddle2.position.z) < 1.5
         ) {
+            this.ball.position.x = 8.5;
             this.ballVelocity.x *= -1;
             this.ballVelocity.z = (this.ball.position.z - this.paddle2.position.z) * 0.3;
         }
