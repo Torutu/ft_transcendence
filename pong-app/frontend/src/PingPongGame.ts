@@ -1,3 +1,4 @@
+// src/PingPongGame.ts
 import * as THREE from 'three';
 
 class PingPongGame {
@@ -14,19 +15,21 @@ class PingPongGame {
     private score1: number;
     private score2: number;
     private scoreElement: HTMLElement;
+    private container: HTMLElement;
 
-    constructor() {
+    constructor(container: HTMLElement) {
+        this.container = container;
         this.keys = {};
         this.paddleSpeed = 0.2;
         this.ballSpeed = 0.1;
-        this.ballVelocity = new THREE.Vector3(this.ballSpeed, 0, 0); // <-- initialize early
+        this.ballVelocity = new THREE.Vector3(this.ballSpeed, 0, 0);
 
         this.initScene();
-        this.createObjects();  // now safe to call resetBall inside this
+        this.createObjects();
         this.setupEventListeners();
         this.score1 = 0;
         this.score2 = 0;
-        
+
         this.scoreElement = document.createElement('div');
         this.scoreElement.style.position = 'absolute';
         this.scoreElement.style.top = '10px';
@@ -35,27 +38,36 @@ class PingPongGame {
         this.scoreElement.style.color = 'white';
         this.scoreElement.style.fontFamily = 'Arial';
         this.scoreElement.style.fontSize = '24px';
+        this.scoreElement.style.pointerEvents = 'none'; // allows clicks through score overlay
         this.scoreElement.textContent = 'Player 1: 0 - Player 2: 0';
-        document.body.appendChild(this.scoreElement);
-        
+
+        // Make sure container is positioned relative so absolute children are positioned correctly
+        const containerStyle = getComputedStyle(this.container);
+        if (containerStyle.position === 'static' || !containerStyle.position) {
+            this.container.style.position = 'relative';
+        }
+
+        this.container.appendChild(this.scoreElement);
+
         this.animate();
+        this.onWindowResize();  // initial size adjustment
     }
 
     private initScene(): void {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x333333);
-        
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        // Aspect ratio will be set on resize
+        this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
         this.camera.position.set(0, 10, 20);
         this.camera.lookAt(0, 0, 0);
-        
+
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(this.renderer.domElement);
-        
+        this.container.appendChild(this.renderer.domElement);
+
         const ambientLight = new THREE.AmbientLight(0x404040);
         this.scene.add(ambientLight);
-        
+
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(1, 1, 1);
         this.scene.add(directionalLight);
@@ -68,11 +80,11 @@ class PingPongGame {
         const table = new THREE.Mesh(tableGeometry, tableMaterial);
         table.position.y = -0.25;
         this.scene.add(table);
-        
+
         // Net
         const netGeometry = new THREE.PlaneGeometry(20, 2);
-        const netMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xffffff, 
+        const netMaterial = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
             side: THREE.DoubleSide,
             transparent: true,
             opacity: 0.7
@@ -80,19 +92,19 @@ class PingPongGame {
         const net = new THREE.Mesh(netGeometry, netMaterial);
         net.rotation.x = Math.PI / 2;
         this.scene.add(net);
-        
+
         // Paddles
         const paddleGeometry = new THREE.BoxGeometry(0.5, 0.5, 2);
         const paddleMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-        
+
         this.paddle1 = new THREE.Mesh(paddleGeometry, paddleMaterial);
         this.paddle1.position.set(-9, 0, 0);
         this.scene.add(this.paddle1);
-        
+
         this.paddle2 = new THREE.Mesh(paddleGeometry, paddleMaterial);
         this.paddle2.position.set(9, 0, 0);
         this.scene.add(this.paddle2);
-        
+
         // Ball
         const ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
         const ballMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 });
@@ -108,9 +120,11 @@ class PingPongGame {
     }
 
     private onWindowResize(): void {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
     }
 
     private resetBall(): void {
@@ -131,7 +145,7 @@ class PingPongGame {
         if (this.keys['s'] && this.paddle1.position.z > -3.5) {
             this.paddle1.position.z -= this.paddleSpeed;
         }
-        
+
         // Player 2 controls (up/down arrows)
         if (this.keys['ArrowUp'] && this.paddle2.position.z < 3.5) {
             this.paddle2.position.z += this.paddleSpeed;
@@ -139,37 +153,37 @@ class PingPongGame {
         if (this.keys['ArrowDown'] && this.paddle2.position.z > -3.5) {
             this.paddle2.position.z -= this.paddleSpeed;
         }
-        
+
         this.ball.position.add(this.ballVelocity);
-        
+
         if (this.ball.position.z > 4 || this.ball.position.z < -4) {
             this.ballVelocity.z *= -1;
         }
-        
+
         if (
-            this.ball.position.x < -8.5 && 
+            this.ball.position.x < -8.5 &&
             this.ball.position.x > -9.5 &&
             Math.abs(this.ball.position.z - this.paddle1.position.z) < 1.5
         ) {
             this.ballVelocity.x *= -1;
             this.ballVelocity.z = (this.ball.position.z - this.paddle1.position.z) * 0.3;
         }
-        
+
         if (
-            this.ball.position.x > 8.5 && 
+            this.ball.position.x > 8.5 &&
             this.ball.position.x < 9.5 &&
             Math.abs(this.ball.position.z - this.paddle2.position.z) < 1.5
         ) {
             this.ballVelocity.x *= -1;
             this.ballVelocity.z = (this.ball.position.z - this.paddle2.position.z) * 0.3;
         }
-        
+
         if (this.ball.position.x < -10) {
             this.score2++;
             this.updateScore();
             this.resetBall();
         }
-        
+
         if (this.ball.position.x > 10) {
             this.score1++;
             this.updateScore();
@@ -188,29 +202,4 @@ class PingPongGame {
     }
 }
 
-function startGame() {
-  const menu = document.getElementById('menu');
-  if (menu) menu.style.display = 'none';
-
-  new PingPongGame();
-}
-
-// Wait for the DOM to load before attaching listeners
-document.addEventListener('DOMContentLoaded', () => {
-  const playButton = document.getElementById('playButton');
-  if (playButton) {
-    playButton.addEventListener('click', startGame);
-  }
-});
-
-
-document.getElementById('playButton')!.addEventListener('click', startGame);
-document.getElementById('registerButton')!.addEventListener('click', () => {
-  alert('Register clicked!'); // Replace with actual register logic
-});
-
-document.getElementById('loginButton')!.addEventListener('click', () => {
-  alert('Login clicked!'); // Replace with actual login logic
-});
-
-
+export default PingPongGame;
