@@ -35,7 +35,6 @@ const App: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
       </Routes>
-
       {gameStarted && <div ref={gameContainerRef} className="flex-grow relative" />}
     </div>
   );

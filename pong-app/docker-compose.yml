@@ -6,9 +6,9 @@ services:
       - '3000:3000'
     volumes:
       - ./backend:/app
+      - /app/node_modules
     environment:
       DATABASE_URL: "file:./dev.db"
-    command: sh -c "npm install && npx prisma generate && npx tsc && node dist/index.js"
     depends_on:
       - frontend
 
