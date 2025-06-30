@@ -36,7 +36,6 @@ const App: React.FC = () => {
         <Route path="/login" element={<Login />} />
       </Routes>
 
-      {/* Show game container outside routes so it persists only if gameStarted */}
       {gameStarted && <div ref={gameContainerRef} className="flex-grow relative" />}
     </div>
   );
