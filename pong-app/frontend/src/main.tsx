@@ -6,7 +6,7 @@ import {
   Route,
 } from 'react-router';
 
-import Menu from './components/Menu';
+import Menu from './components/menu';
 import RegisterPage from './components/register';
 import LoginPage from './components/login';
 import ResetPasswordPage from './components/reset-password';
@@ -33,8 +33,8 @@ const App: React.FC = () => {
             !gameStarted ? <Menu onPlay={() => setGameStarted(true)} /> : <div ref={gameContainerRef} className="flex-grow relative" />
           }
         />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
       {gameStarted && <div ref={gameContainerRef} className="flex-grow relative" />}
