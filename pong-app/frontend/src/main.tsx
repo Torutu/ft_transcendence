@@ -7,8 +7,9 @@ import {
 } from 'react-router';
 
 import Menu from './components/Menu';
-import Register from './components/Register';
-import Login from './components/Login';
+import RegisterPage from './components/register';
+import LoginPage from './components/login';
+import ResetPasswordPage from './components/reset-password';
 
 import './styles.css';
 import PingPongGame from './PingPongGame';
@@ -34,6 +35,7 @@ const App: React.FC = () => {
         />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
       {gameStarted && <div ref={gameContainerRef} className="flex-grow relative" />}
     </div>
