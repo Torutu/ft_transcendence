@@ -49,7 +49,6 @@ class PingPongGame {
         this.camera.position.set(0, 8, 3);
         this.camera.lookAt(0, 0, 1);
         this.camera.up.set(0, 0, 0);
-
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
