@@ -12,7 +12,7 @@ ifeq ($(OS),Windows_NT)
 else
     # Linux/Mac
     RM = rm -f
-    OPEN = open
+    OPEN = xdg-open
     NULL = /dev/null
 endif
 
