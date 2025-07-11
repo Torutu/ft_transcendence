@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {
   BrowserRouter,
@@ -6,38 +6,24 @@ import {
   Route,
 } from 'react-router';
 
-import Menu from './components/menu';
-import RegisterPage from './components/register';
-import LoginPage from './components/login';
-import ResetPasswordPage from './components/reset-password';
+import Menu from './pages/menu';
+import RegisterPage from './pages/register';
+import LoginPage from './pages/login';
+import ResetPasswordPage from './pages/reset-password';
+import PlayPage from './pages/playasguest'; 
 
 import './styles.css';
-import PingPongGame from './PingPongGame';
 
 const App: React.FC = () => {
-  const [gameStarted, setGameStarted] = useState(false);
-  const gameContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (gameStarted && gameContainerRef.current) {
-      new PingPongGame(gameContainerRef.current);
-    }
-  }, [gameStarted]);
-
   return (
     <div className="flex flex-col w-full h-screen relative">
       <Routes>
-        <Route
-          path="/"
-          element={
-            !gameStarted ? <Menu onPlay={() => setGameStarted(true)} /> : <div ref={gameContainerRef} className="flex-grow relative" />
-          }
-        />
+        <Route path="/" element={<Menu />} />
+        <Route path="/play" element={<PlayPage />} /> 
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
-      {gameStarted && <div ref={gameContainerRef} className="flex-grow relative" />}
     </div>
   );
 };
