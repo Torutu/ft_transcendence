@@ -12,7 +12,6 @@
 ## Team Responsibilities
 
 ### pchennia – User Management and Cybersecurity
-- Standard user management, authentication, users across
 - Implementing a remote authentication
 - Implement Two-Factor Authentication (2FA) and JWT
 ### ttero – Web and Backend
@@ -21,6 +20,8 @@
 - Designed and implemented game graphics
 - Developed a second game mode
 - Built game customization features (speed, paddles, etc.)
+### bposa – User Management
+- Standard user management, authentication, users across tournaments
 ---
 
 ## Technologies Used
