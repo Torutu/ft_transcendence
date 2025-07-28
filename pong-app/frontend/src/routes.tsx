@@ -41,9 +41,6 @@ export const AppRoutes = () => {
         </div>
       }>
         <Routes>
-          {/* Public routes without layout */}
-          {/* <Route path="/" element={<Menu />} /> */}
-
           <Route 
               path="/" 
               element={
