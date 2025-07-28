@@ -38,23 +38,6 @@ export default function TournamentPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-              {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
-            </div>
-            <span className="font-medium">{user.name || user.email}</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="text-red-600 hover:text-red-800 font-medium"
-          >
-            Logout
-          </button>
-        </div>
-      </header> */}
-
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">
