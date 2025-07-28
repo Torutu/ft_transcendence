@@ -10,26 +10,6 @@ const Navbar = () => {
   const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
   const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   const fetchUser = async () => {
-  //     try {
-  //       const response = await api.get('/profile');
-  //       console.log('User profile fetched:', response.data);
-  //       setUser(response.data);
-  //     } catch (error) {
-  //       console.error('Failed to fetch user profile:', error);
-  //       removeAuthToken();
-  //       // Redirect to login if user profile fetch fails
-  //       setUser(null);
-  //       // alert('Session expired. Please log in again.');
-  //       // Redirect to login page
-  //       // navigate('/login');
-  //     }
-  //   };
-
-  //   fetchUser();
-  // }, []);
-
   const handleLogout = () => {
     window.google.accounts.id.disableAutoSelect();
     removeAuthToken();
