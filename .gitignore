@@ -1,3 +1,68 @@
 #.gitignore
 
-dev.db
+# ignore all .db files in any subdirectory
+**/*.db
+# ignore all .log files in any subdirectory
+**/*.log
+# ignore all .tmp files in any subdirectory
+**/*.tmp
+# ignore all .bak files in any subdirectory
+**/*.bak
+# ignore all .swp files in any subdirectory
+**/*.swp
+# ignore all .DS_Store files in any subdirectory
+**/.DS_Store
+# ignore all .env files in any subdirectory
+**/.env
+# ignore all .env.local files in any subdirectory
+**/.env.local
+# ignore all .env.development files in any subdirectory
+**/.env.development
+# ignore all .env.production files in any subdirectory
+**/.env.production
+# ignore all .env.test files in any subdirectory
+**/.env.test
+# ignore all .env.example files in any subdirectory
+**/.env.example
+# ignore all .cache files in any subdirectory
+**/.cache
+# ignore all .coverage files in any subdirectory
+**/.coverage
+# ignore all .eslintcache files in any subdirectory
+**/.eslintcache
+# ignore all .nyc_output files in any subdirectory
+**/.nyc_output
+# ignore all .vscode files in any subdirectory
+**/.vscode
+# ignore all .idea files in any subdirectory
+**/.idea
+# ignore all .history files in any subdirectory
+**/.history
+# ignore all .sass-cache files in any subdirectory
+**/.sass-cache
+# ignore all .next files in any subdirectory
+**/.next
+# ignore all .nuxt files in any subdirectory
+**/.nuxt
+# ignore all .cache-loader files in any subdirectory
+**/.cache-loader
+# ignore all .parcel-cache files in any subdirectory
+**/.parcel-cache
+# ignore all .storybook files in any subdirectory
+**/.storybook
+# ignore all .dist files in any subdirectory
+**/.dist
+# ignore node_modules directory
+node_modules/
+# ignore build directory
+build/
+# ignore dist directory
+dist/
+# ignore coverage directory
+coverage/
+# ignore logs directory
+logs/
+# ignore tmp directory
+tmp/
+#ignore jsx files
+*.jsx
