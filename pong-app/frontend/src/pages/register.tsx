@@ -1,29 +1,3 @@
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (!validateForm()) return;
-
-//     setIsLoading(true);
-//     try {
-//       const response = await api.post('/register', {
-//         email: formData.email,
-//         password: formData.password,
-//         name: formData.username,
-//       });
-
-//       // Redirect to verification page
-//       navigate('/verify-email', { state: { userId: response.data.userId } });
-//     } catch (error: any) {
-//       if (error.response?.data?.message === 'Email already in use') {
-//         setErrors(prev => ({ ...prev, email: 'Email already in use' }));
-//       } else {
-//         alert('Registration failed. Please try again.');
-//       }
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
