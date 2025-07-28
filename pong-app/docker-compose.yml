@@ -1,7 +1,12 @@
+networks:
+  pong-network:
+    driver: bridge
 
 services:
   backend:
     build: ./backend
+    networks:
+      - pong-network
     ports:
       - '3000:3000'
     volumes:
@@ -12,6 +17,8 @@ services:
 
   frontend:
     build: ./frontend
+    networks:
+      - pong-network
     ports:
       - '5173:5173'
     volumes:

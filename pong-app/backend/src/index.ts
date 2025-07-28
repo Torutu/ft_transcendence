@@ -1,101 +1,9 @@
-// import Fastify from 'fastify';
-// import fastifyCors from '@fastify/cors';
-// import fastifyPlugin from 'fastify-plugin';
-// import { PrismaClient } from '@prisma/client';
-// import authRoutes from './routes/auth';
-// import { cleanEnv, str, num } from 'envalid';
-
-// // 1. Environment Validation
-// const env = cleanEnv(process.env, {
-//   PORT: num({ default: 3000 }),
-//   DATABASE_URL: str(),
-//   JWT_SECRET: str(),
-//   GOOGLE_CLIENT_ID: str(),
-//   GOOGLE_CLIENT_SECRET: str(),
-//   GOOGLE_REDIRECT_URI: str(),
-//   FRONTEND_URL: str({ default: 'http://localhost:5173' })
-// });
-
-// // 2. Fastify Initialization (Choose ONE of these options)
-
-// // OPTION 1: With Pino Pretty Logger (recommended)
-// const app = Fastify({ 
-//   logger: {
-//     level: 'info',
-//     transport: {
-//       target: 'pino-pretty',
-//       options: {
-//         colorize: true,
-//         translateTime: 'HH:MM:ss Z',
-//         ignore: 'pid,hostname',
-//         singleLine: true
-//       }
-//     }
-//   }
-// });
-
-// // OPTION 2: Without Fastify Logger (use console.log instead)
-// // const app = Fastify({ logger: false });
-
-// // 3. Register Plugins
-// app.register(fastifyCors, {
-//   origin: [env.FRONTEND_URL],
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   credentials: true
-// });
-
-// app.register(fastifyPlugin(async (fastify) => {
-//   const prisma = new PrismaClient();
-//   await prisma.$connect();
-//   fastify.decorate('prisma', prisma);
-//   fastify.addHook('onClose', async () => {
-//     await prisma.$disconnect();
-//   });
-// }));
-
-// // 4. Register Routes
-// app.register(authRoutes, { prefix: '/auth' });
-
-// // 5. Health Check Endpoint
-// app.get('/health', async () => {
-//   return { status: 'OK', timestamp: new Date().toISOString() };
-// });
-
-// // 6. Start Server
-// const start = async () => {
-//   try {
-//     const address = await app.listen({
-//       port: env.PORT,
-//       host: '0.0.0.0'
-//     });
-    
-//     // If using OPTION 2 (logger: false), uncomment this:
-//     // console.log(`Server running at ${address}`);
-//   } catch (err) {
-//     app.log.error(err);
-//     process.exit(1);
-//   }
-// };
-
-// // 7. Graceful Shutdown
-// ['SIGINT', 'SIGTERM'].forEach(signal => {
-//   process.on(signal, () => {
-//     app.close().then(() => {
-//       app.log.info('Server closed');
-//       process.exit(0);
-//     });
-//   });
-// });
-
-// start();
-
-
 // backend/src/index.ts
 import Fastify from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyPlugin from 'fastify-plugin';
 import { PrismaClient } from '@prisma/client';
-import authRouter from './routes/auth';
+import authRoutes from './routes/auth';
 import env from './env';
 import fs from 'fs';
 import path from 'path';
@@ -149,7 +57,7 @@ app.register(fastifyPlugin(async (fastify) => {
   await prisma.$connect();
   
   fastify.decorate('prisma', prisma);
-  fastify.register(authRouter, { prisma });
+  fastify.register(authRoutes, { prisma });
   
   fastify.addHook('onClose', async () => {
     await prisma.$disconnect();
