@@ -9,8 +9,6 @@ services:
       - /app/node_modules
     environment:
       DATABASE_URL: "file:./dev.db"
-    depends_on:
-      - frontend
 
   frontend:
     build: ./frontend

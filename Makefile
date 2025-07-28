@@ -1,4 +1,4 @@
-all : up
+all : build up
 
 up : 
 	docker compose -f ./pong-app/docker-compose.yml up -d
@@ -13,7 +13,7 @@ start :
 	docker compose -f ./pong-app/docker-compose.yml start
 
 build:
-	docker compose -f ./pong-app/docker-compose.yml build 
+	docker compose -f ./pong-app/docker-compose.yml build --no-cache
 
 rebuild: down build up
 

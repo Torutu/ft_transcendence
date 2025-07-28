@@ -102,7 +102,7 @@ import path from 'path';
 
 
 // Reference: https://github.com/fastify/fastify/discussions/5297
-const isHttps = fs.existsSync(path.join(__dirname, '../privkey.pem')) && fs.existsSync(path.join(__dirname, '../fullchain.pem'));
+const isHttps = fs.existsSync(".../privkey.pem") && fs.existsSync(".../fullchain.pem")
 
 // Fastify Initialization with Pino Pretty Logger
 // If you want to use the default logger, you can set `logger: true` instead
