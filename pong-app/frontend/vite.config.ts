@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs, { readFileSync } from 'fs'
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',
-    port: 5173,
+    host: process.env.VITE_HOST_IP || '0.0.0.0',
+    port: 5173
   },
   resolve: {
     alias: {

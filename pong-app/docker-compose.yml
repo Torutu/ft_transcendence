@@ -2,25 +2,41 @@
 services:
   backend:
     build: ./backend
-    ports:
-      - '3000:3000'
+    expose:
+      - '3000'
     volumes:
       - ./backend:/app
       - /app/node_modules
+      # - certs:/app/certs:ro
     environment:
       DATABASE_URL: "file:./dev.db"
+    env_file: "./.env"
     depends_on:
       - frontend
 
   frontend:
     build: ./frontend
-    ports:
-      - '5173:5173'
+    # expose:
+    #   - '5173'
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      # - certs:/app/certs:ro
+    env_file: "./.env"
     command: npm run dev
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "443:443"
+    # volumes:
+    #   - certs:/etc/nginx/ssl:ro
+    # env_file: "./backend/.env"
+    env_file: "./.env"
+    depends_on:
+      - frontend
+      - backend
  
 volumes:
   db:
-
+  # certs: 

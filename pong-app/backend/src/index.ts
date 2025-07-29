@@ -1,11 +1,19 @@
 import Fastify from 'fastify';
 import fastifyPlugin from 'fastify-plugin';
+import fastifyCors from '@fastify/cors';
+import fastifyIo from 'fastify-socket.io';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const app = Fastify();
+
+await app.register(fastifyCors, {
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST'],
+  credentials: true,
+});
 
 // Register Prisma plugin
 app.register(fastifyPlugin(async (fastify) => {
@@ -14,6 +22,18 @@ app.register(fastifyPlugin(async (fastify) => {
     await prisma.$disconnect();
   });
 }));
+
+app.register(fastifyIo, {
+  cors: {
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.get('/', async () => {
+  return { message: 'Backend running' };
+});
 
 // POST /register
 app.post<{ Body: { email: string; password: string; name?: string } }>('/register', async (request, reply) => {
@@ -70,12 +90,87 @@ app.get<{ Params: { userId: string } }>('/matches/:userId', async (request, repl
   reply.send(matches);
 });
 
+let players: { [socketId: string]: 'left' | 'right' } = {};
+let gameState = {
+ball: { x: 0, z: 0, vx: 0.1, vz: 0 },
+paddles: { left: { z: 0 }, right: { z: 0 } },
+scores: [0, 0]
+};
 
-// Start the server
+function resetBall() {
+const angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
+const speed = 0.1;
+gameState.ball.x = 0;
+gameState.ball.z = 0;
+gameState.ball.vx = Math.random() > 0.5 ? speed : -speed;
+gameState.ball.vz = Math.sin(angle) * speed;
+}
+
+resetBall();
+
+setInterval(() => {
+  const ball = gameState.ball;
+
+  ball.x += ball.vx;
+  ball.z += ball.vz;
+
+  if (ball.z > 4 || ball.z < -4) {
+    ball.vz *= -1;
+  }
+
+  const left = gameState.paddles.left;
+  const right = gameState.paddles.right;
+
+  if (ball.x < -8.5 && ball.x > -9.5 && Math.abs(ball.z - left.z) < 1.5) {
+    ball.vx *= -1;
+    ball.vz = (ball.z - left.z) * 0.3;
+  }
+
+  if (ball.x > 8.5 && ball.x < 9.5 && Math.abs(ball.z - right.z) < 1.5) {
+    ball.vx *= -1;
+    ball.vz = (ball.z - right.z) * 0.3;
+  }
+
+  if (ball.x < -10) {
+    gameState.scores[1]++;
+    resetBall();
+  }
+
+  if (ball.x > 10) {
+    gameState.scores[0]++;
+    resetBall();
+  }
+
+  app.server.emit('stateUpdate', gameState);
+}, 1000 / 60);
+
 async function start() {
   try {
-    await app.listen({ port: 3000, host: '0.0.0.0' }); // Use host 0.0.0.0 to work inside Docker
+    await app.ready();
+
+    app.listen({ port: 3000, host: '0.0.0.0'}, () => {
     console.log('Server running at http://localhost:3000');
+    });
+    app.server.on('connection', socket => {
+      console.log('Player connected');
+      
+        const playerNumber = Object.values(players).includes('left') ? 'right' : 'left';
+        players[0] = playerNumber;
+      
+        socket.emit('playerType', playerNumber);
+        socket.emit('init', gameState);
+      
+        socket.on('move', (direction: string) => {
+          const paddle = gameState.paddles[playerNumber];
+          if (direction === 'up' && paddle.z < 3.5) paddle.z += 0.2;
+          if (direction === 'down' && paddle.z > -3.5) paddle.z -= 0.2;
+        });
+      
+        socket.on('disconnect', () => {
+          console.log(`Player disconnected:`);
+          delete players[0];
+        });
+      });
   } catch (err) {
     console.error('Error starting server:', err);
     process.exit(1);
