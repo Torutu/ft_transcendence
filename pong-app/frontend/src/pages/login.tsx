@@ -1,8 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
 import api from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+
+import { setAuthToken } from '../utils/auth';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -17,6 +25,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
+    const googleBtnRef = useRef<HTMLDivElement>(null);
+
 
   const validateForm = () => {
     let isValid = true;
@@ -47,6 +57,14 @@ export default function LoginPage() {
 
     setErrors(newErrors);
     return isValid;
+  };
+
+
+    const handleGoogleLogin = () => {
+    // Implement your Google login logic here
+    // This is just a placeholder
+    console.log('Google login clicked');
+    // Typically you would redirect to Google OAuth or use a popup
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -105,12 +123,79 @@ export default function LoginPage() {
     }
   };
 
+  const handleCredentialResponse = async (response: any) => {
+    setIsLoading(true);
+    try {
+      console.log('Google signin button callback response:', response);
+      if (!response.credential) {
+        setErrors(prev => ({
+          ...prev,
+          form: 'Google sign-in failed. Please try again.'
+        }));
+        return;
+      }
+      const res = await api.post('/auth/signin-with-google', {
+        credential: response.credential,
+      });
+      console.log('/auth/signin-with-google response:', res.data);
+      if (res.data.token) {
+        setAuthToken(res.data.token);
+        navigate('/tournament');
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          form: res.data.message || 'Google sign-in failed',
+        }));
+      }
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      setErrors(prev => ({
+          ...prev,
+          form: 'An unexpected error occurred. Please try again.',
+        })); 
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (window.google && googleBtnRef.current) {
+      const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!client_id) {
+        console.error('VITE_GOOGLE_CLIENT_ID is not set in environment variables');
+        return;
+      }
+      window.google.accounts.id.initialize({
+        client_id: client_id,
+        callback: handleCredentialResponse,
+      });
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: '380',
+        locale: 'en'
+      });
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4" style={{
-        backgroundImage: "url(/background/login-bg.jpeg)",
+    <div className="min-h-screen flex items-center justify-center bg-white p-4" style={{
+        backgroundImage: "url(/background/default-gray.jpg)",
         backgroundSize: "contain",
         backgroundPosition: "center",
       }}>
+
+
+      {/* Image Section */}
+        <div className="hidden md:block md:w-1/2 bg-gray-100">
+          <img 
+            src="/background/bg15.jpeg" // Replace with your image path
+            alt="Login Visual"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+      {/* Form Section */}
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
           Welcome Back!
@@ -124,9 +209,6 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-            </label>
             <input
               id="name"
               name="name"
@@ -147,9 +229,6 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
             <input
               id="password"
               name="password"
@@ -179,8 +258,57 @@ export default function LoginPage() {
               'Log In'
             )}
           </button>
+          <p className="text-center">
+            <Link to="/reset-password" className="text-sm text-blue-600 hover:underline font-medium">
+              Forgot Password?
+            </Link>
+          </p>
         </form>
+        
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-2 bg-white text-sm text-gray-500">
+                Or
+              </span>
+            </div>
+          </div>
+
+                <div className="mt-6">
+              <div className="flex items-center justify-center space-x-2">
+                <div ref={googleBtnRef}></div>
+              </div>
+            </div>
+
+          {/* <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full mt-6 flex justify-center items-center gap-2 py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+          >
+            <img 
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+              alt="Google" 
+              className="h-5 w-5"
+            />
+            Sign in with Google
+          </button> */}
+        </div>
+        
+        <div className="mt-6 text-center text-sm">
+          <p className="text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-base text-blue-600 hover:underline font-medium">
+              Create New Account
+            </Link>
+          </p>
+
+        </div>
+
       </div>
+   
     </div>
   );
 }

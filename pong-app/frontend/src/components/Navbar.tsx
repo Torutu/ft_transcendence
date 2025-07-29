@@ -33,7 +33,7 @@ const Navbar = () => {
   const handleLogout = () => {
     window.google.accounts.id.disableAutoSelect();
     removeAuthToken();
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -46,10 +46,10 @@ const Navbar = () => {
         <div className="flex space-x-4">
           {authenticated ? (
             <>
-              <Link to="/tournament" className="text-white hover:text-blue-300">
-                Tournament
-              </Link>
+
+            
               <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {console.log('User:', user)}
               {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
             </div>
 
@@ -57,17 +57,22 @@ const Navbar = () => {
                 onClick={handleLogout}
                 className="text-white hover:text-red-300"
               >
-                Logout
+                {/* Logout */}
+                <img 
+                  src="/icons/logout.gif" 
+                  alt="Logout" 
+                  className="h-10 w-10"  // Adjust size as needed
+                />
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="text-white hover:text-blue-300">
+              {/* <Link to="/login" className="text-white hover:text-blue-300">
                 Login
               </Link>
               <Link to="/register" className="text-white hover:text-blue-300">
                 Register
-              </Link>
+              </Link> */}
               <Link to="/play" className="text-white hover:text-blue-300">
                 Play as Guest
               </Link>
