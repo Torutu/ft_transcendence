@@ -14,11 +14,6 @@ const VerifyTwoFactorPage = lazy(() => import('./pages/verify-2fa'));
 const ResetPasswordPage = lazy(() => import('./pages/reset-password'));
 const TournamentPage = lazy(() => import('./pages/tournament'));
 const PlayPage = lazy(() => import('./pages/playasguest'));
-const VerifyCodePage = lazy(() => import('./pages/VerifyCode'));
-
-const TermsPage = lazy(() => import('./pages/terms'));
-const PrivacyPage = lazy(() => import('./pages/privacy'));
-
 
 export const AppRoutes = () => {
   return (
@@ -59,10 +54,8 @@ export const AppRoutes = () => {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/verify-2fa" element={<VerifyTwoFactorPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-						<Route path="/verify-code" element={<VerifyCodePage />} />
-            <Route path="/tournament" element={<TournamentPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
+						<Route path="/tournament" element={<TournamentPage />} />
+
             
             {/* Protected routes */}
             {/* <Route 
