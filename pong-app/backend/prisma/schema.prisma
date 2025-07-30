@@ -11,8 +11,12 @@ model User {
   id        String  @id @default(cuid())
   email     String  @unique
   password  String
-  name      String?
+  name      String  @unique
   avatarUrl String?
+  isVerified Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  googleId String?
 
   // Many-to-many self relation for friends (implicit join table)
   friends  User[] @relation("UserFriends")
@@ -27,6 +31,18 @@ model User {
   // Matches where this user is winner
   winnerMatches Match[] @relation("WinnerMatches")
 
+  verificationCodes VerificationCode[]
+
+  createdAt DateTime @default(now())
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  code      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime? // Add this line
   createdAt DateTime @default(now())
 }
 
