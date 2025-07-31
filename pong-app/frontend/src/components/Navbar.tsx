@@ -29,7 +29,6 @@ const Navbar = () => {
 
             
               <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                {console.log('User:', user)}
               {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
             </div>
 

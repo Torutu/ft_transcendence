@@ -24,9 +24,8 @@ export default function VerifyTwoFactorPage() {
   console.log('TOTP URL from localStorage:', totp_url);
   if (!totp_url) {
     console.error('No TOTP URL found in localStorage');
-    setError('TOTP URL not found. Please try again.');
-    return null;
   }
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token.trim()) {
@@ -39,6 +38,7 @@ export default function VerifyTwoFactorPage() {
       const response = await api.post('/auth/verify-2fa', { userId, token });
       console.log('Verification response:', response.data);
       setAuthToken(response.data.token);
+      localStorage.removeItem('totp_url');
       navigate('/tournament');
     } catch (error) {
       console.error('Verification failed:', error);
@@ -58,13 +58,9 @@ export default function VerifyTwoFactorPage() {
           Scan the QR code with your authenticator app.
         </p>
         <div className="flex justify-center my-4">
-          {/* <img
-            src={totp_url}
-            alt="QR Code for 2FA"
-            className="w-48 h-48 border border-gray-300 rounded-md"
-          /> */}
+          {totp_url && <QRCodeComponent value={totp_url} />}
         </div>
-        <QRCodeComponent value={totp_url} />
+        
         <p className="text-gray-600 text-center mb-6">
           Please enter the 6-digit code from your authenticator app.
         </p>

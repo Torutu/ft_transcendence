@@ -1,8 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+// import crypto from 'crypto';
+import { randomBytes } from 'node:crypto';
 import env from '../env';
 import { hashPassword, comparePasswords, generateToken, authenticateUser, verifyToken, generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/auth';
-import { sendVerificationEmail } from '../utils/email';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 import { OAuth2Client } from 'google-auth-library';
 
@@ -29,6 +31,10 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
     return Math.floor(10 ** (length - 1) + Math.random() * 9 * 10 ** (length - 1)).toString();
   };
 
+  const generatePasswordResetToken = (): string => {
+    return randomBytes(32).toString('hex');
+  }
+
   // Login endpoint
   fastify.post<{ Body: { email: string; password: string } }>(
     '/auth/login',
@@ -45,7 +51,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
       }
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      console.log('Request body:', request.body);
       console.log('Request headers:', request.headers);
       const { name, password } = request.body as { name: string; password: string };
 
@@ -59,15 +64,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           });
         }
 
-        // Check if email is verified
-        if (!user.isVerified) {
-          return reply.status(403).send({
-            error: 'EMAIL_NOT_VERIFIED',
-            message: 'Please verify your email first',
-            userId: user.id
-          });
-        }
-
         const passwordMatch = await comparePasswords(password, user.password);
         if (!passwordMatch) {
           return reply.status(401).send({
@@ -76,24 +72,26 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           });
         }
 
-        const twoFactorSecret = generateTwoFactorSecret();
-        if (twoFactorSecret.otpauth_url === undefined) {
-          return reply.status(500).send({
-            error: '2FA_ERROR',
-            message: 'Failed to generate two-factor authentication secret'
+        if (!user.twoFactorSecret) {
+          return reply.status(403).send({
+            error: 'INVALID_TWOFACTOR_SECRET',
+            message: 'Invalid 2 factor secret'
           });
         }
-        // Update user with 2FA secret
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { twoFactorSecret: twoFactorSecret.base32, twoFactorEnabled: true }
-        });
+
+        if (!user.twoFactorURL) {
+          return reply.status(403).send({
+            error: 'INVALID_TWOFACTOR_URL',
+            message: 'Invalid 2 factor URL'
+          });
+        }
         
+        const totp_url = user.twoFactorRegistered ? null : user.twoFactorURL
         return reply.send({
           requires2FA: true,
           userId: user.id,
           message: 'Two-factor authentication required',
-          totp_url: twoFactorSecret.otpauth_url
+          totp_url
         });
 
       } catch (error) {
@@ -137,12 +135,25 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
 
         // Create user
         const hashedPassword = await hashPassword(password);
+
+        const twoFactorSecret = generateTwoFactorSecret(email);
+        if (twoFactorSecret.otpauth_url === undefined) {
+          return reply.status(500).send({
+            error: '2FA_ERROR',
+            message: 'Failed to generate two-factor authentication secret'
+          });
+        }
+
+        console.log("otpauth_url", twoFactorSecret.otpauth_url);
+        
         const user = await prisma.user.create({
           data: { 
             email, 
             password: hashedPassword, 
             name,
-            isVerified: false
+            isVerified: false,
+            twoFactorSecret: twoFactorSecret.base32, 
+            twoFactorURL: twoFactorSecret.otpauth_url
           }
         });
 
@@ -232,28 +243,17 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           data: { isVerified: true }
         });
 
-        // Check if 2FA is enabled
-        if (user.twoFactorEnabled) {
-          return reply.send({
-            success: true,
-            twoFactorEnabled: true,
-            message: 'Email verified. Two-factor authentication required.'
-          });
-        }
-
         // Generate JWT token
         const token = generateToken(user.id);
 
         return reply.send({
           success: true,
-          twoFactorEnabled: false,
           token,
           user: {
             id: user.id,
             email: user.email,
             name: user.name,
-            isVerified: true,
-            twoFactorEnabled: false
+            isVerified: true
           }
         });
 
@@ -329,6 +329,151 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         return reply.status(500).send({
           error: 'RESEND_FAILED',
           message: 'Failed to resend verification code. Please try again.'
+        });
+      }
+    }
+  );
+
+  // Reset Password endpoint
+  fastify.post<{ Body: { email: string; password: string; name: string } }>(
+    '/auth/reset-password',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+          }
+        }
+      }
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { email } = request.body as { email: string; };
+
+      try {
+        // Check if user exists
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          return reply.status(500).send({
+            error: 'INVALID_EMAIL',
+            message: 'Email not registered.'
+          });
+        }
+
+        // Check if email is verified
+        if (!user.isVerified) {
+          return reply.status(503).send({
+            error: 'EMAIL_NOT_VERIFIED',
+            message: 'Please verify your email first',
+            userId: user.id,
+            requiresVerification: true
+          });
+        }
+
+        const resetToken = generatePasswordResetToken();
+        const expiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+        const tokenRecord = await prisma.passwordResetToken.upsert({
+          where: { userId: user.id },  // unique field
+          update: {
+            token: resetToken,
+            expiresAt: expiryDate
+          },
+          create: {
+            token: resetToken,
+            expiresAt: expiryDate,
+            userId: user.id,
+          },
+        });
+
+        fastify.log.info("passwordResetToken upserted.")
+        // const tokenRecord = await prisma.passwordResetToken.create({
+        //   data: {
+        //     token: resetToken,
+        //     expiresAt: expiryDate,
+        //     userId: user.id
+        //   }
+        // });
+
+        const resetLink = `${env.FRONTEND_URL}/change-password?token=${resetToken}`;
+
+        // Send verification email
+        await sendPasswordResetEmail(user.email, resetLink);
+
+        return reply.status(201).send({
+          success: true,
+          message: 'Instructions to reset your password has been sent to the registered email address.',
+        });
+
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          error: 'PASSWORD_RESET_EMAIL_SEND_FAILED',
+          message: 'Unable to reset password. Please try again.'
+        });
+      }
+    }
+  );
+
+  // change password
+  fastify.post<{ Body: { userId: string; token: string } }>(
+    '/auth/change-password',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['token', 'password'],
+          properties: {
+            token: { type: 'string' },
+            password: { type: 'string' }
+          }
+        }
+      }
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { token, password } = request.body as { token: string; password: string };
+
+      try {
+        const tokenRecord = await prisma.passwordResetToken.findUnique({ where: { token: token } });
+        
+        if (!tokenRecord) {
+          return reply.status(404).send({
+            error: 'TOKEN_NOT_FOUND',
+            message: 'Password reset token is not found.'
+          });
+        }
+
+        if (tokenRecord.expiresAt <= new Date()) {
+          return reply.status(404).send({
+            error: 'TOKEN_EXPIRED',
+            message: 'Password reset link has expired.'
+          });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        // update password
+        await prisma.user.update({
+          where: { id: tokenRecord.userId },
+          data: { password: hashedPassword }
+        })
+
+        await prisma.passwordResetToken.delete({
+          where: {
+            id: tokenRecord.id
+          }
+        });
+        
+        return reply.status(200).send({
+          success: true,
+          message: 'Password is changed successfully. You may login now with the new password.'
+        });
+
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          error: 'CHANGE_PASSWORD_FAILED',
+          message: 'Change password failed. Please try again.'
         });
       }
     }
@@ -433,25 +578,48 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
       try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         
-        if (!user || !user.twoFactorSecret) {
-          return reply.status(404).send({
+        if (!user) {
+          console.log("user not found");
+          return reply.status(401).send({
             error: 'USER_NOT_FOUND',
-            message: 'User not found or 2FA not enabled'
+            message: 'User not found'
           });
         }
-
+        if (!user.twoFactorSecret) {
+          console.log("twoFactorSecret not found");
+          
+          return reply.status(401).send({
+            error: 'TWOFACTOR_SECRET_NOT_FOUND',
+            message: 'twoFactorSecret not found'
+          });
+        }
         const base32secret = user.twoFactorSecret;
 
         // Verify 2FA token (implement your 2FA verification logic)
         const verified = verifyTwoFactorToken(base32secret, token);
 
         if (!verified) {
+          console.log("twoFactorSecret verification failed");
           return reply.status(401).send({
             error: 'INVALID_2FA_TOKEN',
             message: 'Invalid 2FA code'
           });
         }
 
+        console.log("user.twoFactorRegistered = ", user.twoFactorRegistered);
+        
+        const isTwoFactorRegistered = Boolean(user.twoFactorRegistered);
+        console.log("isTwoFactorRegistered = ", isTwoFactorRegistered);
+
+        if (!isTwoFactorRegistered) {
+          console.log("Updating twoFactorRegistered to true")
+          const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { twoFactorRegistered: true }
+          });
+          console.log("updatedUser.twoFactorRegistered = ", updatedUser.twoFactorRegistered);
+        }
+        
         const authToken = generateToken(user.id);
         return reply.send({
           token: authToken,
@@ -460,7 +628,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
             email: user.email,
             name: user.name,
             isVerified: user.isVerified,
-            twoFactorEnabled: user.twoFactorEnabled
           }
         });
 
@@ -499,7 +666,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           reply.status(401).send({ message: 'User not found' });
           return null;
         }
-        // return user;
         return reply.send({
           name: user.name,
           email: user.email 
@@ -596,7 +762,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           email: user.email,
           name: user.name,
           isVerified: user.isVerified,
-          twoFactorEnabled: user.twoFactorEnabled
         }
       });
     } catch (err) {

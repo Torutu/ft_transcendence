@@ -38,8 +38,18 @@ export const comparePasswords = async (password: string, hash: string): Promise<
 };
 
 // 2FA functions
-export const generateTwoFactorSecret = (): speakeasy.GeneratedSecret => {
-  return speakeasy.generateSecret({ length: 20 });
+export const generateTwoFactorSecret = (email: string): speakeasy.GeneratedSecret => {
+  const issuer = process.env.TEAM_NAME ?? 'Hivers5 Asteroids';
+  // Key URI Format expects "Issuer:AccountName" as the label.
+  const label = `${issuer}:${email}`;
+  
+  console.log("Issuer:", issuer, ", label: ", label);
+  
+  return speakeasy.generateSecret({ 
+    name: label,
+    issuer,
+    length: 20 
+  });
 };
 
 export const verifyTwoFactorToken = (secret: string, token: string): boolean => {

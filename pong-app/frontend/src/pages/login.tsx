@@ -81,8 +81,11 @@ export default function LoginPage() {
       if (response.data.requires2FA) {
         // If 2FA is required, redirect to verification page
         console.log('2FA required, redirecting to verification page');
-        // Store the TOTP URL in localStorage for later use
-        localStorage.setItem('totp_url', response.data.totp_url);
+        if (response.data.totp_url) {
+          // Store the TOTP URL in localStorage for later use
+          localStorage.setItem('totp_url', response.data.totp_url);
+        }
+        
         navigate('/verify-2fa', {
           state: {
             userId: response.data.userId
@@ -197,9 +200,10 @@ export default function LoginPage() {
 
       {/* Form Section */}
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          Welcome Back!
+        <h1 className="text-2xl font-bold text-center mb-1 text-gray-800">
+          Welcome!
         </h1>
+        <p className="text text-center mb-6 text-gray-400">Log in to your account</p>
         
         {errors.form && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">

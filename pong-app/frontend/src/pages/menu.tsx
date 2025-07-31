@@ -1,11 +1,21 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles.css'; // Ensure styles are imported
+import { isAuthenticated } from '../utils/auth';
+
 
 
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
+
+  const handleStart = () => {
+    if (isAuthenticated()) {
+      navigate('/tournament');
+    } else {
+      navigate('/login');
+    }
+  }
 
   return (
     // <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-80 z-10">
@@ -62,7 +72,7 @@ const Menu: React.FC = () => {
 
           <div className="flex justify-center">
             <button
-              onClick={() => navigate("/login")}
+              onClick={handleStart}
               className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition shadow-lg"
               aria-label="Log in"
             >
