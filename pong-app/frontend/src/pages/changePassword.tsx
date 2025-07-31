@@ -63,7 +63,27 @@ const ChangePasswordPage = () => {
 
 
 	return (
-		<div>
+        <div className="min-h-screen flex items-center justify-center bg-white p-4" style={{
+        backgroundImage: "url(/background/default-gray.jpg)",
+        backgroundSize: "contain",
+        backgroundPosition: "center",
+      }}>
+
+          {/* Image Section */}
+        <div className="hidden md:block md:w-1/2 bg-gray-100">
+          <img 
+            src="/background/changepass-bg.jpg" // Replace with your image path
+            alt="Login Visual"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+      {/* Form Section */}
+
+		<div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+          Change Password
+        </h1>
 			
 		  <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
@@ -118,6 +138,7 @@ const ChangePasswordPage = () => {
         </form>
 
 		</div>
+    </div>
 	)
 }
 
