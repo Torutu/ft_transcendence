@@ -36,19 +36,9 @@ export default function VerifyEmailPage() {
 
       console.log('Verification response:', response);
       
-      if (response.data.twoFactorEnabled) {
-        // If 2FA is enabled, go to 2FA verification
-        navigate('/verify-2fa', { 
-          state: { 
-            userId,
-            email 
-          } 
-        });
-      } else {
-        // If no 2FA, log them in directly
-        setAuthToken(response.data.token);
-        navigate('/tournament');
-      }
+      setAuthToken(response.data.token);
+      navigate('/tournament');
+
     } catch (error: any) {
       setError(
         error.response?.data?.message || 

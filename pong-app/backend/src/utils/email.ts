@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
   try {
     await transporter.sendMail({
-      from: `"Hivers5 asteroids" <${env.EMAIL_FROM}>`,
+      from: `${env.TEAM_NAME} <${env.EMAIL_FROM}>`,
       to,
       subject: 'Verify Your Email Address',
       text: `Your verification code is: ${code}\n\nThis code will expire in 24 hours.`,
@@ -34,5 +34,26 @@ export async function sendVerificationEmail(to: string, code: string): Promise<v
   } catch (error) {
     console.error('Error sending verification email:', error);
     throw new Error('Failed to send verification email');
+  }
+}
+
+export async function sendPasswordResetEmail(to: string, resetLink: string): Promise<void> {
+  try {
+    await transporter.sendMail({
+      from: `${env.TEAM_NAME} <${env.EMAIL_FROM}>`,
+      to,
+      subject: 'Reset your password',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Reset Password</h2>
+          <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        </div>
+      `
+    });
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error('Failed to send password reset email');
   }
 }

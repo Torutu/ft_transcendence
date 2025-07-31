@@ -32,6 +32,7 @@ const env = cleanEnv(process.env, {
   EMAIL_USER: str(),
   EMAIL_PASSWORD: str(),
   EMAIL_FROM: str(),
+  TEAM_NAME: str({ default: 'Hivers5 Asteroids' }),
   GOOGLE_CLIENT_ID: str(),
   GOOGLE_CLIENT_SECRET: str(),
   GOOGLE_REDIRECT_URI: str({ default: 'http://localhost:3000/auth/google/callback' })

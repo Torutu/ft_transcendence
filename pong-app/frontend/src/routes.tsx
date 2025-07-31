@@ -13,6 +13,7 @@ const VerifyEmailPage = lazy(() => import('./pages/verify-email'));
 const VerifyTwoFactorPage = lazy(() => import('./pages/verify-2fa'));
 const ResetPasswordPage = lazy(() => import('./pages/reset-password'));
 const TournamentPage = lazy(() => import('./pages/tournament'));
+const ChangePasswordPage = lazy(() => import('./pages/changePassword'));
 const PlayPage = lazy(() => import('./pages/playasguest'));
 
 export const AppRoutes = () => {
@@ -55,6 +56,7 @@ export const AppRoutes = () => {
             <Route path="/verify-2fa" element={<VerifyTwoFactorPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
 						<Route path="/tournament" element={<TournamentPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
 
             
             {/* Protected routes */}

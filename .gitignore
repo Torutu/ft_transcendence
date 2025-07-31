@@ -66,3 +66,7 @@ logs/
 tmp/
 #ignore jsx files
 *.jsx
+# ideally ignore all js files but for now known js files
+pong-app/frontend/src/PingPongGame.js
+pong-app/frontend/src/utils/api.js
+pong-app/frontend/src/utils/auth.js

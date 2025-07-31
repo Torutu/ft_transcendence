@@ -81,8 +81,11 @@ export default function LoginPage() {
       if (response.data.requires2FA) {
         // If 2FA is required, redirect to verification page
         console.log('2FA required, redirecting to verification page');
-        // Store the TOTP URL in localStorage for later use
-        localStorage.setItem('totp_url', response.data.totp_url);
+        if (response.data.totp_url) {
+          // Store the TOTP URL in localStorage for later use
+          localStorage.setItem('totp_url', response.data.totp_url);
+        }
+        
         navigate('/verify-2fa', {
           state: {
             userId: response.data.userId
