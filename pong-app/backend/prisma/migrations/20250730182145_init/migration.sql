@@ -6,8 +6,9 @@ CREATE TABLE "User" (
     "name" TEXT NOT NULL,
     "avatarUrl" TEXT,
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
-    "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false,
     "twoFactorSecret" TEXT,
+    "twoFactorURL" TEXT,
+    "twoFactorRegistered" BOOLEAN NOT NULL DEFAULT false,
     "googleId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -21,6 +22,16 @@ CREATE TABLE "VerificationCode" (
     "usedAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "VerificationCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "PasswordResetToken" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "token" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expiresAt" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PasswordResetToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -48,6 +59,12 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_name_key" ON "User"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PasswordResetToken_userId_key" ON "PasswordResetToken"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_UserFriends_AB_unique" ON "_UserFriends"("A", "B");

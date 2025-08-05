@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
+import api from '../utils/api';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setError(''); // Clear error when typing
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validator.isEmail(email)) {
@@ -20,12 +24,25 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // Simulate API call
-    if (email === 'senthilpoo@gmail.com') {
-      setError('No user found with this email address');
-    } else {
+    setIsLoading(true);
+    try {
+      const response = await api.post('/auth/reset-password', {
+        email
+      });
+
+      console.log("Password reset Response:", response);
+
       setIsSubmitted(true);
       setError('');
+
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      
+      setError(
+          error.response?.data?.message || 'Unable to reset password. Please try later.'
+        );
+    } finally {
+      setIsLoading(false);
     }
   };
 

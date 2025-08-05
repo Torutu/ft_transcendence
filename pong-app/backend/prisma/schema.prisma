@@ -14,8 +14,9 @@ model User {
   name      String  @unique
   avatarUrl String?
   isVerified Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
   twoFactorSecret String?
+  twoFactorURL String?
+  twoFactorRegistered Boolean @default(false)
   googleId String?
 
   // Many-to-many self relation for friends (implicit join table)
@@ -33,6 +34,8 @@ model User {
 
   verificationCodes VerificationCode[]
 
+  passwordResetToken PasswordResetToken?
+
   createdAt DateTime @default(now())
 }
 
@@ -43,6 +46,15 @@ model VerificationCode {
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   usedAt    DateTime? // Add this line
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
   createdAt DateTime @default(now())
 }
 
