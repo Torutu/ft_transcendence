@@ -24,7 +24,7 @@ const env = cleanEnv(process.env, {
   PORT: num({ default: 3000 }),
   DATABASE_URL: str(),
   JWT_SECRET: str(),
-  FRONTEND_URL: str({ default: 'http://localhost:5173' }), // Add this line
+  FRONTEND_URL: str(),
   EMAIL_HOST: str(),
   EMAIL_PORT: str(),
   EMAIL_SECURE: str(),

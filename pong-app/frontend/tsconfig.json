@@ -6,7 +6,9 @@
     "strict": true,
     "jsx": "preserve",
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true, // ✅ Don't emit .js/.jsx files
+    "skipLibCheck": true // ✅ Optional: Speeds up type checking
   },
   "include": ["src"]
 }

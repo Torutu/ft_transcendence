@@ -7,10 +7,17 @@ import authRoutes from './routes/auth';
 import env from './env';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Reference: https://github.com/fastify/fastify/discussions/5297
-const isHttps = fs.existsSync(".../privkey.pem") && fs.existsSync(".../fullchain.pem")
+const baseTlsPath = process.env.TLS_PATH || path.join(__dirname, "../../tls");
+
+const httpsOptions = {
+  key: fs.readFileSync(path.join(baseTlsPath, "key.pem")),
+  cert: fs.readFileSync(path.join(baseTlsPath, "cert.pem")),
+};
 
 // Fastify Initialization with Pino Pretty Logger
 // If you want to use the default logger, you can set `logger: true` instead
@@ -21,27 +28,23 @@ const isHttps = fs.existsSync(".../privkey.pem") && fs.existsSync(".../fullchain
 // Uncomment the following line if you want to use the default logger
 // const app = Fastify({ logger: true });
 
+const logOptions = {
+  level: 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'HH:MM:ss Z',
+      ignore: 'pid,hostname',
+      singleLine: true
+    }
+  }
+}
 
 // Initialize Fastify with custom logger configuration
 const app = Fastify({ 
-  logger: {
-    level: 'info',
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-        singleLine: true
-      }
-    }
-  },
-  ...(isHttps ? {
-    https: {
-      key: fs.readFileSync(".../privkey.pem"),
-      cert: fs.readFileSync(".../fullchain.pem"),
-    },
-  } : null)
+  logger: logOptions,
+  https: httpsOptions
 });
 
 // Register CORS with validated FRONTEND_URL
