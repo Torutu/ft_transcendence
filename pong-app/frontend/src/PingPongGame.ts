@@ -269,8 +269,6 @@ constructor(containerId: string | HTMLElement) {
     this.renderer.dispose();
     }
 
-
-
   private animate(now: number) {
     if (!this.animationRunning) return;
 
