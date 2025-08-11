@@ -29,7 +29,18 @@ services:
     environment:
       - TLS_PATH=/app/tls
     command: npm run dev
- 
-volumes:
-  db:
 
+  ngrok:
+    build: ./ngrok
+    container_name: ngrok
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: ["http", "https://host.docker.internal:5173"]
+    depends_on:
+      - frontend
+    ports:
+      - "4040:4040"
+    networks:
+      - pong-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
