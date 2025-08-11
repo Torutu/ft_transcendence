@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist *.jsx vite.config.js src/*.js src/*.jsx src/*/*.js src/*/*.jsx",
-    "fclean": "rm -rf dist node_modules *.jsx vite.config.js src/*.js src/*.jsx src/*/*.js src/*/*.jsx"
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.5",
