@@ -57,7 +57,6 @@ export const AppRoutes = () => {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
 						<Route path="/tournament" element={<TournamentPage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
-
             
             {/* Protected routes */}
             {/* <Route 
