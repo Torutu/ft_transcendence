@@ -1,205 +1,374 @@
-// src/PingPongGame.ts
 import * as THREE from 'three';
 
-class PingPongGame {
-    private scene!: THREE.Scene;
-    private camera!: THREE.PerspectiveCamera;
-    private renderer!: THREE.WebGLRenderer;
-    private paddle1!: THREE.Mesh;
-    private paddle2!: THREE.Mesh;
-    private ball!: THREE.Mesh;
-    private ballVelocity: THREE.Vector3;
-    private paddleSpeed: number;
-    private ballSpeed: number;
-    private keys: { [key: string]: boolean };
-    private score1: number;
-    private score2: number;
-    private scoreElement: HTMLElement;
-    private container: HTMLElement;
+export default class PingPongGame {
+  private groundEmission = 0.5;
+  private groundColor = 0xffffff;
+  private hitter = 0;
+  private leftPlayer = 'Guest';
+  private rightPlayer = 'Guest';
+  private leftScore = 0;
+  private rightScore = 0;
+  private maxScore = 3;
+  private animationRunning = true;
+  private currentRotationY = 0;
+  private currentLookTarget = new THREE.Vector3(0, 0, 0);
 
-    constructor(container: HTMLElement) {
-        this.container = container;
-        this.keys = {};
-        this.paddleSpeed = 0.2;
-        this.ballSpeed = 0.1;
-        this.ballVelocity = new THREE.Vector3(this.ballSpeed, 0, 0);
+  private container: HTMLDivElement;
+  private scene = new THREE.Scene();
+  private renderer: THREE.WebGLRenderer;
+  private camera: THREE.PerspectiveCamera;
 
-        this.initScene();
-        this.createObjects();
-        this.setupEventListeners();
-        this.score1 = 0;
-        this.score2 = 0;
+  private lineMaterial: THREE.LineBasicMaterial;
+  private gridLines: THREE.Group;
 
-        this.scoreElement = document.createElement('div');
-        this.scoreElement.style.position = 'absolute';
-        this.scoreElement.style.top = '10px';
-        this.scoreElement.style.width = '100%';
-        this.scoreElement.style.textAlign = 'center';
-        this.scoreElement.style.color = 'white';
-        this.scoreElement.style.fontFamily = 'Arial';
-        this.scoreElement.style.fontSize = '24px';
-        this.scoreElement.style.pointerEvents = 'none'; // allows clicks through score overlay
-        this.scoreElement.textContent = 'Player 1: 0 - Player 2: 0';
+  private paddleGeo = new THREE.BoxGeometry(1.5, 0.4, 3);
+  private leftMat = new THREE.MeshStandardMaterial({ color: 0xff6b6b, emissive: 0x331111 });
+  private rightMat = new THREE.MeshStandardMaterial({ color: 0x6b8cff, emissive: 0x112233 });
 
-        // Make sure container is positioned relative so absolute children are positioned correctly
-        const containerStyle = getComputedStyle(this.container);
-        if (containerStyle.position === 'static' || !containerStyle.position) {
-            this.container.style.position = 'relative';
-        }
+  private leftPaddle: THREE.Mesh;
+  private rightPaddle: THREE.Mesh;
 
-        this.container.appendChild(this.scoreElement);
+  private ballGeo = new THREE.SphereGeometry(0.45, 32, 32);
+  private ballMat = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    emissive: 0xffffff,
+    emissiveIntensity: 1.1,
+    roughness: 0.2,
+    metalness: 0.8,
+  });
+  private ball: THREE.Mesh;
 
-        this.animate();
-        this.onWindowResize();  // initial size adjustment
+  private bounds = { x: 9.6, z: 5.6 };
+  private ballVel = new THREE.Vector3(6.0, 0, 3.5);
+  private paddleSpeed = 12;
+  private keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
+
+  private hud: HTMLDivElement;
+  private scoreDisplay: HTMLDivElement;
+  private restartButton: HTMLButtonElement;
+  private timerDisplay: HTMLDivElement;
+
+  private last = performance.now();
+  private gameDuration = 120000;
+  private gameEndTime = performance.now() + this.gameDuration;
+
+constructor(containerId: string | HTMLElement) {
+  if (typeof containerId === 'string') {
+    const el = document.getElementById(containerId);
+    if (!el) throw new Error(`Container with id "${containerId}" not found`);
+    this.container = el as HTMLDivElement;
+  } else if (containerId instanceof HTMLElement) {
+    this.container = containerId as HTMLDivElement;
+  } else {
+    throw new Error('Invalid container argument');
+  }
+    this.animate = this.animate.bind(this);
+
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleKeyUp = this.handleKeyUp.bind(this);
+    this.handleResize = this.handleResize.bind(this);
+
+    // Add event listeners with bound handlers
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('resize', this.handleResize);
+    
+    // Renderer setup
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.container.appendChild(this.renderer.domElement);
+
+    // Camera setup
+    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    this.camera.position.set(0, 20, 10);
+
+    // Lights
+    const hemi = new THREE.HemisphereLight(0xffeebb, 0x080820, 0.9);
+    this.scene.add(hemi);
+    const p1 = new THREE.PointLight(0xff4d4d, 1.2, 50);
+    p1.position.set(10, 8, 6);
+    this.scene.add(p1);
+    const p2 = new THREE.PointLight(0x66ccff, 1.0, 50);
+    p2.position.set(-10, 8, -6);
+    this.scene.add(p2);
+
+    // Ground grid
+    this.lineMaterial = new THREE.LineBasicMaterial({ color: this.groundColor, transparent: true, opacity: this.groundEmission });
+    this.gridLines = new THREE.Group();
+    for (let i = -10; i <= 10; i++) {
+      const geometryH = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-10, 0, i * 0.6),
+        new THREE.Vector3(10, 0, i * 0.6),
+      ]);
+      const lineH = new THREE.Line(geometryH, this.lineMaterial);
+      this.gridLines.add(lineH);
+
+      const geometryV = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(i, 0, -6),
+        new THREE.Vector3(i, 0, 6),
+      ]);
+      const lineV = new THREE.Line(geometryV, this.lineMaterial);
+      this.gridLines.add(lineV);
+    }
+    this.gridLines.position.y = 0.26;
+    this.scene.add(this.gridLines);
+
+    // Paddles
+    this.leftPaddle = new THREE.Mesh(this.paddleGeo, this.leftMat);
+    this.rightPaddle = new THREE.Mesh(this.paddleGeo, this.rightMat);
+    this.leftPaddle.position.set(-8.2, 0.5, 0);
+    this.rightPaddle.position.set(8.2, 0.5, 0);
+    this.scene.add(this.leftPaddle, this.rightPaddle);
+
+    // Ball
+    this.ball = new THREE.Mesh(this.ballGeo, this.ballMat);
+    this.ball.position.set(0, 0.6, 0);
+    this.scene.add(this.ball);
+
+    // HUD
+    this.hud = document.createElement('div');
+    this.hud.className = 'overlay';
+    this.hud.innerHTML = 'W/S: left paddle &nbsp; ArrowUp/Down: right paddle &nbsp; Esc: pause';
+    document.body.appendChild(this.hud);
+
+    // Score Display
+    this.scoreDisplay = document.createElement('div');
+    Object.assign(this.scoreDisplay.style, {
+      position: 'absolute',
+      top: '10px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      color: 'white',
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      userSelect: 'none',
+    });
+    document.body.appendChild(this.scoreDisplay);
+
+    // Restart Button
+    this.restartButton = document.createElement('button');
+    this.restartButton.textContent = 'Restart';
+    Object.assign(this.restartButton.style, {
+      position: 'absolute',
+      top: '50px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      padding: '8px 18px',
+      fontSize: '18px',
+      marginTop: '15px',
+      cursor: 'pointer',
+      display: 'none',
+    });
+    document.body.appendChild(this.restartButton);
+    this.restartButton.addEventListener('click', () => this.resetGame());
+
+    // Timer Display
+    this.timerDisplay = document.createElement('div');
+    Object.assign(this.timerDisplay.style, {
+      position: 'absolute',
+      top: '40px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      color: 'yellow',
+      fontSize: '20px',
+      fontFamily: 'monospace',
+    });
+    document.body.appendChild(this.timerDisplay);
+
+    this.updateScoreDisplay();
+
+    this.last = performance.now();
+    this.gameEndTime = this.last + this.gameDuration;
+
+    this.animate(this.last);
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {
+  if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
+  if (e.key === 'Escape') this.togglePause();
     }
 
-    private initScene(): void {
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x333333);
-
-        // Aspect ratio will be set on resize
-        this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        this.camera.position.set(0, 10, 20);
-        this.camera.lookAt(0, 0, 0);
-
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.container.appendChild(this.renderer.domElement);
-
-        const ambientLight = new THREE.AmbientLight(0x404040);
-        this.scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(1, 1, 1);
-        this.scene.add(directionalLight);
+    private handleKeyUp(e: KeyboardEvent) {
+    if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
     }
 
-    private createObjects(): void {
-        // Table
-        const tableGeometry = new THREE.BoxGeometry(20, 0.5, 10);
-        const tableMaterial = new THREE.MeshPhongMaterial({ color: 0x006600 });
-        const table = new THREE.Mesh(tableGeometry, tableMaterial);
-        table.position.y = -0.25;
-        this.scene.add(table);
-
-        // Net
-        const netGeometry = new THREE.PlaneGeometry(20, 2);
-        const netMaterial = new THREE.MeshPhongMaterial({
-            color: 0xffffff,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.7
-        });
-        const net = new THREE.Mesh(netGeometry, netMaterial);
-        net.rotation.x = Math.PI / 2;
-        this.scene.add(net);
-
-        // Paddles
-        const paddleGeometry = new THREE.BoxGeometry(0.5, 0.5, 2);
-        const paddleMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-
-        this.paddle1 = new THREE.Mesh(paddleGeometry, paddleMaterial);
-        this.paddle1.position.set(-9, 0, 0);
-        this.scene.add(this.paddle1);
-
-        this.paddle2 = new THREE.Mesh(paddleGeometry, paddleMaterial);
-        this.paddle2.position.set(9, 0, 0);
-        this.scene.add(this.paddle2);
-
-        // Ball
-        const ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-        const ballMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 });
-        this.ball = new THREE.Mesh(ballGeometry, ballMaterial);
-        this.resetBall();
-        this.scene.add(this.ball);
+    private handleResize() {
+    this.onResize();
     }
 
-    private setupEventListeners(): void {
-        window.addEventListener('keydown', (e) => this.keys[e.key] = true);
-        window.addEventListener('keyup', (e) => this.keys[e.key] = false);
-        window.addEventListener('resize', () => this.onWindowResize());
+  private updateScoreDisplay() {
+    this.scoreDisplay.textContent = `${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;
+  }
+
+  private resetGame() {
+    this.leftScore = 0;
+    this.rightScore = 0;
+    this.hitter = 0;
+    this.updateScoreDisplay();
+
+    this.ball.position.set(0, 0.6, 0);
+    this.ballVel.set((Math.random() > 0.5 ? 1 : -1) * 6, 0, (Math.random() - 0.5) * 4);
+    this.ball.material.color.set(0xffffff);
+    this.ball.material.emissive.set(0xffffff);
+
+    this.leftPaddle.position.set(-8.2, 0.5, 0);
+    this.rightPaddle.position.set(8.2, 0.5, 0);
+
+    if (!this.animationRunning) {
+      this.animationRunning = true;
+      this.last = performance.now();
+      this.restartButton.style.display = 'none';
+      this.gameEndTime = this.last + this.gameDuration;
+      this.animate(this.last);
+    }
+  }
+
+  private togglePause() {
+    this.animationRunning = !this.animationRunning;
+    if (this.animationRunning) {
+      this.restartButton.style.display = 'none';
+      this.last = performance.now();
+      this.animate(this.last);
+    } else {
+      this.restartButton.style.display = 'block';
+    }
+  }
+
+  private onResize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  private paddleHit(paddle: THREE.Mesh) {
+    const dx = Math.abs(this.ball.position.x - paddle.position.x);
+    const dz = Math.abs(this.ball.position.z - paddle.position.z);
+    return dx < 1.5 && dz < 2.0;
+  }
+
+    dispose() {
+    this.animationRunning = false;
+
+    // Remove renderer DOM element
+    if (this.renderer.domElement.parentNode) {
+        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
     }
 
-    private onWindowResize(): void {
-        const width = this.container.clientWidth;
-        const height = this.container.clientHeight;
-        this.camera.aspect = width / height;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
+    // Remove HUD, Score Display, Timer Display, Restart Button from DOM
+    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton].forEach(el => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    });
+
+    // Remove event listeners
+    window.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('resize', this.handleResize);
+
+    // Dispose three.js renderer
+    this.renderer.dispose();
     }
 
-    private resetBall(): void {
-        this.ball.position.set(0, 0, 0);
-        const angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
-        this.ballVelocity.set(
-            Math.random() > 0.5 ? this.ballSpeed : -this.ballSpeed,
-            0,
-            Math.sin(angle) * this.ballSpeed
-        );
+  private animate(now: number) {
+    if (!this.animationRunning) return;
+
+    const totalSecondsLeft = Math.max(0, Math.floor((this.gameEndTime - now) / 1000));
+    const minutes = String(Math.floor(totalSecondsLeft / 60)).padStart(2, '0');
+    const seconds = String(totalSecondsLeft % 60).padStart(2, '0');
+    this.timerDisplay.textContent = `${minutes}:${seconds}`;
+
+    if (now >= this.gameEndTime) {
+      this.animationRunning = false;
+      if (this.leftScore > this.rightScore) {
+        this.scoreDisplay.textContent = `${this.leftPlayer} Wins!`;
+      } else if (this.rightScore > this.leftScore) {
+        this.scoreDisplay.textContent = `${this.rightPlayer} Wins!`;
+      } else {
+        this.scoreDisplay.textContent = `It's a tie!`;
+      }
+      this.restartButton.style.display = 'block';
+      return;
     }
 
-    private update(): void {
-        // Player 1 controls (W/S)
-        if (this.keys['w'] && this.paddle1.position.z < 3.5) {
-            this.paddle1.position.z += this.paddleSpeed;
-        }
-        if (this.keys['s'] && this.paddle1.position.z > -3.5) {
-            this.paddle1.position.z -= this.paddleSpeed;
-        }
+    const dt = Math.min((now - this.last) / 1000, 0.033);
+    this.last = now;
 
-        // Player 2 controls (up/down arrows)
-        if (this.keys['ArrowUp'] && this.paddle2.position.z < 3.5) {
-            this.paddle2.position.z += this.paddleSpeed;
-        }
-        if (this.keys['ArrowDown'] && this.paddle2.position.z > -3.5) {
-            this.paddle2.position.z -= this.paddleSpeed;
-        }
-
-        this.ball.position.add(this.ballVelocity);
-
-        if (this.ball.position.z > 4 || this.ball.position.z < -4) {
-            this.ballVelocity.z *= -1;
-        }
-
-        if (
-            this.ball.position.x < -8.5 &&
-            this.ball.position.x > -9.5 &&
-            Math.abs(this.ball.position.z - this.paddle1.position.z) < 1.5
-        ) {
-            this.ballVelocity.x *= -1;
-            this.ballVelocity.z = (this.ball.position.z - this.paddle1.position.z) * 0.3;
-        }
-
-        if (
-            this.ball.position.x > 8.5 &&
-            this.ball.position.x < 9.5 &&
-            Math.abs(this.ball.position.z - this.paddle2.position.z) < 1.5
-        ) {
-            this.ballVelocity.x *= -1;
-            this.ballVelocity.z = (this.ball.position.z - this.paddle2.position.z) * 0.3;
-        }
-
-        if (this.ball.position.x < -10) {
-            this.score2++;
-            this.updateScore();
-            this.resetBall();
-        }
-
-        if (this.ball.position.x > 10) {
-            this.score1++;
-            this.updateScore();
-            this.resetBall();
-        }
+    if (this.leftScore >= this.maxScore || this.rightScore >= this.maxScore) {
+      this.scoreDisplay.textContent = `Game Over! ${
+        this.leftScore >= this.maxScore ? `${this.leftPlayer} Wins!` : `${this.rightPlayer} Wins!`
+      }`;
+      this.restartButton.style.display = 'block';
+      this.animationRunning = false;
+      return;
     }
 
-    private updateScore(): void {
-        this.scoreElement.textContent = `Player 1: ${this.score1} - Player 2: ${this.score2}`;
+    // Move paddles
+    if (this.keys.w) this.leftPaddle.position.z -= this.paddleSpeed * dt;
+    if (this.keys.s) this.leftPaddle.position.z += this.paddleSpeed * dt;
+    if (this.keys.ArrowUp) this.rightPaddle.position.z -= this.paddleSpeed * dt;
+    if (this.keys.ArrowDown) this.rightPaddle.position.z += this.paddleSpeed * dt;
+
+    // Clamp paddles
+    this.leftPaddle.position.z = THREE.MathUtils.clamp(this.leftPaddle.position.z, -this.bounds.z, this.bounds.z);
+    this.rightPaddle.position.z = THREE.MathUtils.clamp(this.rightPaddle.position.z, -this.bounds.z, this.bounds.z);
+
+    // Move ball
+    this.ball.position.addScaledVector(this.ballVel, dt);
+
+    // Bounce on table sides (z)
+    if (this.ball.position.z > this.bounds.z || this.ball.position.z < -this.bounds.z) {
+      this.ball.position.z = THREE.MathUtils.clamp(this.ball.position.z, -this.bounds.z, this.bounds.z);
+      this.ballVel.z *= -1;
     }
 
-    private animate(): void {
-        requestAnimationFrame(() => this.animate());
-        this.update();
-        this.renderer.render(this.scene, this.camera);
+    // Paddle collision
+    if (this.paddleHit(this.leftPaddle) && this.ballVel.x < 0) {
+      this.ballVel.x *= -1.05;
+      const deltaZ = (this.ball.position.z - this.leftPaddle.position.z) * 2.0;
+      this.ballVel.z += deltaZ;
+      this.ball.material.color.set(0xff6b6b);
+      this.ball.material.emissive.set(0xff6b6b);
+      this.hitter = 1;
     }
+
+    if (this.paddleHit(this.rightPaddle) && this.ballVel.x > 0) {
+      this.ballVel.x *= -1.05;
+      const deltaZ = (this.ball.position.z - this.rightPaddle.position.z) * 2.0;
+      this.ballVel.z += deltaZ;
+      this.ball.material.color.set(0x6b8cff);
+      this.ball.material.emissive.set(0x6b8cff);
+      this.hitter = 2;
+    }
+
+    // Score and reset
+    if (this.ball.position.x < -this.bounds.x || this.ball.position.x > this.bounds.x) {
+      if (this.ball.position.x < -this.bounds.x && this.hitter != 0) {
+        this.hitter = 0;
+        this.rightScore++;
+      } else if (this.ball.position.x > this.bounds.x && this.hitter != 0) {
+        this.hitter = 0;
+        this.leftScore++;
+      }
+      this.updateScoreDisplay();
+
+      this.ball.position.set(0, 0.6, 0);
+      this.ballVel.set((Math.random() > 0.5 ? 1 : -1) * 6, 0, (Math.random() - 0.5) * 4);
+      this.ball.material.color.set(0xffffff);
+      this.ball.material.emissive.set(0xffffff);
+    }
+
+    // Camera rotation based on ball
+    const targetRotationY = THREE.MathUtils.clamp(this.ball.position.z / this.bounds.z, -0.9, 0.9);
+    const smoothingFactor = 0.1;
+    this.currentRotationY = THREE.MathUtils.lerp(this.currentRotationY, targetRotationY, smoothingFactor);
+    this.camera.rotation.y = this.currentRotationY;
+
+    // Camera look target lerp
+    const targetLookTarget = new THREE.Vector3(this.ball.position.x * 0.1, this.ball.position.y, this.ball.position.z * 0.2);
+    this.currentLookTarget.lerp(targetLookTarget, smoothingFactor);
+    this.camera.lookAt(this.currentLookTarget);
+
+    this.renderer.render(this.scene, this.camera);
+    requestAnimationFrame(this.animate);
+  }
 }
-
-export default PingPongGame;
