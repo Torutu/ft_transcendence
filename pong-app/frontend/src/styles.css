@@ -62,7 +62,7 @@ body {
 
 /********* keyClash *********/
 
-html, body {
+/* html, body {
   font-family: sans-serif;
   text-align: center;
   background: #000000;
@@ -80,8 +80,8 @@ html, body {
 }
 .players-row {
   display: flex;
-  justify-content: center; /* center both players */
-  gap: 2rem; /* spacing between them */
+  justify-content: center; 
+  gap: 2rem; 
 }
 .player {
   border: 2px solid #333333;
@@ -149,4 +149,4 @@ html, body {
   0% { background: #1a1a1a; }
   50% { background: #2a2a2a; }
   100% { background: #1a1a1a; }
-}
+} */
