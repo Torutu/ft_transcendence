@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: process.env.VITE_HOST_IP || '0.0.0.0',
+    allowedHosts: ['fttranscendence.duckdns.org'],
     port: 5173
   },
   resolve: {

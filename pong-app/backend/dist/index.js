@@ -4,7 +4,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { Server } from 'socket.io';
-import fs from 'fs';
+import { setupLobby } from './lobby.js';
+import { setupGame } from './remoteGame.js';
 
 const prisma = new PrismaClient();
 
@@ -18,34 +19,6 @@ const io = new Server(app.server, {
         methods: ['GET', 'POST'],
         credentials: true,
     }
-});
-
-io.on('connection', (socket) => {
-    console.log('Player connected');
-
-    let playerSide = null;
-    if (Object.keys(players).length === 0)
-        playerSide = 'left';
-    else if (Object.keys(players).length === 1)
-        playerSide = 'right';
-    players[socket.id] = playerSide;
-    console.log('player: ', playerSide);
-    console.log('players size: ', Object.keys(players));
-        
-    socket.emit('playerSide', playerSide);
-    socket.emit('stateUpdate', gameState);
-        
-    socket.on('move', (direction, bool) => {
-        if (direction === 'up')
-            gameState.paddles[playerSide].moveUp = bool;
-        else
-            gameState.paddles[playerSide].moveDown = bool;       
-    });
-        
-    socket.on('disconnect', () => {
-        console.log(`Player disconnected:`);
-        delete players[socket.id];
-    });
 });
 
 // Register Prisma plugin
@@ -107,72 +80,8 @@ app.get('/matches/:userId', async (request, reply) => {
     reply.send(matches);
 });
 
-let players = {};
-let gameState = {
-ball: { x: 0, z: 0, vx: 0.1, vz: 0 },
-paddles: { left: { z: 0, moveUp: false, moveDown: false }, 
-            right: { z: 0, moveUp: false, moveDown: false } },
-scores: [0, 0]
-};
-const paddleSpeed = 0.2;
-
-function resetBall() {
-const angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
-const speed = 0.1;
-gameState.ball.x = 0;
-gameState.ball.z = 0;
-gameState.ball.vx = Math.random() > 0.5 ? speed : -speed;
-gameState.ball.vz = Math.sin(angle) * speed;
-}
-
-resetBall();
-
-setInterval(() => {
-    if (Object.keys(players).length < 2) {
-        io.emit('waiting');
-        return;
-    }
-
-    const ball = gameState.ball;
-
-    ball.x += ball.vx;
-    ball.z += ball.vz;
-
-    if (ball.z > 4 || ball.z < -4) {
-        ball.vz *= -1;
-    }
-
-    const left = gameState.paddles.left;
-    const right = gameState.paddles.right;
-
-    if (left.moveUp && left.z > -3.5) left.z -= paddleSpeed;
-    if (left.moveDown && left.z < 3.5) left.z += paddleSpeed;
-    if (right.moveUp && right.z > -3.5) right.z -= paddleSpeed;
-    if (right.moveDown && right.z < 3.5) right.z += paddleSpeed;
-
-    if (ball.x < -8.5 && ball.x > -9.5 && Math.abs(ball.z - left.z) < 1.5) {
-        ball.vx *= -1;
-        ball.vz = (ball.z - left.z) * 0.3;
-    }
-
-    if (ball.x > 8.5 && ball.x < 9.5 && Math.abs(ball.z - right.z) < 1.5) {
-        ball.vx *= -1;
-        ball.vz = (ball.z - right.z) * 0.3;
-    }
-
-    if (ball.x < -10) {
-        gameState.scores[1]++;
-        resetBall();     
-    }
-
-    if (ball.x > 10) {
-        gameState.scores[0]++; 
-        resetBall();     
-    }
-
-    io.emit('stateUpdate', gameState);
-}, 1000 / 60);
-
+setupLobby(io);
+setupGame(io);
 
 // Start the server
 async function start() {

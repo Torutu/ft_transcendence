@@ -12,6 +12,7 @@ import {
     createScoreElement,
     updateScoreDisplay,    
   } from './common/SceneSetup';
+import GameRoom from '../pages/gameRoom';
 
 class LANGame {
     private scene!: THREE.Scene;
@@ -24,11 +25,16 @@ class LANGame {
     private score2: number;
     private scoreElement: HTMLElement;
     private container: HTMLElement;
-    private playerSide: 'left' | 'right' | null = null; 
-    private socket: Socket;
+    private playerSide: 'left' | 'right' | null = null;
+    private player1Name: string = "player 1";
+    private player2Name: string = "player 2";
+    private socket: Socket | null = null;
+    private gameId: string;
+    private listenersSetup = false;
 
-    constructor(container: HTMLElement) {
+    constructor(container: HTMLElement, gameId: string) {
         this.container = container;
+        this.gameId = gameId;
         this.scene = createScene();
         this.camera = createCamera(this.container);
         this.renderer = createRenderer(this.container);
@@ -55,24 +61,44 @@ class LANGame {
         this.score2 = 0;    
         this.scoreElement = createScoreElement(this.container);
 
+        this.animate = this.animate.bind(this);
         this.animate();
         this.onWindowResize();  // initial size adjustment
 
+        this.connect();
+    }
+
+    private connect(){
         const host_ip = import.meta.env.VITE_HOST_IP;
-        this.socket = io(`wss://${host_ip}`, {
+        this.socket = io(`wss://${host_ip}/game`, {
             path: '/socket.io',
             transports: ['websocket'],
             secure: true
         });
+
         this.socket.on('connect', () => {
-            console.log('Connected to server:', this.socket.id);
-          });
+            console.log('Connected to server:', this.socket?.id);
+            const name = prompt("Enter your name:", "Guest");
+            this.socket?.emit('join_game_room', this.gameId, name);
+        });
 
         this.socket.on('playerSide', (side) => {
             this.playerSide = side;
             this.setupEventListeners();
         });
-        
+
+        this.socket.on('playerNames', (players) => {
+            for (const player of Object.values(players))
+            {
+                if (player.side === 'left')
+                    this.player1Name = player.name;
+                else if (player.side === 'right')
+                    this.player2Name = player.name;
+            }
+            // this.player1Name = player1;
+            // this.player2Name = player2;
+        });
+
         this.socket.on('stateUpdate', (state) => {
             this.paddle1.position.z = state.paddles.left.z;
             this.paddle2.position.z = state.paddles.right.z;
@@ -87,16 +113,19 @@ class LANGame {
         });
     }
 
-    private setupEventListeners(): void {  
+    private setupEventListeners(): void {
+        if (this.listenersSetup) return;
+        this.listenersSetup = true;
+
         window.addEventListener('keydown', (e) => {
             if (!this.playerSide) {
                 return;
               }    
             if (e.key === 'w' || e.key === 'ArrowUp') {
-                this.socket.emit('move', 'up', true);
+                this.socket?.emit('move', 'up', true);
             }
             if (e.key === 's' || e.key === 'ArrowDown') {
-                this.socket.emit('move', 'down', true);
+                this.socket?.emit('move', 'down', true);
             }
         });
         window.addEventListener('keyup', (e) => {
@@ -104,10 +133,10 @@ class LANGame {
                 return;
               }            
             if (e.key === 'w' || e.key === 'ArrowUp') {
-                this.socket.emit('move', 'up', false);                
+                this.socket?.emit('move', 'up', false);                
             }
             if (e.key === 's' || e.key === 'ArrowDown') {
-                this.socket.emit('move', 'down', false);
+                this.socket?.emit('move', 'down', false);
             }
         });
         window.addEventListener('resize', () => this.onWindowResize());
@@ -122,12 +151,18 @@ class LANGame {
     }
 
     private updateScore(): void {
-        this.scoreElement.textContent = `Player 1: ${this.score1} - Player 2: ${this.score2}`;
+        // TO DO: get the real playerNames here
+        this.scoreElement.textContent = `${this.player1Name}: ${this.score1} - ${this.player2Name}: ${this.score2}`;
     }
 
     private animate(): void {
-        requestAnimationFrame(() => this.animate());
         this.renderer.render(this.scene, this.camera);
+        requestAnimationFrame(this.animate);
+    }
+
+    public cleanup(): void {
+        this.socket?.disconnect();
+        this.socket = null;
     }
 }
 

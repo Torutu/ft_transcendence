@@ -12,7 +12,7 @@ const GameType: React.FC = () => {
       </Link>
 
       <Link
-        to="/playLAN"
+        to="/lobby"
         className="px-4 py-2 m-2 bg-blue-500 text-white font-bold rounded inline-block text-center"
       >
         LAN game

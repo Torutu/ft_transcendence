@@ -16,8 +16,8 @@ services:
 
   frontend:
     build: ./frontend
-    # expose:
-    #   - '5173'
+    expose:
+      - '5173'
     volumes:
       - ./frontend:/app
       - /app/node_modules
