@@ -1,180 +1,122 @@
+// backend/src/index.ts
 import Fastify from 'fastify';
-import fastifyPlugin from 'fastify-plugin';
 import fastifyCors from '@fastify/cors';
-import fastifyIo from 'fastify-socket.io';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import fastifyPlugin from 'fastify-plugin';
 import { PrismaClient } from '@prisma/client';
+import authRoutes from './routes/auth';
+import env from './env';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from "url";
+import { Server } from 'socket.io';
+import { setupLobby } from './lobby';
+import { setupPongNamespace } from './PongServer';
+import { setupKeyClash } from './KeyClashGame';
 
-const prisma = new PrismaClient();
-const app = Fastify();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-await app.register(fastifyCors, {
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-  credentials: true,
+const baseTlsPath = process.env.TLS_PATH || path.join(__dirname, "../../tls");
+
+const httpsOptions = {
+  key: fs.readFileSync(path.join(baseTlsPath, "key.pem")),
+  cert: fs.readFileSync(path.join(baseTlsPath, "cert.pem")),
+};
+
+// Fastify Initialization with Pino Pretty Logger
+// If you want to use the default logger, you can set `logger: true` instead
+// of providing a custom logger configuration.
+// If you want to disable the logger, set `logger: false`.
+// For production, you might want to use a more robust logging solution.
+// For development, you can use `pino-pretty` for better readability.
+// Uncomment the following line if you want to use the default logger
+// const app = Fastify({ logger: true });
+
+const logOptions = {
+  level: 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'HH:MM:ss Z',
+      ignore: 'pid,hostname',
+      singleLine: true
+    }
+  }
+}
+
+// Initialize Fastify with custom logger configuration
+const app = Fastify({ 
+  logger: logOptions,
+  https: httpsOptions
 });
 
-// Register Prisma plugin
+// Register CORS with validated FRONTEND_URL
+app.register(fastifyCors, {
+  origin: [
+    "https://localhost:5173",
+    "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+});
+
+// Register Prisma and Auth routes
 app.register(fastifyPlugin(async (fastify) => {
+  const prisma = new PrismaClient();
+  await prisma.$connect();
+  
   fastify.decorate('prisma', prisma);
+  fastify.register(authRoutes, { prisma });
+  
   fastify.addHook('onClose', async () => {
     await prisma.$disconnect();
   });
 }));
 
-app.register(fastifyIo, {
+// Health check
+app.get('/health', async () => {
+  return { status: 'OK', timestamp: new Date().toISOString() };
+});
+
+// wrap socket.io server around the fastify server
+const io = new Server(app.server, {
   cors: {
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-});
-
-app.get('/', async () => {
-  return { message: 'Backend running' };
-});
-
-// POST /register
-app.post<{ Body: { email: string; password: string; name?: string } }>('/register', async (request, reply) => {
-  const { email, password, name } = request.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { email, password: hashedPassword, name },
-  });
-  reply.send(user);
-});
-
-// POST /login
-app.post<{ Body: { email: string; password: string } }>('/login', async (request, reply) => {
-  const { email, password } = request.body;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (user && await bcrypt.compare(password, user.password)) {
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '1h' });
-    reply.send({ token });
-  } else {
-    reply.status(401).send({ message: 'Invalid credentials' });
-  }
-});
-
-// PUT /profile
-app.put<{ Body: { userId: string; name?: string; avatarUrl?: string } }>('/profile', async (request, reply) => {
-  const { userId, name, avatarUrl } = request.body;
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { name, avatarUrl },
-  });
-  reply.send(user);
-});
-
-// POST /match
-app.post<{ Body: { player1Id: string; player2Id: string; winnerId: string } }>('/match', async (request, reply) => {
-  const { player1Id, player2Id, winnerId } = request.body;
-  const match = await prisma.match.create({
-    data: { player1Id, player2Id, winnerId },
-  });
-  reply.send(match);
-});
-
-// GET /matches/:userId
-app.get<{ Params: { userId: string } }>('/matches/:userId', async (request, reply) => {
-  const { userId } = request.params;
-  const matches = await prisma.match.findMany({
-    where: {
-      OR: [
-        { player1Id: userId },
-        { player2Id: userId },
+      origin: [
+        "https://localhost:5173",
+        "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
       ],
-    },
-  });
-  reply.send(matches);
+      methods: ['GET', 'POST'],
+      credentials: true,
+  }
 });
 
-let players: { [socketId: string]: 'left' | 'right' } = {};
-let gameState = {
-ball: { x: 0, z: 0, vx: 0.1, vz: 0 },
-paddles: { left: { z: 0 }, right: { z: 0 } },
-scores: [0, 0]
-};
+setupLobby(io);
+setupPongNamespace(io);
+setupKeyClash(io);
 
-function resetBall() {
-const angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
-const speed = 0.1;
-gameState.ball.x = 0;
-gameState.ball.z = 0;
-gameState.ball.vx = Math.random() > 0.5 ? speed : -speed;
-gameState.ball.vz = Math.sin(angle) * speed;
-}
-
-resetBall();
-
-setInterval(() => {
-  const ball = gameState.ball;
-
-  ball.x += ball.vx;
-  ball.z += ball.vz;
-
-  if (ball.z > 4 || ball.z < -4) {
-    ball.vz *= -1;
-  }
-
-  const left = gameState.paddles.left;
-  const right = gameState.paddles.right;
-
-  if (ball.x < -8.5 && ball.x > -9.5 && Math.abs(ball.z - left.z) < 1.5) {
-    ball.vx *= -1;
-    ball.vz = (ball.z - left.z) * 0.3;
-  }
-
-  if (ball.x > 8.5 && ball.x < 9.5 && Math.abs(ball.z - right.z) < 1.5) {
-    ball.vx *= -1;
-    ball.vz = (ball.z - right.z) * 0.3;
-  }
-
-  if (ball.x < -10) {
-    gameState.scores[1]++;
-    resetBall();
-  }
-
-  if (ball.x > 10) {
-    gameState.scores[0]++;
-    resetBall();
-  }
-
-  app.server.emit('stateUpdate', gameState);
-}, 1000 / 60);
-
-async function start() {
+// Start server
+const start = async () => {
   try {
-    await app.ready();
-
-    app.listen({ port: 3000, host: '0.0.0.0'}, () => {
-    console.log('Server running at http://localhost:3000');
+    await app.listen({
+      port: env.PORT,
+      host: '0.0.0.0'
     });
-    app.server.on('connection', socket => {
-      console.log('Player connected');
-      
-        const playerNumber = Object.values(players).includes('left') ? 'right' : 'left';
-        players[0] = playerNumber;
-      
-        socket.emit('playerType', playerNumber);
-        socket.emit('init', gameState);
-      
-        socket.on('move', (direction: string) => {
-          const paddle = gameState.paddles[playerNumber];
-          if (direction === 'up' && paddle.z < 3.5) paddle.z += 0.2;
-          if (direction === 'down' && paddle.z > -3.5) paddle.z -= 0.2;
-        });
-      
-        socket.on('disconnect', () => {
-          console.log(`Player disconnected:`);
-          delete players[0];
-        });
-      });
+    app.log.info(`Server running at ${app.server.address()}`);
   } catch (err) {
-    console.error('Error starting server:', err);
+    app.log.error(err);
     process.exit(1);
   }
-}
+};
+
+// Graceful shutdown
+['SIGINT', 'SIGTERM'].forEach(signal => {
+  process.on(signal, () => {
+    app.close().then(() => {
+      app.log.info('Server closed');
+      process.exit(0);
+    });
+  });
+});
 
 start();

@@ -1,42 +1,47 @@
+networks:
+  pong-network:
+    driver: bridge
 
 services:
   backend:
     build: ./backend
-    expose:
-      - '3000'
+    networks:
+      - pong-network
+    ports:
+      - '3000:3000'
     volumes:
       - ./backend:/app
+      - ./tls:/app/tls
       - /app/node_modules
-      # - certs:/app/certs:ro
     environment:
-      DATABASE_URL: "file:./dev.db"
-    env_file: "./.env"
-    depends_on:
-      - frontend
+      - TLS_PATH=/app/tls
 
   frontend:
     build: ./frontend
-    expose:
-      - '5173'
+    networks:
+      - pong-network
+    ports:
+      - '5173:5173'
     volumes:
       - ./frontend:/app
+      - ./tls:/app/tls
       - /app/node_modules
-      # - certs:/app/certs:ro
-    env_file: "./.env"
+    environment:
+      - TLS_PATH=/app/tls
     command: npm run dev
+    depends_on:
+      - backend
 
-  nginx:
-    build: ./nginx
-    ports:
-      - "443:443"
-    # volumes:
-    #   - certs:/etc/nginx/ssl:ro
-    # env_file: "./backend/.env"
-    env_file: "./.env"
+  ngrok:
+    build: ./ngrok
+    container_name: ngrok
+    environment:
+      - NGROK_AUTHTOKEN=31n4ws6BtctGyeqtvgsJqCfNf6U_53Wz1pUyFLNJaHED1HYaL
+      - VITE_PORT=5173
+      - VITE_HOST=https://frontend
     depends_on:
       - frontend
-      - backend
- 
-volumes:
-  db:
-  # certs: 
+    ports:
+      - "4040:4040"
+    networks:
+      - pong-network
