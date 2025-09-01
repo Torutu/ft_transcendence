@@ -69,3 +69,4 @@ model Match {
   player2 User @relation("Player2Matches", fields: [player2Id], references: [id])
   winner  User @relation("WinnerMatches", fields: [winnerId], references: [id])
 }
+

@@ -1,11 +1,11 @@
+// pong-app/backend/src/routes/auth.ts
+// Authentication routes only
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-// import crypto from 'crypto';
 import { randomBytes } from 'node:crypto';
 import env from '../env';
-import { hashPassword, comparePasswords, generateToken, authenticateUser, verifyToken, generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/auth';
+import { hashPassword, comparePasswords, generateToken, verifyToken, generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/auth';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
-
 import { OAuth2Client } from 'google-auth-library';
 
 // Initialize Google OAuth client
@@ -14,9 +14,11 @@ const oauth2ClientOptions = {
   clientSecret: env.GOOGLE_CLIENT_SECRET,
   redirectUri: env.GOOGLE_REDIRECT_URI
 };
+
 if (!oauth2ClientOptions.clientId || !oauth2ClientOptions.clientSecret || !oauth2ClientOptions.redirectUri) {
   throw new Error('Google OAuth client configuration is missing. Please check your environment variables.');
 }
+
 export const client = new OAuth2Client(oauth2ClientOptions);
 
 interface AuthRoutesOptions {
@@ -33,10 +35,30 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
 
   const generatePasswordResetToken = (): string => {
     return randomBytes(32).toString('hex');
-  }
+  };
+
+  // Helper function to set secure HTTPOnly cookie
+  const setAuthCookie = (reply: FastifyReply, token: string) => {
+    reply.setCookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60, // 1 hour
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined
+    });
+  };
+
+  // Helper function to clear auth cookie
+  const clearAuthCookie = (reply: FastifyReply) => {
+    reply.clearCookie('authToken', {
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined
+    });
+  };
 
   // Login endpoint
-  fastify.post<{ Body: { email: string; password: string } }>(
+  fastify.post<{ Body: { name: string; password: string } }>(
     '/auth/login',
     {
       schema: {
@@ -44,14 +66,13 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           type: 'object',
           required: ['name', 'password'],
           properties: {
-            username: { type: 'string', minLength: 2 },
+            name: { type: 'string', minLength: 2 },
             password: { type: 'string', minLength: 6 }
           }
         }
       }
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      console.log('Request headers:', request.headers);
       const { name, password } = request.body as { name: string; password: string };
 
       try {
@@ -60,7 +81,7 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         if (!user || !user.password) {
           return reply.status(401).send({
             error: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password'
+            message: 'Invalid username or password'
           });
         }
 
@@ -68,7 +89,7 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         if (!passwordMatch) {
           return reply.status(401).send({
             error: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password'
+            message: 'Invalid username or password'
           });
         }
 
@@ -86,7 +107,7 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           });
         }
         
-        const totp_url = user.twoFactorRegistered ? null : user.twoFactorURL
+        const totp_url = user.twoFactorRegistered ? null : user.twoFactorURL;
         return reply.send({
           requires2FA: true,
           userId: user.id,
@@ -144,8 +165,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           });
         }
 
-        console.log("otpauth_url", twoFactorSecret.otpauth_url);
-        
         const user = await prisma.user.create({
           data: { 
             email, 
@@ -188,84 +207,80 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
   );
 
   // Email verification endpoint
-  fastify.post<{ Body: { userId: string; code: string } }>(
-    '/auth/verify-otp',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['userId', 'code'],
-          properties: {
-            userId: { type: 'string' },
-            code: { type: 'string', minLength: 6, maxLength: 6 }
-          }
+fastify.post<{ Body: { userId: string; code: string } }>(
+  '/auth/verify-otp',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['userId', 'code'],
+        properties: {
+          userId: { type: 'string' },
+          code: { type: 'string', minLength: 6, maxLength: 6 }
         }
-      }
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { userId, code } = request.body as { userId: string; code: string };
-
-      try {
-        // Find and validate verification code
-        const verificationCode = await prisma.verificationCode.findFirst({
-          where: {
-            userId,
-            code,
-            expiresAt: { gt: new Date() },
-            usedAt: null
-          }
-        });
-
-        if (!verificationCode) {
-          return reply.status(400).send({
-            error: 'INVALID_CODE',
-            message: 'Invalid or expired verification code'
-          });
-        }
-
-        // Mark code as used
-        // await prisma.verificationCode.update({
-        //   where: { id: verificationCode.id },
-        //   data: { usedAt: new Date() }
-        // });
-
-        await prisma.verificationCode.deleteMany({
-          where: {
-            userId,
-            // usedAt: null,
-            // expiresAt: { lt: new Date() }
-          }
-        });
-
-        // Verify user
-        const user = await prisma.user.update({
-          where: { id: userId },
-          data: { isVerified: true }
-        });
-
-        // Generate JWT token
-        const token = generateToken(user.id);
-
-        return reply.send({
-          success: true,
-          token,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            isVerified: true
-          }
-        });
-
-      } catch (error) {
-        fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'VERIFICATION_FAILED',
-          message: 'Email verification failed. Please try again.'
-        });
       }
     }
-  );
+  },
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    const { userId, code } = request.body as { userId: string; code: string };
+
+    try {
+      // Find and validate verification code
+      const verificationCode = await prisma.verificationCode.findFirst({
+        where: {
+          userId,
+          code,
+          expiresAt: { gt: new Date() },
+          usedAt: null
+        }
+      });
+
+      if (!verificationCode) {
+        return reply.status(400).send({
+          error: 'INVALID_CODE',
+          message: 'Invalid or expired verification code'
+        });
+      }
+
+      await prisma.verificationCode.deleteMany({
+        where: {
+          userId,
+        }
+      });
+
+      // Verify user (set isVerified to true)
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: { isVerified: true }
+      });
+
+      // ⭐⭐ IMPORTANT: DO NOT set auth cookie here ⭐⭐
+      // The user should login normally after email verification
+      // const token = generateToken(user.id);
+      // setAuthCookie(reply, token);
+
+      // Return response with TOTP URL but don't log the user in
+      return reply.send({
+        success: true,
+        message: 'Email verified successfully. Please login to continue.',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isVerified: true
+        },
+        totp_url: user.twoFactorURL
+      });
+
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({
+        error: 'VERIFICATION_FAILED',
+        message: 'Email verification failed. Please try again.'
+      });
+    }
+  }
+);
 
   // Resend verification code endpoint
   fastify.post<{ Body: { userId: string } }>(
@@ -334,89 +349,93 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
     }
   );
 
+
   // Reset Password endpoint
-  fastify.post<{ Body: { email: string; password: string; name: string } }>(
-    '/auth/reset-password',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['email'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-          }
+fastify.post<{ Body: { email: string } }>(
+  '/auth/reset-password',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
         }
-      }
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { email } = request.body as { email: string; };
-
-      try {
-        // Check if user exists
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-          return reply.status(500).send({
-            error: 'INVALID_EMAIL',
-            message: 'Email not registered.'
-          });
-        }
-
-        // Check if email is verified
-        if (!user.isVerified) {
-          return reply.status(503).send({
-            error: 'EMAIL_NOT_VERIFIED',
-            message: 'Please verify your email first',
-            userId: user.id,
-            requiresVerification: true
-          });
-        }
-
-        const resetToken = generatePasswordResetToken();
-        const expiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-        const tokenRecord = await prisma.passwordResetToken.upsert({
-          where: { userId: user.id },  // unique field
-          update: {
-            token: resetToken,
-            expiresAt: expiryDate
-          },
-          create: {
-            token: resetToken,
-            expiresAt: expiryDate,
-            userId: user.id,
-          },
-        });
-
-        fastify.log.info("passwordResetToken upserted.")
-        // const tokenRecord = await prisma.passwordResetToken.create({
-        //   data: {
-        //     token: resetToken,
-        //     expiresAt: expiryDate,
-        //     userId: user.id
-        //   }
-        // });
-
-        const resetLink = `${env.FRONTEND_URL}/change-password?token=${resetToken}`;
-
-        // Send verification email
-        await sendPasswordResetEmail(user.email, resetLink);
-
-        return reply.status(201).send({
-          success: true,
-          message: 'Instructions to reset your password has been sent to the registered email address.',
-        });
-
-      } catch (error) {
-        fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'PASSWORD_RESET_EMAIL_SEND_FAILED',
-          message: 'Unable to reset password. Please try again.'
-        });
       }
     }
-  );
+  },
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    const { email } = request.body as { email: string };
 
-  // change password
-  fastify.post<{ Body: { userId: string; token: string } }>(
+    try {
+      // Check if user exists
+      const user = await prisma.user.findUnique({ where: { email } });
+      
+      // Security: Don't reveal if user exists, return generic message
+      if (!user) {
+        return reply.send({
+          success: true,
+          message: 'If the email exists, a reset link has been sent to the registered email address.'
+        });
+      }
+
+      // ⭐⭐ Prevent Google OAuth users from resetting password
+      if (user.googleId) {
+        return reply.status(400).send({
+          error: 'GOOGLE_OAUTH_USER',
+          message: 'Google OAuth users cannot reset password. Please use Google Sign-In.'
+        });
+      }
+
+      // Check if email is verified
+      if (!user.isVerified) {
+        return reply.status(400).send({
+          error: 'EMAIL_NOT_VERIFIED',
+          message: 'Please verify your email first before resetting password.',
+          userId: user.id,
+          requiresVerification: true
+        });
+      }
+
+      const resetToken = generatePasswordResetToken();
+      const expiryDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      
+      // Create or update password reset token
+      const tokenRecord = await prisma.passwordResetToken.upsert({
+        where: { userId: user.id },
+        update: {
+          token: resetToken,
+          expiresAt: expiryDate
+        },
+        create: {
+          token: resetToken,
+          expiresAt: expiryDate,
+          userId: user.id,
+        },
+      });
+
+      const resetLink = `${env.FRONTEND_URL}/change-password?token=${resetToken}`;
+
+      // Send password reset email using the proper function from email.ts
+      await sendPasswordResetEmail(user.email, resetLink);
+
+      return reply.send({
+        success: true,
+        message: 'Instructions to reset your password has been sent to the registered email address.'
+      });
+
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({
+        error: 'PASSWORD_RESET_EMAIL_SEND_FAILED',
+        message: 'Unable to reset password. Please try again.'
+      });
+    }
+  }
+);
+
+  // Change password endpoint
+  fastify.post<{ Body: { token: string; password: string } }>(
     '/auth/change-password',
     {
       schema: {
@@ -456,7 +475,7 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         await prisma.user.update({
           where: { id: tokenRecord.userId },
           data: { password: hashedPassword }
-        })
+        });
 
         await prisma.passwordResetToken.delete({
           where: {
@@ -479,205 +498,120 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
     }
   );
 
-  // // Login endpoint
-  // fastify.post<{ Body: { email: string; password: string } }>(
-  //   '/auth/login',
-  //   {
-  //     schema: {
-  //       body: {
-  //         type: 'object',
-  //         required: ['email', 'password'],
-  //         properties: {
-  //           email: { type: 'string', format: 'email' },
-  //           password: { type: 'string', minLength: 6 }
-  //         }
-  //       }
-  //     }
-  //   },
-  //   async (request: FastifyRequest, reply: FastifyReply) => {
-  //     console.log('Request body:', request.body);
-  //     console.log('Request headers:', request.headers);
-  //     const { email, password } = request.body as { email: string; password: string };
 
-  //     try {
-  //       const user = await prisma.user.findUnique({ where: { email } });
-        
-  //       if (!user || !user.password) {
-  //         return reply.status(401).send({
-  //           error: 'INVALID_CREDENTIALS',
-  //           message: 'Invalid email or password'
-  //         });
-  //       }
-
-  //       // Check if email is verified
-  //       if (!user.isVerified) {
-  //         return reply.status(403).send({
-  //           error: 'EMAIL_NOT_VERIFIED',
-  //           message: 'Please verify your email first',
-  //           userId: user.id
-  //         });
-  //       }
-
-  //       const passwordMatch = await comparePasswords(password, user.password);
-  //       if (!passwordMatch) {
-  //         return reply.status(401).send({
-  //           error: 'INVALID_CREDENTIALS',
-  //           message: 'Invalid email or password'
-  //         });
-  //       }
-
-  //       // Check if 2FA is enabled
-  //       if (user.twoFactorEnabled) {
-  //         return reply.send({
-  //           requires2FA: true,
-  //           userId: user.id,
-  //           message: '2FA required'
-  //         });
-  //       }
-
-  //       const token = generateToken(user.id);
-  //       return reply.send({
-  //         token,
-  //         user: {
-  //           id: user.id,
-  //           email: user.email,
-  //           name: user.name,
-  //           isVerified: user.isVerified,
-  //           twoFactorEnabled: user.twoFactorEnabled
-  //         }
-  //       });
-
-  //     } catch (error) {
-  //       fastify.log.error(error);
-  //       return reply.status(500).send({
-  //         error: 'LOGIN_FAILED',
-  //         message: 'Login failed. Please try again.'
-  //       });
-  //     }
-  //   }
-  // );
-
-  // 2FA verification endpoint
-  fastify.post<{ Body: { userId: string; token: string } }>(
-    '/auth/verify-2fa',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['userId', 'token'],
-          properties: {
-            userId: { type: 'string' },
-            token: { type: 'string' }
-          }
+// 2FA verification endpoint
+fastify.post<{ Body: { userId: string; token: string } }>(
+  '/auth/verify-2fa',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['userId', 'token'],
+        properties: {
+          userId: { type: 'string' },
+          token: { type: 'string' }
         }
-      }
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { userId, token } = request.body as { userId: string; token: string };
-
-      try {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        
-        if (!user) {
-          console.log("user not found");
-          return reply.status(401).send({
-            error: 'USER_NOT_FOUND',
-            message: 'User not found'
-          });
-        }
-        if (!user.twoFactorSecret) {
-          console.log("twoFactorSecret not found");
-          
-          return reply.status(401).send({
-            error: 'TWOFACTOR_SECRET_NOT_FOUND',
-            message: 'twoFactorSecret not found'
-          });
-        }
-        const base32secret = user.twoFactorSecret;
-
-        // Verify 2FA token (implement your 2FA verification logic)
-        const verified = verifyTwoFactorToken(base32secret, token);
-
-        if (!verified) {
-          console.log("twoFactorSecret verification failed");
-          return reply.status(401).send({
-            error: 'INVALID_2FA_TOKEN',
-            message: 'Invalid 2FA code'
-          });
-        }
-
-        console.log("user.twoFactorRegistered = ", user.twoFactorRegistered);
-        
-        const isTwoFactorRegistered = Boolean(user.twoFactorRegistered);
-        console.log("isTwoFactorRegistered = ", isTwoFactorRegistered);
-
-        if (!isTwoFactorRegistered) {
-          console.log("Updating twoFactorRegistered to true")
-          const updatedUser = await prisma.user.update({
-            where: { id: user.id },
-            data: { twoFactorRegistered: true }
-          });
-          console.log("updatedUser.twoFactorRegistered = ", updatedUser.twoFactorRegistered);
-        }
-        
-        const authToken = generateToken(user.id);
-        return reply.send({
-          token: authToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            isVerified: user.isVerified,
-          }
-        });
-
-      } catch (error) {
-        fastify.log.error(error);
-        return reply.status(500).send({
-          error: '2FA_VERIFICATION_FAILED',
-          message: 'Two-factor authentication failed. Please try again.'
-        });
       }
     }
-  );
+  },
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    const { userId, token } = request.body as { userId: string; token: string };
 
-  // Declare a route
-  fastify.get('/profile', async function handler (request, reply) {
-    // const user = authenticateUser(request, reply);
-    // if (!user) {
-    //   return reply.status(401).send({ message: 'Unauthorized' });
-    // }
-    // // return { hello: 'world' }
-    // return reply.send({
-    //   name: user.name,
-    //   email: user.email 
-    // });
-
-    const token = request.headers.authorization?.split(' ')[1];
-      if (!token) {
-        reply.status(401).send({ message: 'Authentication required' });
-        return null;
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      
+      if (!user) {
+        return reply.status(401).send({
+          error: 'USER_NOT_FOUND',
+          message: 'User not found'
+        });
       }
-    
-      try {
-        const decoded = verifyToken(token) as { userId: string };
-        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-        if (!user) {
-          reply.status(401).send({ message: 'User not found' });
-          return null;
-        }
-        return reply.send({
+
+      if (!user.twoFactorSecret) {
+        return reply.status(401).send({
+          error: 'TWOFACTOR_SECRET_NOT_FOUND',
+          message: 'twoFactorSecret not found'
+        });
+      }
+
+      const base32secret = user.twoFactorSecret;
+      const verified = verifyTwoFactorToken(base32secret, token);
+
+      if (!verified) {
+        return reply.status(401).send({
+          error: 'INVALID_2FA_TOKEN',
+          message: 'Invalid 2FA code'
+        });
+      }
+
+      if (!user.twoFactorRegistered) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { twoFactorRegistered: true }
+        });
+      }
+      
+      const authToken = generateToken(user.id);
+      setAuthCookie(reply, authToken);
+
+      // ⭐⭐ Make sure to return both user data and token ⭐⭐
+      return reply.send({
+        user: {
+          id: user.id,
+          email: user.email,
           name: user.name,
-          email: user.email 
+          isVerified: user.isVerified,
+        },
+        // token: authToken // Include token in response
       });
-      } catch (err) {
-        reply.status(401).send({ message: 'Invalid token' });
-        return null;
+
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({
+        error: '2FA_VERIFICATION_FAILED',
+        message: 'Two-factor authentication failed. Please try again.'
+      });
+    }
+  }
+);
+
+
+  // Profile endpoint
+  fastify.get('/profile', async function handler (request: FastifyRequest, reply: FastifyReply) {
+    const token = request.cookies.authToken;
+    
+    if (!token) {
+      return reply.status(401).send({ message: 'Authentication required' });
+    }
+
+    try {
+      const decoded = verifyToken(token) as { userId: string };
+      const user = await prisma.user.findUnique({ 
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isVerified: true,
+          avatarUrl: true,
+          createdAt: true
+        }
+      });
+      
+      if (!user) {
+        clearAuthCookie(reply);
+        return reply.status(401).send({ message: 'User not found' });
       }
+      
+      return reply.send(user);
+    } catch (err) {
+      clearAuthCookie(reply);
+      return reply.status(401).send({ message: 'Invalid token' });
+    }
   });
-  
+
   // Google OAuth login endpoint
-  fastify.post<{ Body: { userId: string; token: string } }>(
+  fastify.post<{ Body: { credential: string } }>(
     '/auth/signin-with-google',
     {
       schema: {
@@ -692,82 +626,67 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { credential } = request.body as { credential: string };
-    try {
-      // Verify the token
-      const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: env.GOOGLE_CLIENT_ID,
-      });
-      fastify.log.info('Google credential verified successfully');
-      // Get the payload from the ticket
-      if (!ticket) {
-        reply.status(401).send({ success: false, message: 'Invalid Google credential' });
-        return;
-      }
-      fastify.log.info('Google credential ticket:', ticket);
-      // Extract user information from the payload
-      // The payload contains user info: email, name, sub (Google user ID), etc
-      const payload = ticket.getPayload();
+      
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: credential,
+          audience: env.GOOGLE_CLIENT_ID,
+        });
 
-      if (!payload) {
-        reply.status(401).send({ success: false, message: 'Invalid Google credential: payload missing' });
-        return;
-      }
-      fastify.log.info('Google credential payload:', payload);
-      // Check if the payload contains necessary fields
-      if (!payload.email || !payload.name || !payload.sub) {
-        reply.status(400).send({ success: false, message: 'Google credential payload is missing required fields.' });
-        return;
-      }
+        if (!ticket) {
+          return reply.status(401).send({ success: false, message: 'Invalid Google credential' });
+        }
 
-      // payload contains user info: email, name, sub (Google user ID), etc.
-      // Example: Find or create user in your DB
-      // const user = await findOrCreateUser(payload);
-      if (!payload.email) {
-        reply.status(400).send({ success: false, message: 'Google account email is missing.' });
-        return;
-      }
-      var user = await prisma.user.findUnique({ where: { email: payload.email } });
-      if (!user) {
-        // User not found, create a new user
-        fastify.log.info('Creating new user with Google credentials:', payload.email);
-        // Check if email_verified is true
-        if (!payload.email_verified) {
-          reply.status(400).send({ success: false, message: 'Google account email is not verified.' });
-          return;
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email || !payload.name || !payload.sub) {
+          return reply.status(400).send({ success: false, message: 'Invalid Google credential payload' });
         }
-        if (!payload.name) {
-          reply.status(400).send({ success: false, message: 'Google account name is missing.' });
-          return;
+
+        let user = await prisma.user.findUnique({ where: { email: payload.email } });
+        if (!user) {
+          user = await prisma.user.create({
+            data: { 
+              email: payload.email,
+              password: '',
+              name: payload.name,
+              isVerified: payload.email_verified || false,
+              googleId: payload.sub
+            }
+          });
         }
-        // Create a new user if not found
-        user = await prisma.user.create({
-          data: { 
-            email: payload.email,
-            password: '', // No password for Google login
-            name: payload.name,
-            isVerified: payload.email_verified,
-            googleId: payload.sub // Store Google user ID
+
+        const authToken = generateToken(user.id);
+        setAuthCookie(reply, authToken);
+
+        return reply.send({
+          user: {
+            id: user.id,            
+            email: user.email,
+            name: user.name,
+            isVerified: user.isVerified,
           }
         });
+      } catch (err) {
+        fastify.log.error(err);
+        return reply.status(401).send({ success: false, message: 'Invalid Google credential' });
       }
-
-      const authToken = generateToken(user.id);
-      // Respond with success and user info
-      fastify.log.info('User authenticated:', user);
-      return reply.send({
-        token: authToken,
-        user: {
-          id: user.id,            
-          email: user.email,
-          name: user.name,
-          isVerified: user.isVerified,
-        }
-      });
-    } catch (err) {
-      reply.status(401).send({ success: false, message: 'Invalid Google credential' });
-      fastify.log.error(err);
     }
+  );
 
-  });
+  // Logout endpoint
+  fastify.post(
+    '/auth/logout',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      clearAuthCookie(reply);
+      
+      return reply.send({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    }
+  );
 }
+
+
+
+
