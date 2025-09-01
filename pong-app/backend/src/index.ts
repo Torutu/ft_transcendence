@@ -54,7 +54,7 @@ const app = Fastify({
 // Register CORS with validated FRONTEND_URL
 app.register(fastifyCors, {
   origin: [
-    "https://localhost:5173",
+    env.FRONTEND_URL,
     "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -83,7 +83,7 @@ app.get('/health', async () => {
 const io = new Server(app.server, {
   cors: {
       origin: [
-        "https://localhost:5173",
+        env.FRONTEND_URL,
         "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
       ],
       methods: ['GET', 'POST'],

@@ -94,7 +94,7 @@ html, body {
   text-align: center;
 }
 
-#prompt {
+.prompt {
   font-size: 48px;
   margin: 20px 0;
   color: #ffffff;
@@ -108,7 +108,7 @@ html, body {
   opacity: 1;
 }
 
-#score {
+.score {
   font-size: 20px;
   color: #cccccc;
 }
@@ -137,7 +137,7 @@ html, body {
   border-color: #e74c3c;
 }
 
-#prompt {
+.prompt {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
 }
 
