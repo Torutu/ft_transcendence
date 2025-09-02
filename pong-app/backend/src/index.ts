@@ -90,9 +90,8 @@ async function buildServer() {
 
   // Register CORS with credentials
   await server.register(fastifyCors, {
-    origin: [ env.FRONTEND_URL,
-      "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
-    ],
+    origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+              env.FRONTEND_URL ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -109,10 +108,8 @@ async function buildServer() {
   // wrap socket.io server around the fastify server
   const io = new Server(server.server, {
     cors: {
-        origin: [
-          env.FRONTEND_URL,
-          "https://brave-widely-chigger.ngrok-free.app" // domain from ngrok
-        ],
+        origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+                  env.FRONTEND_URL ],
         methods: ['GET', 'POST'],
         credentials: true,
     }

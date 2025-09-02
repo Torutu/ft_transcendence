@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:3000',
+  baseURL: "https://brave-widely-chigger.ngrok-free.app/api" || 'https://localhost:3000',
   withCredentials: true, // Critical for httpOnly cookies with SameSite: strict
   timeout: 10000,
   headers: {

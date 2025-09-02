@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
           secure: false, // Set to true only if using a trusted cert
         },
         '/socket.io': {
-          target: "https://backend:3000",
+          target: env.VITE_API_URL,
           ws: true,
           changeOrigin: true,
           secure: false,
