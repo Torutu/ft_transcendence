@@ -7,6 +7,7 @@ body {
   background-color: #111;
   color: #fff;
   font-family: sans-serif;
+  text-align: center;
   margin: 0;
   padding: 0;
   height: 100vh;
@@ -16,7 +17,7 @@ body {
 
 html, body {
   height: 100%;
-  overflow-y: auto;
+  /* overflow-y: auto; NEED TO FIX THE PONG GAME*/ 
 }
 
 #root {
@@ -69,7 +70,7 @@ body {
 
 /********* keyClash *********/
 
-html, body {
+/* html, body {
   font-family: sans-serif;
   text-align: center;
   background: #000000;
@@ -78,7 +79,7 @@ html, body {
   padding: 20px;
   min-height: 100vh;
   overflow: hidden;
-}
+} */
 
 #game {
   display: flex;

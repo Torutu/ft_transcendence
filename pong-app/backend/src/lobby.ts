@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
-import { playersOnline, pongRooms, keyClashRooms, getLobbyState } from "./gameData"
+import { playersOnline, pongRooms, keyClashRooms, getLobbyState } from "./gameData";
 import PingPongGame from "./PingPongGame";
-import { state } from "./KeyClashGame"
+import { state } from "./KeyClashGame";
 
 export function setupLobby(io: Server) {
     const lobbyNamespace = io.of('/lobby');
@@ -9,12 +9,17 @@ export function setupLobby(io: Server) {
     lobbyNamespace.on("connection", (socket: Socket) => {
       console.log(`Player connected: ${socket.id}`);
 
-      // if registered get the name, else:
-      const playerName =  `Guest-${socket.id.slice(0, 4)}`;
+      socket.on("name", (name: string | null) => {
+        if (name)
+          socket.data.name = name
+        else
+          socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
 
-      playersOnline.push({ id: socket.id, name: playerName });
+        playersOnline.push({ id: socket.id, name: socket.data.name });
 
-      lobbyNamespace.emit("lobby_update", getLobbyState());
+        lobbyNamespace.emit("lobby_update", getLobbyState());        
+      })
+
   
       socket.on("create_game", (game: "pong" | "keyclash", mode: "local" | "remote") => {
         const id = Math.random().toString(36).substring(2, 6);

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Player {
   id: string;
@@ -26,12 +27,20 @@ export default function LobbyPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [pongGames, setPongGames] = useState<PongRoom[]>([]);
   const [keyClashGames, setKeyClashGames] = useState<KeyClashRoom[]>([]);
+  const { user } = useAuth();
+  let name: string | null = null;
 
   useEffect(() => {
     socketRef.current = io("/lobby", {
       path: "/socket.io",
       transports: ["websocket"],
       secure: true
+    });
+
+    socketRef.current.on("connect", () => {
+      if (user)
+        name = user.name;
+      socketRef.current.emit("name", name);
     });
 
     socketRef.current.on("lobby_update", (data) => {
@@ -47,14 +56,14 @@ export default function LobbyPage() {
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-      navigate(`/${game}/${mode}/${gameId}`);
+      navigate(`/${game}/${mode}/${gameId}`, { state: { name: name } });
     });
 
     return () => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [navigate]);
+  }, [user]);
 
   const createLocalPong = () => {
     socketRef.current?.emit("create_game", "pong", "local");

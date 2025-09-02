@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
-import { isAuthenticated } from './utils/auth';
 
 export default class PingPongClient {
   private groundEmission = 0.5;
@@ -56,7 +55,7 @@ export default class PingPongClient {
   private updated: boolean;
   private navigate: NavigateFunction;
 
-  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction) {
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -191,11 +190,11 @@ export default class PingPongClient {
     document.body.appendChild(this.timerDisplay);
 
     this.lastFrame = performance.now();
-    this.connect();
+    this.connect(name);
     this.animate();    
   }
 
-  private connect(){
+  private connect(name: string | null){
     this.socket = io("/pong", {
         path: '/socket.io',
         transports: ['websocket'],
@@ -204,12 +203,9 @@ export default class PingPongClient {
 
     this.socket.on('connect', () => {
         console.log('Connected to server:', this.socket?.id);
-        //TO DO get real name from database
-        let name: string | null;
-        // if (isAuthenticated())
-        //   name = get name?
-        // else:
-        name = prompt("Enter your name:", "Guest");
+
+        if (!name)
+          name = prompt("Enter name for player1:", "Guest");
         let player2: string | null = null;
         if (this.mode === "local")
           player2 = prompt("Enter name for player2:", "Guest");

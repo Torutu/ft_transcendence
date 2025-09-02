@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
                                         mode: "local" | "remote", 
-                                        navigate: NavigateFunction):() => void {
+                                        navigate: NavigateFunction, name: string | null):() => void {
   const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   const wasdKeys = ['w', 'a', 's', 'd'];
 
@@ -45,8 +45,8 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   window.addEventListener("keydown", onKeyDown);
 
   socket.on('connect', () => {
-      //TO DO get real name from database
-      const name = prompt("Enter your name:", "Guest");
+      if (!name)
+        name = prompt("Enter name for player1:", "Guest");
       let player2: string | null = null;
       if (mode === "local")
         player2 = prompt("Enter name for player2:", "Guest");

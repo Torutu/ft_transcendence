@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import PingPongClient from '../PingPongClient';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import KeyClashClient from '../keyClashClient';
 
 const PlayPage: React.FC = () => {
@@ -10,13 +10,15 @@ const PlayPage: React.FC = () => {
   const { mode } = useParams<{ mode: "local" | "remote" }>();
   const { game } = useParams<{ game: "pong" | "keyclash" }>();
   const navigate = useNavigate();
+  const location  = useLocation();
 
   useEffect(() => {
+    const name = location.state.name;
     if (containerRef.current && gameId && mode && game === "pong") {
-      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, navigate);
+      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, navigate, name);
     }
     else if (containerRef.current && gameId && mode && game === "keyclash") {
-      const cleanup = KeyClashClient(containerRef.current, gameId, mode, navigate);
+      const cleanup = KeyClashClient(containerRef.current, gameId, mode, navigate, name);
       return cleanup;
     }
     return () => {
@@ -25,7 +27,7 @@ const PlayPage: React.FC = () => {
         pongInstance.current = null; 
       }
     };
-  }, [gameId, mode, game]);
+  }, [gameId, mode, game, location]);
 
   if (game === "pong")
     return <div ref={containerRef} className="flex-grow relative w-full h-full bg-black" />;
