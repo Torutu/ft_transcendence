@@ -1,3 +1,5 @@
+// pong-app/backend/src/types/fastify.d.ts
+// Custom Fastify types
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
@@ -13,3 +15,4 @@ export interface RequestWithUser extends FastifyRequest {
     email: string;
   };
 }
+

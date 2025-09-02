@@ -1,99 +1,149 @@
-// backend/src/index.ts
-import Fastify from 'fastify';
+// pong-app/backend/src/index.ts
+// Main server entry point
+import fastify, { FastifyInstance } from 'fastify';
+import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
-import fastifyPlugin from 'fastify-plugin';
-import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/auth';
-import env from './env';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from "url";
+import { fileURLToPath } from 'url';
+import env from './env';
+import authRoutes from './routes/auth';
+import { PrismaClient } from '@prisma/client';
 
+// Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const baseTlsPath = process.env.TLS_PATH || path.join(__dirname, "../../tls");
+const prisma = new PrismaClient();
 
-const httpsOptions = {
-  key: fs.readFileSync(path.join(baseTlsPath, "key.pem")),
-  cert: fs.readFileSync(path.join(baseTlsPath, "cert.pem")),
-};
+async function buildServer() {
+  let serverOptions = {};
 
-// Fastify Initialization with Pino Pretty Logger
-// If you want to use the default logger, you can set `logger: true` instead
-// of providing a custom logger configuration.
-// If you want to disable the logger, set `logger: false`.
-// For production, you might want to use a more robust logging solution.
-// For development, you can use `pino-pretty` for better readability.
-// Uncomment the following line if you want to use the default logger
-// const app = Fastify({ logger: true });
+  // Check multiple possible locations for SSL files
+  const possibleSSLDirs = [
+    path.join(__dirname, '../../tls'),      // Mounted volume location
+    path.join(__dirname, '../tls'),         // Alternative location
+    path.join(process.cwd(), 'tls'),        // Current working directory
+    '/app/tls',                             // Absolute path in container
+    '/ssl'                                  // Common SSL directory
+  ];
 
-const logOptions = {
-  level: 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'HH:MM:ss Z',
-      ignore: 'pid,hostname',
-      singleLine: true
+  let certPath = '';
+  let keyPath = '';
+  let sslFilesExist = false;
+
+  // Check all possible locations
+  for (const sslDir of possibleSSLDirs) {
+    const currentCertPath = path.join(sslDir, 'cert.pem');
+    const currentKeyPath = path.join(sslDir, 'key.pem');
+    
+    if (fs.existsSync(currentCertPath) && fs.existsSync(currentKeyPath)) {
+      certPath = currentCertPath;
+      keyPath = currentKeyPath;
+      sslFilesExist = true;
+      console.log(`SSL files found in: ${sslDir}`);
+      break;
     }
+  }
+
+  if (sslFilesExist) {
+    console.log('Configuring server for HTTPS...');
+    console.log(`Certificate path: ${certPath}`);
+    console.log(`Key path: ${keyPath}`);
+    
+    serverOptions = {
+      https: {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      },
+      logger: {
+        level: 'info',
+        transport: {
+          target: 'pino-pretty'
+        }
+      }
+    };
+  } else {
+    console.log('No SSL files found, configuring HTTP...');
+    console.log('Checked directories:', possibleSSLDirs);
+    serverOptions = {
+      logger: {
+        level: 'info',
+        transport: {
+          target: 'pino-pretty'
+        }
+      }
+    };
+  }
+
+  const server: FastifyInstance = fastify(serverOptions);
+
+  // Register cookie plugin
+  await server.register(fastifyCookie, {
+    secret: env.COOKIE_SECRET,
+    hook: 'onRequest'
+  });
+
+  // Register CORS with credentials
+  await server.register(fastifyCors, {
+    origin: [env.FRONTEND_URL],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  });
+
+  // Register routes
+  server.register(authRoutes, { prisma });
+
+  // Health check endpoint
+  server.get('/health', async (request, reply) => {
+    return { status: 'OK', timestamp: new Date().toISOString() };
+  });
+
+  return server;
+}
+
+async function startServer() {
+  try {
+    const server = await buildServer();
+    
+    // Check database connection
+    await prisma.$connect();
+    console.log('Database connected successfully');
+
+    const address = await server.listen({ 
+      port: env.PORT, 
+      host: '0.0.0.0' 
+    });
+    
+    // Simple protocol detection
+    const sslFilesExist = fs.existsSync('/app/tls/cert.pem') && 
+                         fs.existsSync('/app/tls/key.pem');
+    const protocol = sslFilesExist ? 'https' : 'http';
+    
+    console.log(`Server listening at ${protocol}://${address}`);
+    console.log(`Health check available at ${protocol}://${address}/health`);
+    
+  } catch (err) {
+    console.error('Error starting server:', err);
+    process.exit(1);
   }
 }
 
-// Initialize Fastify with custom logger configuration
-const app = Fastify({ 
-  logger: logOptions,
-  https: httpsOptions
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
-// Register CORS with validated FRONTEND_URL
-app.register(fastifyCors, {
-  origin: [env.FRONTEND_URL],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+process.on('SIGTERM', async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
-// Register Prisma and Auth routes
-app.register(fastifyPlugin(async (fastify) => {
-  const prisma = new PrismaClient();
-  await prisma.$connect();
-  
-  fastify.decorate('prisma', prisma);
-  fastify.register(authRoutes, { prisma });
-  
-  fastify.addHook('onClose', async () => {
-    await prisma.$disconnect();
-  });
-}));
+startServer();
 
-// Health check
-app.get('/health', async () => {
-  return { status: 'OK', timestamp: new Date().toISOString() };
-});
 
-// Start server
-const start = async () => {
-  try {
-    await app.listen({
-      port: env.PORT,
-      host: '0.0.0.0'
-    });
-    app.log.info(`Server running at ${app.server.address()}`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-};
 
-// Graceful shutdown
-['SIGINT', 'SIGTERM'].forEach(signal => {
-  process.on(signal, () => {
-    app.close().then(() => {
-      app.log.info('Server closed');
-      process.exit(0);
-    });
-  });
-});
-
-start();

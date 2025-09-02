@@ -1,20 +1,48 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+// frontend/src/routes.tsx
+import { Routes, Route, Navigate } from 'react-router-dom'; 
 import { lazy, Suspense } from 'react';
-import { isAuthenticated } from './utils/auth';
+import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Explicit lazy imports for each page
-const Menu = lazy(() => import('./pages/menu'));
-const LoginPage = lazy(() => import('./pages/login'));
-const RegisterPage = lazy(() => import('./pages/register'));
-const VerifyEmailPage = lazy(() => import('./pages/verify-email'));
-const VerifyTwoFactorPage = lazy(() => import('./pages/verify-2fa'));
-const ResetPasswordPage = lazy(() => import('./pages/reset-password'));
-const TournamentPage = lazy(() => import('./pages/tournament'));
-const ChangePasswordPage = lazy(() => import('./pages/changePassword'));
+const Menu = lazy(() => import('./pages/home'));
+const LoginPage = lazy(() => import('./pages/unauthorised/login'));
+const RegisterPage = lazy(() => import('./pages/unauthorised/register'));
+const VerifyEmailPage = lazy(() => import('./pages/unauthorised/verify-email'));
+const VerifyTwoFactorPage = lazy(() => import('./pages/unauthorised/verify-2fa'));
+const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password'));
+const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
+const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
 const PlayPage = lazy(() => import('./pages/playasguest'));
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return !user ? <>{children}</> : <Navigate to="/tournament" replace />;
+};
 
 export const AppRoutes = () => {
   return (
@@ -37,39 +65,34 @@ export const AppRoutes = () => {
         </div>
       }>
         <Routes>
-          <Route 
-              path="/" 
-              element={
-                isAuthenticated() ? 
-                  <Navigate to="/tournament" replace /> : 
-                  <Menu />
-              } 
-            />
-            
+          <Route path="/" element={<Menu />} />
           <Route path="/play" element={<PlayPage />} />
-          
-          {/* Auth routes with layout */}
+
           <Route element={<Layout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/verify-2fa" element={<VerifyTwoFactorPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-						<Route path="/tournament" element={<TournamentPage />} />
-            <Route path="/change-password" element={<ChangePasswordPage />} />
-            
-            {/* Protected routes */}
-            {/* <Route 
-              path="/tournament" 
-              element={
-                isAuthenticated() ? 
-                  <TournamentPage /> : 
-                  <Navigate to="/login" state={{ from: '/tournament' }} replace />
-              } 
-            /> */}
+            <Route path="/login" element={
+              <PublicRoute><LoginPage /></PublicRoute>
+            } />
+            <Route path="/register" element={
+              <PublicRoute><RegisterPage /></PublicRoute>
+            } />
+            <Route path="/verify-email" element={
+              <PublicRoute><VerifyEmailPage /></PublicRoute>
+            } />
+            <Route path="/verify-2fa" element={
+              <PublicRoute><VerifyTwoFactorPage /></PublicRoute>
+            } />
+            <Route path="/reset-password" element={
+              <PublicRoute><ResetPasswordPage /></PublicRoute>
+            } />
+            <Route path="/change-password" element={
+              <PublicRoute><ChangePasswordPage /></PublicRoute>
+            } />
           </Route>
-          
-          {/* Catch-all route */}
+
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route path="/tournament" element={<TournamentPage />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

@@ -231,6 +231,8 @@ fclean:  ## Full clean: remove containers, volumes, orphans
 	@echo "[$(shell date +%T)] $(RED)[x] Performing full cleanup...$(RESET)"
 	docker compose -f $(COMPOSE_FILE) down -v --remove-orphans
 	docker system prune -f --volumes
+		@rm -rf frontend/node_modules backend/node_modules
+
 	@echo "[$(shell date +%T)] $(CYAN)[✓] Full cleanup completed.$(RESET)"
 
 logs:  ## Follow logs from all services
