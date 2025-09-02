@@ -1,11 +1,10 @@
+// backend/src/utils/email.ts
+// Email utility functions
 import nodemailer from 'nodemailer';
 import env from '../env';
 
 const transporter = nodemailer.createTransport({
-  // host: env.EMAIL_HOST,
-  // port: parseInt(env.EMAIL_PORT),
-  // secure: env.EMAIL_SECURE === 'true',
-  service: env.EMAIL_SERVICE, // e.g., 'gmail', 'outlook', etc.
+  service: env.EMAIL_SERVICE,
   auth: {
     user: env.EMAIL_USER,
     pass: env.EMAIL_PASSWORD

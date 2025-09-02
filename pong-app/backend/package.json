@@ -10,6 +10,7 @@
     "prepare": "npm run build"
   },
   "dependencies": {
+    "@fastify/cookie": "^10.0.1",
     "@fastify/cors": "^11.0.1",
     "@prisma/client": "^6.13.0",
     "bcrypt": "^6.0.0",

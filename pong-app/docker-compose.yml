@@ -9,6 +9,8 @@ services:
       - pong-network
     ports:
       - '3000:3000'
+    env_file:
+      - ./backend/.env  # Load environment variables from file
     volumes:
       - ./backend:/app
       - ./tls:/app/tls
@@ -22,6 +24,8 @@ services:
       - pong-network
     ports:
       - '5173:5173'
+    env_file:
+      - ./frontend/.env  # Load environment variables from file
     volumes:
       - ./frontend:/app
       - ./tls:/app/tls
