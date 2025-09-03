@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import Alert from '../../components/Alert';
 
 export default function VerifyEmailPage() {
   const location = useLocation();
@@ -14,17 +15,23 @@ export default function VerifyEmailPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  // if (!userId || !email) {
-  //   navigate('/register');
-  //   return null;
-  // }
-
-    // Redirect if userId or email missing
+  // ✅ ADD SESSION STORAGE RECOVERY
   useEffect(() => {
-    if (!userId || !email) {
-      navigate('/register');
+    // First check navigation state (immediate use)
+    if (location.state?.userId && location.state?.email) {
+      // Also save to sessionStorage for recovery
+      sessionStorage.setItem('pendingUserId', location.state.userId);
+      sessionStorage.setItem('pendingEmail', location.state.email);
+    } 
+    // If page reloaded, recover from sessionStorage
+    else {
+      const savedUserId = sessionStorage.getItem('pendingUserId');
+      const savedEmail = sessionStorage.getItem('pendingEmail');
+      if (!savedUserId || !savedEmail) {
+        navigate('/register'); // No recovery possible
+      }
     }
-  }, [userId, email, navigate]);
+  }, [location, navigate]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +42,13 @@ export default function VerifyEmailPage() {
 
     setIsLoading(true);
     setError('');
+    setSuccess('');
     try {
-      const response = await api.post('/auth/verify-otp', { userId, code });
+      await api.post('/auth/verify-otp', { userId, code });
+
+      // ✅ CLEANUP: Remove session storage on success
+      sessionStorage.removeItem('pendingUserId');
+      sessionStorage.removeItem('pendingEmail');
 
       navigate('/login', { 
         state: { 
@@ -61,9 +73,7 @@ export default function VerifyEmailPage() {
     setSuccess('');
     try {
       await api.post('/auth/resend-verification', { userId });
-      // setError('');
       setSuccess('A new verification code has been sent to your email');
-      // alert('New verification code sent to your email');
     } catch (error: any) {
       setError(
         error.response?.data?.message || 
@@ -73,6 +83,17 @@ export default function VerifyEmailPage() {
       setIsResending(false);
     }
   };
+
+  // ✅ GET EMAIL FROM STATE OR SESSIONSTORAGE FOR DISPLAY
+  const displayEmail = email || sessionStorage.getItem('pendingEmail');
+
+  if (!userId && !sessionStorage.getItem('pendingUserId')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white">Invalid session. Please try registering again.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -94,14 +115,11 @@ export default function VerifyEmailPage() {
             Verify Your Email
           </h1>
           <p className="text-gray-300 text-center mb-6">
-            We've sent a 6-digit verification code to {email}
+            We've sent a 6-digit verification code to {displayEmail}
           </p>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
-              {error}
-            </div>
-          )}
+          <Alert type="error" message={error} />
+          <Alert type="success" message={success} />
 
           <form onSubmit={handleVerify} className="space-y-4">
             <input
@@ -112,18 +130,19 @@ export default function VerifyEmailPage() {
                 const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setCode(value);
                 setError('');
+                setSuccess('');
               }}
               autoFocus
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition"
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition text-center text-xl tracking-widest"
             />
 
             <button
               type="submit"
               disabled={isLoading || code.length !== 6}
-              className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 transition-transform text-white py-2 px-4 rounded-lg flex justify-center items-center shadow-md"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed active:scale-95 transition-transform text-white py-2 px-4 rounded-lg flex justify-center items-center shadow-md"
             >
               {isLoading ? (
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 'Verify Email'
               )}
@@ -136,7 +155,7 @@ export default function VerifyEmailPage() {
               <button
                 onClick={handleResendCode}
                 disabled={isResending}
-                className="text-base text-blue-400 hover:underline font-medium"
+                className="text-base text-blue-400 hover:underline font-medium disabled:text-gray-400"
               >
                 {isResending ? 'Sending...' : 'Resend Code'}
               </button>

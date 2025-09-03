@@ -207,7 +207,7 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
   );
 
   // Email verification endpoint
-fastify.post<{ Body: { userId: string; code: string } }>(
+  fastify.post<{ Body: { userId: string; code: string } }>(
   '/auth/verify-otp',
   {
     schema: {
@@ -280,7 +280,7 @@ fastify.post<{ Body: { userId: string; code: string } }>(
       });
     }
   }
-);
+  );
 
   // Resend verification code endpoint
   fastify.post<{ Body: { userId: string } }>(
@@ -351,7 +351,7 @@ fastify.post<{ Body: { userId: string; code: string } }>(
 
 
   // Reset Password endpoint
-fastify.post<{ Body: { email: string } }>(
+  fastify.post<{ Body: { email: string } }>(
   '/auth/reset-password',
   {
     schema: {
@@ -432,7 +432,7 @@ fastify.post<{ Body: { email: string } }>(
       });
     }
   }
-);
+  );
 
   // Change password endpoint
   fastify.post<{ Body: { token: string; password: string } }>(
@@ -499,8 +499,8 @@ fastify.post<{ Body: { email: string } }>(
   );
 
 
-// 2FA verification endpoint
-fastify.post<{ Body: { userId: string; token: string } }>(
+ // 2FA verification endpoint
+ fastify.post<{ Body: { userId: string; token: string } }>(
   '/auth/verify-2fa',
   {
     schema: {
@@ -573,7 +573,7 @@ fastify.post<{ Body: { userId: string; token: string } }>(
       });
     }
   }
-);
+ );
 
 
   // Profile endpoint
@@ -685,7 +685,19 @@ fastify.post<{ Body: { userId: string; token: string } }>(
       });
     }
   );
+
+// Add this at the top of your auth routes
+fastify.addHook('preHandler', async (request, reply) => {
+  console.log(`[${new Date().toISOString()}] ${request.method} ${request.url}`);
+  console.log('Headers:', request.headers);
+  console.log('Body:', request.body);
+});
+
+
 }
+
+
+
 
 
 

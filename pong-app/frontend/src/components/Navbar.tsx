@@ -9,8 +9,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  console.log('NAVBAR user:', user);
-
   const handleLogout = async () => {
     if (isLoggingOut) return;
     

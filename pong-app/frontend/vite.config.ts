@@ -30,6 +30,15 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
           secure: false, // Set to true only if using a trusted cert
+          configure: (proxy, options) => {
+            // Additional configuration for HTTPS
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              console.log('Proxying request:', req.method, req.url, 'to', options.target);
+            });
+            proxy.on('error', (err, req, res) => {
+              console.error('Proxy error:', err);
+            });
+          }
         },
       },
     },

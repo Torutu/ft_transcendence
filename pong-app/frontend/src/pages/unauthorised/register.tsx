@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
 import api from '../../utils/api';
+import Alert from '../../components/Alert';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -69,7 +70,10 @@ export default function RegisterPage() {
       });
 
       if (response.data.requiresVerification) {
+        // ✅ BOTH: sessionStorage for recovery + navigation state for immediate use
         sessionStorage.setItem('pendingUserId', response.data.userId);
+        sessionStorage.setItem('pendingEmail', formData.email);
+        
         navigate('/verify-email', { 
           state: { 
             email: formData.email,
@@ -108,7 +112,7 @@ export default function RegisterPage() {
     }
   };
 
-return (
+  return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-900 text-white">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
@@ -138,11 +142,7 @@ return (
           </h1>
           <p className="text-gray-300 text-center mb-6">Join us today</p>
 
-          {errors.form && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
-              {errors.form}
-            </div>
-          )}
+          <Alert type="error" message={errors.form} />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
