@@ -45,7 +45,7 @@ model VerificationCode {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
-  usedAt    DateTime? // Add this line
+  usedAt    DateTime? 
   createdAt DateTime @default(now())
 }
 

@@ -39,7 +39,12 @@ const ChangePasswordPage = () => {
         password: formData.newpassword
       });
       
-      navigate("/login");
+      // navigate("/login");
+      navigate("/login", { 
+        state: { 
+          message: 'Password successfully changed! Please login with your new password.' 
+        } 
+      });
       
     } catch (error: any) {
       setErrors(prev => ({

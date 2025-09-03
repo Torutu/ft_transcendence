@@ -21,7 +21,6 @@ const __dirname = path.dirname(__filename);
 const prisma = new PrismaClient();
 
 async function buildServer() {
-  let serverOptions = {};
 
   // Check multiple possible locations for SSL files
   const possibleSSLDirs = [
@@ -50,12 +49,19 @@ async function buildServer() {
     }
   }
 
-  if (sslFilesExist) {
-    console.log('Configuring server for HTTPS...');
-    console.log(`Certificate path: ${certPath}`);
-    console.log(`Key path: ${keyPath}`);
+  if (!sslFilesExist) {
+    console.error('❌ SSL certificates not found! Server cannot start without HTTPS.');
+    console.error('Checked directories:', possibleSSLDirs);
+    console.error('Please provide SSL certificates in one of these locations:');
+    possibleSSLDirs.forEach(dir => console.error(`- ${dir}`));
+    process.exit(1); // exit instead of falling back to HTTP
+  }
+
+  console.log('🔐 Configuring server for HTTPS...');
+  console.log(`Certificate path: ${certPath}`);
+  console.log(`Key path: ${keyPath}`);
     
-    serverOptions = {
+   const serverOptions = {
       https: {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath),
@@ -67,18 +73,7 @@ async function buildServer() {
         }
       }
     };
-  } else {
-    console.log('No SSL files found, configuring HTTP...');
-    console.log('Checked directories:', possibleSSLDirs);
-    serverOptions = {
-      logger: {
-        level: 'info',
-        transport: {
-          target: 'pino-pretty'
-        }
-      }
-    };
-  }
+  
 
   const server: FastifyInstance = fastify(serverOptions);
 
@@ -101,7 +96,7 @@ async function buildServer() {
   server.register(authRoutes, { prisma });
 
   // Health check endpoint
-  server.get('/health', async (request, reply) => {
+  server.get('/health', async () => {
     return { status: 'OK', timestamp: new Date().toISOString() };
   });
 
@@ -128,23 +123,17 @@ async function startServer() {
     
     // Check database connection
     await prisma.$connect();
-    console.log('Database connected successfully');
+    console.log('✅ Database connected successfully');
 
     const address = await server.listen({ 
       port: env.PORT, 
       host: '0.0.0.0' 
     });
-    
-    // Simple protocol detection
-    const sslFilesExist = fs.existsSync('/app/tls/cert.pem') && 
-                         fs.existsSync('/app/tls/key.pem');
-    const protocol = sslFilesExist ? 'https' : 'http';
-    
-    console.log(`Server listening at ${protocol}://${address}`);
-    console.log(`Health check available at ${protocol}://${address}/health`);
-    
+
+    console.log(`🚀 Server listening securely at ${address}`);
+    console.log(`🩺 Health check available at ${address}/health`);
   } catch (err) {
-    console.error('Error starting server:', err);
+    console.error('❌ Error starting server:', err);
     process.exit(1);
   }
 }

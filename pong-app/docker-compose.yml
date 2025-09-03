@@ -17,6 +17,7 @@ services:
       - /app/node_modules
     environment:
       - TLS_PATH=/app/tls
+      - NODE_TLS_REJECT_UNAUTHORIZED=0  # Allow self-signed certificates for development
 
   frontend:
     build: ./frontend
@@ -32,6 +33,7 @@ services:
       - /app/node_modules
     environment:
       - TLS_PATH=/app/tls
+      - NODE_TLS_REJECT_UNAUTHORIZED=0  # Allow self-signed certificates for development
     command: npm run dev
     depends_on:
       - backend
@@ -45,6 +47,7 @@ services:
       - VITE_HOST=https://frontend
     depends_on:
       - frontend
+      - backend
     ports:
       - "4040:4040"
     networks:
