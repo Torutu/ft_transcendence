@@ -25,13 +25,13 @@ export default function LobbyPage() {
   const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
-  const [pongGames, setPongGames] = useState<PongRoom[]>([]);
-  const [keyClashGames, setKeyClashGames] = useState<KeyClashRoom[]>([]);
+  const [pongTournaments, setPongTournaments] = useState<PongRoom[]>([]);
+  const [keyClashTournaments, setKeyClashTournaments] = useState<KeyClashRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
 
   useEffect(() => {
-    socketRef.current = io("/lobby", {
+    socketRef.current = io("/tournament_lobby", {
       path: "/socket.io",
       transports: ["websocket"],
       secure: true
@@ -45,8 +45,8 @@ export default function LobbyPage() {
 
     socketRef.current.on("lobby_update", (data) => {
       setPlayers(data.players);
-      setPongGames(data.pongGames);
-      setKeyClashGames(data.keyClashGames)
+      setPongTournaments(data.pongGames);
+      setKeyClashTournaments(data.keyClashGames)
     });
 
     socketRef.current.on("created_game", (gameId, game, mode) => {
@@ -56,7 +56,7 @@ export default function LobbyPage() {
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	  const type = "1v1";
+	  const type = "tournament";
       navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name } });
     });
 
@@ -88,14 +88,14 @@ export default function LobbyPage() {
 
   return (
     <div style={{ padding: "1rem" }}>
-      <h2>Players in Lobby ({players.length})</h2>
+      <h2>Players in Tournament Lobby ({players.length})</h2>
       <ul>
         {players.map(p => <li key={p.id}>{p.name}</li>)}
       </ul>
 
-      <h2>Pong Games</h2>
+      <h2>Pong Tournaments</h2>
       <ul>
-        {pongGames.map(game => (
+        {pongTournaments.map(game => (
           <li
             key={game.id}
             style={{
@@ -108,23 +108,23 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "pong", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {game.players.length} players  — {game.status}
+            <strong>Tournament-{game.id}</strong> — {game.players.length} players  — {game.status}
             <ul>
               {game.players.map(p => <li key={p.id}>{p.name}</li>)}
             </ul>
           </li>
         ))}
         <ul>
-          <button onClick={createLocalPong}>Create New Local Pong Game</button>
+          <button onClick={createLocalPong}>Create New Local Pong Tournament</button>
         </ul>
         <ul>
-          <button onClick={createRemotePong}>Create New Remote Pong Game</button> 
+          <button onClick={createRemotePong}>Join A Remote Pong Tournament</button> 
         </ul>
       </ul>
 
-      <h2>Key Clash Games</h2>
+      <h2>Key Clash Tournaments</h2>
       <ul>
-        {keyClashGames.map(game => (
+        {keyClashTournaments.map(game => (
           <li
             key={game.id}
             style={{
@@ -137,18 +137,20 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {Object.keys(game.players).length} players — {game.status}
+            <strong>Tournament-{game.id}</strong> — {Object.keys(game.players).length} players — {game.status}
             <ul>
               <li>{game.p1}</li>
               <li>{game.p2}</li>
+              <li>{game.p3}</li>
+              <li>{game.p4}</li>
             </ul>
           </li>
         ))}      
         <ul>
-        <button onClick={createLocalKeyClash}>Create New Local Key Clash Game</button>
+        <button onClick={createLocalKeyClash}>Create New Local Key Clash Tournament</button>
         </ul>
         <ul>
-          <button onClick={createRemoteKeyClash}>Create New Remote Key Clash Game</button> 
+          <button onClick={createRemoteKeyClash}>Join A Remote Key Clash Tournament</button> 
         </ul>                     
       </ul>
     </div>

@@ -16,6 +16,7 @@ const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
 const PlayPage = lazy(() => import('./pages/playPage'));
 const LobbyPage = lazy(() => import('./pages/lobby'));
+const TournamentLobbyPage = lazy(() => import('./pages/tournament_lobby'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -91,7 +92,10 @@ export const AppRoutes = () => {
             <Route path="/lobby" element={
               <LobbyPage/>
             } />
-            <Route path="/:game/:mode/:gameId" element={
+            <Route path="/tournament_lobby" element={
+              <TournamentLobbyPage/>
+            } />			
+            <Route path="/:game/:mode/:type/:gameId" element={
               <PlayPage />
             } />
           </Route>

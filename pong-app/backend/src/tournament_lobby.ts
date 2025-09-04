@@ -1,12 +1,12 @@
 import { Server, Socket } from "socket.io";
-import { playersOnline, pongRooms, keyClashRooms, getLobbyState } from "./gameData";
+import { playersOnlineTournament, pongTournaments, keyClashTournaments, getTournamentLobbyState } from "./gameData";
 import PingPongGame from "./PingPongGame";
 import { state } from "./KeyClashGame";
 
-export function setupLobby(io: Server) {
-    const lobbyNamespace = io.of('/lobby');
+export function setupTournamentLobby(io: Server) {
+    const tournamentLobbyNamespace = io.of('/tournament_lobby');
 
-    lobbyNamespace.on("connection", (socket: Socket) => {
+    tournamentLobbyNamespace.on("connection", (socket: Socket) => {
       console.log(`Player connected: ${socket.id}`);
 
       socket.on("name", (name: string | null) => {
@@ -15,16 +15,16 @@ export function setupLobby(io: Server) {
         else
           socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
 
-        playersOnline.push({ id: socket.id, name: socket.data.name });
+        playersOnlineTournament.push({ id: socket.id, name: socket.data.name });
 
-        lobbyNamespace.emit("lobby_update", getLobbyState());        
+        tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());        
       })
 
   
       socket.on("create_game", (game: "pong" | "keyclash", mode: "local" | "remote") => {
         const id = Math.random().toString(36).substring(2, 6);
 
-        if (game === "pong") pongRooms.push(new PingPongGame(id, mode, "1v1"));
+        if (game === "pong") pongTournaments.push(new PingPongGame(id, mode, "tournament"));
         else {
           let newKeyClash: state = {
             id: id,
@@ -40,29 +40,29 @@ export function setupLobby(io: Server) {
             p2: undefined,
             status: "waiting",
             mode: mode,
-			type: "1v1"
+			type: "tournament"
           }
-          keyClashRooms.push(newKeyClash);
+          keyClashTournaments.push(newKeyClash);
         }
         socket.emit("created_game", id, game, mode);
       });
   
       socket.on("join_game", (gameId, game, mode, callback) => {
         if (game === "pong") { 
-          const gameRoom = pongRooms.find(g => g.getId() === gameId); 
+          const gameRoom = pongTournaments.find(g => g.getId() === gameId); 
           if (!gameRoom) return callback({ error: "Game not found" });
           if (gameRoom.state.status !== "waiting") return callback({ error: "Game already started" });                
         }
         else { 
-          const gameRoom = keyClashRooms.find(g => g.id === gameId);
+          const gameRoom = keyClashTournaments.find(g => g.id === gameId);
           if (!gameRoom) return callback({ error: "Game not found" });
           if (gameRoom.status !== "waiting") return callback({ error: "Game already started" });          
         } 
-        // remove player from list of players in lobby
-        const i = playersOnline.findIndex(p => p.id === socket.id);
-        if (i !== -1) playersOnline.splice(i, 1);
+        // remove player from list of players in tournamentLobby
+        const i = playersOnlineTournament.findIndex(p => p.id === socket.id);
+        if (i !== -1) playersOnlineTournament.splice(i, 1);
 
-        lobbyNamespace.emit("lobby_update", getLobbyState());        
+        tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());        
 
         socket.emit("joined_game", gameId, game, mode);
       });
@@ -70,10 +70,10 @@ export function setupLobby(io: Server) {
       socket.on("disconnect", () => {
         console.log(`Player disconnected: ${socket.id}`);
 
-        const player = playersOnline.findIndex(p => p.id === socket.id);
-        if (player !== -1) playersOnline.splice(player, 1);
+        const player = playersOnlineTournament.findIndex(p => p.id === socket.id);
+        if (player !== -1) playersOnlineTournament.splice(player, 1);
   
-        lobbyNamespace.emit("lobby_update", getLobbyState());
+        tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
       });
     });
   }

@@ -51,11 +51,17 @@ export default class PingPongClient {
   private gameId: string;
   private playerSide: "left" | "right" | null = null;
   private mode: "local" | "remote" | undefined;
+  private type: "1v1" | "tournament";
   private status: "waiting" | "in-progress" | "finished" | "paused" = "waiting";
   private updated: boolean;
   private navigate: NavigateFunction;
+  private players: { player1: string | null,
+				player2: string | null,
+				player3: string | null,
+				player4: string | null
+			}
 
-  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null) {
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", type: "1v1" | "tournament", navigate: NavigateFunction, name: string | null) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -66,8 +72,10 @@ export default class PingPongClient {
       throw new Error('Invalid container argument');
     }
 
+	this.players = { player1: null, player2: null, player3: null, player4: null};
     this.gameId = gameId;
     this.mode = mode;
+	this.type = type;
     this.updated = false;
 
     this.navigate = navigate;
@@ -204,17 +212,36 @@ export default class PingPongClient {
     this.socket.on('connect', () => {
         console.log('Connected to server:', this.socket?.id);
 
-        if (!name)
-          name = prompt("Enter name for player1:", "Guest");
-        let player2: string | null = null;
-        if (this.mode === "local")
-          player2 = prompt("Enter name for player2:", "Guest");
-        this.socket?.emit('join_game_room', this.gameId, name, player2, (callback: { error: string }) => {
-          if (callback.error) {
-            alert(callback.error);          
-            this.navigate("/lobby");
-          }
-        });         
+		if (this.type === "1v1") {
+			if (!name)
+				name = prompt("Enter name for player1:", "Guest");
+			let player2: string | null = null;
+			if (this.mode === "local")
+				player2 = prompt("Enter name for player2:", "Guest");
+			this.socket?.emit('join_game_room', this.gameId, name, player2, (callback: { error: string }) => {
+				if (callback.error) {
+					alert(callback.error);       
+					this.navigate("/lobby");
+				}
+			});
+		}
+		else if (this.type === "tournament")
+		{
+			if (!name)
+				name = prompt("Enter name for player1:", "Guest");
+			this.players.player1 = name;
+			if (this.mode === "local") {
+				this.players.player2 = prompt("Enter name for player2:", "Guest");
+				this.players.player3 = prompt("Enter name for player3:", "Guest");
+				this.players.player4 = prompt("Enter name for player4:", "Guest");			
+			}
+			this.socket?.emit('join_tournament_room', this.gameId, this.players, (callback: { error: string }) => {
+				if (callback.error) {
+					alert(callback.error);
+					this.navigate("tournament_lobby");
+				}
+			});			
+		}    
     });
 
     this.socket.on('playerSide', (side) => {

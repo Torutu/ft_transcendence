@@ -7,8 +7,10 @@ export interface GameState {
     loop: NodeJS.Timeout | undefined;
     timerDisplay: string;
     scoreDisplay: string;
-    players: { id: string | null, name: string | undefined, side: "left" | "right" }[];
+    players: { id: string | null, name: string | undefined, side: "left" | "right" | null }[];
     mode: "local" | "remote";
+	type: "1v1" | "tournament";
+	round: number;
     gameEndTime: DOMHighResTimeStamp;
     whenPaused: DOMHighResTimeStamp;
   }
@@ -22,12 +24,11 @@ export default class PingPongGame {
     private rightScore: number = 0;
     private maxScore = 3;
     private bounds = { x: 9.6, z: 5.6 };
-    // private paddleSpeed = 12;
     private gameDuration = 120000;
     private last: DOMHighResTimeStamp;
     private id: string;
 
-    constructor(id: string, mode: "local" | "remote") {
+    constructor(id: string, mode: "local" | "remote", type: "1v1" | "tournament") {
         this.id = id;
         this.last = performance.now(),     
         this.state = {
@@ -35,25 +36,35 @@ export default class PingPongGame {
             leftPaddle: { x: -8.2, z: 0 },
             rightPaddle: { x: 8.2, z: 0 },
             status: "waiting",
-            // keys: { w: false, s: false, ArrowUp: false, ArrowDown: false },
             loop: undefined,
             timerDisplay: "",
             scoreDisplay: "waiting for opponent...",
             players: [],
             mode: mode,
+			type: type,
+			round: 1,
             gameEndTime: performance.now() + this.gameDuration,
             whenPaused: performance.now()
         };
     }
 
     public getId() { return (this.id); };
-    public setPlayer(side: "left" | "right", name: string | undefined, id: string | null){
+    public setPlayer(side: "left" | "right" | null, name: string | undefined, id: string | null){
         if (side === "left")
             this.leftPlayer = name?.substring(0, 10);
         else if (side === "right")
             this.rightPlayer = name?.substring(0, 10);
         this.state.players.push({ id: id, name: name, side: side });
     };
+	public updatePlayers() {
+		for (let i = 0; i < this.state.players.length ; i++) {
+			let player = this.state.players[i];
+			if (player.side === "left")
+            	this.leftPlayer = player.name?.substring(0, 10);
+        	else if (player.side === "right")
+            	this.rightPlayer = player.name?.substring(0, 10);			
+		}
+	};
     public getLeftPlayer() { return (this.leftPlayer) };
     public getRightPlayer() { return (this.rightPlayer) };    
 
@@ -108,22 +119,6 @@ export default class PingPongGame {
             this.state.status = "finished";
             return;
         }
-    
-        // Move paddles
-        // if (this.state.keys.w) this.state.leftPaddle.z -= this.paddleSpeed * dt;
-        // if (this.state.keys.s) this.state.leftPaddle.z += this.paddleSpeed * dt;
-        // if (this.state.keys.ArrowUp) this.state.rightPaddle.z -= this.paddleSpeed * dt;
-        // if (this.state.keys.ArrowDown) this.state.rightPaddle.z += this.paddleSpeed * dt;
-
-        // // Clamp paddles
-        // if (this.state.leftPaddle.z < -this.bounds.z)
-        //     this.state.leftPaddle.z = -this.bounds.z;
-        // else if (this.state.leftPaddle.z > this.bounds.z)
-        //     this.state.leftPaddle.z = this.bounds.z;
-        // if (this.state.rightPaddle.z < -this.bounds.z)
-        //     this.state.rightPaddle.z = -this.bounds.z;
-        // else if (this.state.rightPaddle.z > this.bounds.z)
-        //     this.state.rightPaddle.z = this.bounds.z;
 
         // Move ball
         this.state.ball.z += (this.state.ball.vz * dt);

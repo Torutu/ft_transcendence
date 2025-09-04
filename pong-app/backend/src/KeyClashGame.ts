@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { keyClashRooms, getLobbyState } from "./gameData.js";
+import { keyClashRooms, getLobbyState, keyClashTournaments, getTournamentLobbyState } from "./gameData.js";
 
 export interface state {
     id: string,
@@ -14,7 +14,8 @@ export interface state {
     p1: string | undefined,
     p2: string | undefined,
     status: "waiting" | "starting" | "in-progress" | "finished",
-    mode: "local" | "remote"
+    mode: "local" | "remote",
+	type: "1v1" | "tournament"
 }
 
 function getPublicState(state: state) {
@@ -34,7 +35,8 @@ function getPublicState(state: state) {
       timeLeft: state.timeLeft,
       players: state.players,
       status: state.status,
-      mode: state.mode
+      mode: state.mode,
+	  type: state.type
     };
 }
 
@@ -49,15 +51,25 @@ export function setupKeyClash(io: Server) {
 
     const keyClash = io.of("/keyclash");
     const lobby = io.of("/lobby");
+	const tournament_lobby = io.of("tournament_lobby");
 
     keyClash.on("connection", (socket) => {
         console.log(`Player connected on key clash: ${socket.id}`);
 
-        socket.on("join_game_room", (roomId, mode, name, player2, callback) => {
-            const roomState = keyClashRooms.find(r => r.id === roomId);
-            if (!roomState) {
-                return callback({ error: "Can't find the key clash game room!" });
-            }          
+        socket.on("join_game_room", (roomId, mode, type, name, player2, callback) => {
+			let roomState: state | undefined;
+			if (type === "1v1") {
+				roomState = keyClashRooms.find(r => r.id === roomId);
+				if (!roomState) {
+					return callback({ error: "Can't find the key clash game room!" });
+				}
+			}
+			else {
+				roomState = keyClashTournaments.find(r => r.id === roomId);
+				if (!roomState) {
+					return callback({ error: "Can't find the key clash tournament!" });
+				}				
+			}
             const state = roomState;            
             if (state.status !== "waiting") {
                 return callback({ error: "The game is full!" });
@@ -91,7 +103,10 @@ export function setupKeyClash(io: Server) {
             else
                 state.status = "starting";
 
-            lobby.emit("lobby_update", getLobbyState());
+			if (type === "1v1")
+            	lobby.emit("lobby_update", getLobbyState());
+			else
+				tournament_lobby.emit("lobby_update", getTournamentLobbyState());
             keyClash.to(roomId).emit("gameState", getPublicState(state));
 
             socket.on("setReady", () => {
@@ -100,7 +115,10 @@ export function setupKeyClash(io: Server) {
                     return startGame();
                 if (state.status === "finished"){
                     state.status = "starting";
-                    lobby.emit("lobby_update", getLobbyState());
+					if (type === "1v1")
+						lobby.emit("lobby_update", getLobbyState());
+					else
+						tournament_lobby.emit("lobby_update", getTournamentLobbyState());
                 }
                 if (playerNum === 1) { state.player1ready = true; }
                 else { state.player2ready = true; }
@@ -116,7 +134,10 @@ export function setupKeyClash(io: Server) {
                 if (state.status === "in-progress") return; // game already running
 
                 state.status = "in-progress";
-                lobby.emit("lobby_update", getLobbyState());
+				if (type === "1v1")
+					lobby.emit("lobby_update", getLobbyState());
+				else
+					tournament_lobby.emit("lobby_update", getTournamentLobbyState());
                 state.score1 = 0;
                 state.score2 = 0;
                 state.timeLeft = 20;
@@ -129,7 +150,10 @@ export function setupKeyClash(io: Server) {
                         clearInterval(state.interval);
                         state.interval = null;
                         state.status = "finished";
-                        lobby.emit("lobby_update", getLobbyState());
+						if (type === "1v1")
+							lobby.emit("lobby_update", getLobbyState());
+						else
+							tournament_lobby.emit("lobby_update", getTournamentLobbyState());
                         keyClash.to(roomId).emit("gameOver", getPublicState(state));
                         state.player1ready = false;
                         state.player2ready = false;
@@ -190,9 +214,11 @@ export function setupKeyClash(io: Server) {
         socket.on("disconnect", () => {
             console.log(`Player disconnected from key clash: ${socket.id}`);            
             if (!socket.data.roomId) return;
-            const game = keyClashRooms.find(g => g.id === socket.data.roomId);
+            let game = keyClashRooms.find(g => g.id === socket.data.roomId);
+            if (!game)
+				game = keyClashTournaments.find(g => g.id === socket.data.roomId);
             if (!game) return;
-            
+			
             if (socket.id in game.players) {
                 if (game.players[socket.id] === 1)
                     game.p1 = undefined;
@@ -210,12 +236,22 @@ export function setupKeyClash(io: Server) {
                 game.player2ready = false;
                 keyClash.to(socket.data.roomId).emit("waiting");
             }
-            lobby.emit("lobby_update", getLobbyState());
+			if (game.type === "1v1")
+            	lobby.emit("lobby_update", getLobbyState());
+			else
+				tournament_lobby.emit("lobby_update", getTournamentLobbyState());
     
             if (Object.keys(game.players).length === 0 || game.mode === "local") {
-                const i = keyClashRooms.findIndex(g => g.id === socket.data.roomId);
-                if (i !== -1) keyClashRooms.splice(i, 1);
-                lobby.emit('lobby_update', getLobbyState());
+				if (game.type === "1v1") {
+                	const i = keyClashRooms.findIndex(g => g.id === socket.data.roomId);
+					if (i !== -1) keyClashRooms.splice(i, 1);
+					lobby.emit("lobby_update", getLobbyState());
+				}
+				else {
+                	const i = keyClashTournaments.findIndex(g => g.id === socket.data.roomId);
+					if (i !== -1) keyClashTournaments.splice(i, 1);
+					tournament_lobby.emit("lobby_update", getTournamentLobbyState());								
+				}
             }
         });
     });

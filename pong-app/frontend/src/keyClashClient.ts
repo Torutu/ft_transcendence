@@ -2,7 +2,7 @@ import { NavigateFunction } from "react-router-dom";
 import { io } from "socket.io-client";
 
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
-                                        mode: "local" | "remote", 
+                                        mode: "local" | "remote", type: "1v1" | "tournament",
                                         navigate: NavigateFunction, name: string | null):() => void {
   const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   const wasdKeys = ['w', 'a', 's', 'd'];
@@ -50,10 +50,13 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       let player2: string | null = null;
       if (mode === "local")
         player2 = prompt("Enter name for player2:", "Guest");
-      socket.emit('join_game_room', gameId, mode, name, player2, (callback: { error: string }) => {
+      socket.emit('join_game_room', gameId, mode, type, name, player2, (callback: { error: string }) => {
         if (callback.error) {
-          alert(callback.error);          
-          navigate("/lobby");
+          alert(callback.error);
+		  if (type === "1v1")         
+          	navigate("/lobby");
+		  else
+			navigate("tournament_lobby");
         }
       });
   });

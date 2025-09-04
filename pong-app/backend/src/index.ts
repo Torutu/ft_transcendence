@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { Server } from 'socket.io';
 import { setupLobby } from './lobby';
+import { setupTournamentLobby } from './tournament_lobby';
 import { setupPongNamespace } from './PongServer';
 import { setupKeyClash } from './KeyClashGame';
 import { fileURLToPath } from 'url';
@@ -111,6 +112,7 @@ async function buildServer() {
   });
 
   setupLobby(io);
+  setupTournamentLobby(io);
   setupPongNamespace(io);
   setupKeyClash(io);
 

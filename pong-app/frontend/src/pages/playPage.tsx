@@ -9,16 +9,17 @@ const PlayPage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { mode } = useParams<{ mode: "local" | "remote" }>();
   const { game } = useParams<{ game: "pong" | "keyclash" }>();
+  const { type } = useParams<{ type: "1v1" | "tournament" }>(); 
   const navigate = useNavigate();
   const location  = useLocation();
 
   useEffect(() => {
     const name = location.state.name;
-    if (containerRef.current && gameId && mode && game === "pong") {
-      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, navigate, name);
+    if (containerRef.current && gameId && mode && type && game === "pong") {
+      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name);
     }
-    else if (containerRef.current && gameId && mode && game === "keyclash") {
-      const cleanup = KeyClashClient(containerRef.current, gameId, mode, navigate, name);
+    else if (containerRef.current && gameId && mode && type && game === "keyclash") {
+      const cleanup = KeyClashClient(containerRef.current, gameId, mode, type, navigate, name);
       return cleanup;
     }
     return () => {
@@ -27,7 +28,7 @@ const PlayPage: React.FC = () => {
         pongInstance.current = null; 
       }
     };
-  }, [gameId, mode, game, location]);
+  }, [gameId, mode, game, type, location]);
 
   if (game === "pong")
     return <div ref={containerRef} className="flex-grow relative w-full h-full bg-black" />;
