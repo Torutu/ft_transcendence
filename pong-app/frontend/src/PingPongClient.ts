@@ -1,15 +1,11 @@
 import * as THREE from 'three';
+import { io, Socket } from 'socket.io-client';
+import { NavigateFunction } from 'react-router-dom';
 
-export default class PingPongGame {
+export default class PingPongClient {
   private groundEmission = 0.5;
   private groundColor = 0xffffff;
-  private hitter = 0;
-  private leftPlayer = 'Guest';
-  private rightPlayer = 'Guest';
-  private leftScore = 0;
-  private rightScore = 0;
-  private maxScore = 3;
-  private animationRunning = true;
+
   private currentRotationY = 0;
   private currentLookTarget = new THREE.Vector3(0, 0, 0);
 
@@ -37,31 +33,45 @@ export default class PingPongGame {
     metalness: 0.8,
   });
   private ball: THREE.Mesh;
+  private ballVel = new THREE.Vector3(6.0, 0, 3.5);
+  private latestBallZ: number;
+  private latestBallX: number;
 
   private bounds = { x: 9.6, z: 5.6 };
-  private ballVel = new THREE.Vector3(6.0, 0, 3.5);
-  private paddleSpeed = 12;
   private keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
+
+  private lastFrame: DOMHighResTimeStamp;
 
   private hud: HTMLDivElement;
   private scoreDisplay: HTMLDivElement;
   private restartButton: HTMLButtonElement;
   private timerDisplay: HTMLDivElement;
 
-  private last = performance.now();
-  private gameDuration = 120000;
-  private gameEndTime = performance.now() + this.gameDuration;
+  private socket: Socket | null = null;
+  private gameId: string;
+  private playerSide: "left" | "right" | null = null;
+  private mode: "local" | "remote" | undefined;
+  private status: "waiting" | "in-progress" | "finished" | "paused" = "waiting";
+  private updated: boolean;
+  private navigate: NavigateFunction;
 
-constructor(containerId: string | HTMLElement) {
-  if (typeof containerId === 'string') {
-    const el = document.getElementById(containerId);
-    if (!el) throw new Error(`Container with id "${containerId}" not found`);
-    this.container = el as HTMLDivElement;
-  } else if (containerId instanceof HTMLElement) {
-    this.container = containerId as HTMLDivElement;
-  } else {
-    throw new Error('Invalid container argument');
-  }
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null) {
+    if (typeof containerId === 'string') {
+      const el = document.getElementById(containerId);
+      if (!el) throw new Error(`Container with id "${containerId}" not found`);
+      this.container = el as HTMLDivElement;
+    } else if (containerId instanceof HTMLElement) {
+      this.container = containerId as HTMLDivElement;
+    } else {
+      throw new Error('Invalid container argument');
+    }
+
+    this.gameId = gameId;
+    this.mode = mode;
+    this.updated = false;
+
+    this.navigate = navigate;
+
     this.animate = this.animate.bind(this);
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -72,7 +82,7 @@ constructor(containerId: string | HTMLElement) {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('resize', this.handleResize);
-    
+
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -111,6 +121,7 @@ constructor(containerId: string | HTMLElement) {
       const lineV = new THREE.Line(geometryV, this.lineMaterial);
       this.gridLines.add(lineV);
     }
+
     this.gridLines.position.y = 0.26;
     this.scene.add(this.gridLines);
 
@@ -125,6 +136,8 @@ constructor(containerId: string | HTMLElement) {
     this.ball = new THREE.Mesh(this.ballGeo, this.ballMat);
     this.ball.position.set(0, 0.6, 0);
     this.scene.add(this.ball);
+    this.latestBallX = 0;
+    this.latestBallZ = 0;
 
     // HUD
     this.hud = document.createElement('div');
@@ -161,7 +174,7 @@ constructor(containerId: string | HTMLElement) {
       display: 'none',
     });
     document.body.appendChild(this.restartButton);
-    this.restartButton.addEventListener('click', () => this.resetGame());
+    this.restartButton.addEventListener('click', () => this.socket?.emit("restart"));
 
     // Timer Display
     this.timerDisplay = document.createElement('div');
@@ -176,63 +189,91 @@ constructor(containerId: string | HTMLElement) {
     });
     document.body.appendChild(this.timerDisplay);
 
-    this.updateScoreDisplay();
-
-    this.last = performance.now();
-    this.gameEndTime = this.last + this.gameDuration;
-
-    this.animate(this.last);
+    this.lastFrame = performance.now();
+    this.connect(name);
+    this.animate();    
   }
+
+  private connect(name: string | null){
+    this.socket = io("/pong", {
+        path: '/socket.io',
+        transports: ['websocket'],
+        secure: true
+    });
+
+    this.socket.on('connect', () => {
+        console.log('Connected to server:', this.socket?.id);
+
+        if (!name)
+          name = prompt("Enter name for player1:", "Guest");
+        let player2: string | null = null;
+        if (this.mode === "local")
+          player2 = prompt("Enter name for player2:", "Guest");
+        this.socket?.emit('join_game_room', this.gameId, name, player2, (callback: { error: string }) => {
+          if (callback.error) {
+            alert(callback.error);          
+            this.navigate("/lobby");
+          }
+        });         
+    });
+
+    this.socket.on('playerSide', (side) => {
+        this.playerSide = side;
+    });
+
+    this.socket.on('stateUpdate', (state, start: string | null) => {
+        if (this.mode === "remote" && this.playerSide === "left") {
+          this.rightPaddle.position.setZ(state.rightPaddle.z);
+          if (start) this.leftPaddle.position.setZ(state.leftPaddle.z);
+        }
+        else if (this.mode === "remote" && this.playerSide === "right") {
+          this.leftPaddle.position.setZ(state.leftPaddle.z);
+          if (start) this.rightPaddle.position.setZ(state.rightPaddle.z);
+        }
+        this.latestBallX = state.ball.x;
+        this.latestBallZ = state.ball.z;
+        this.updated = true;
+        this.ballVel.setX(state.ball.vx);
+        this.ballVel.setZ(state.ball.vz);
+        if (this.ball.material.color !== state.ball.color){
+          this.ball.material.color.set(state.ball.color);
+          this.ball.material.emissive.set(state.ball.color);
+        }
+        if (this.scoreDisplay.textContent !== state.scoreDisplay)
+          this.scoreDisplay.textContent = state.scoreDisplay;
+        this.timerDisplay.textContent = state.timerDisplay;
+        this.status = state.status;
+        if (state.status === "finished" || state.status === "paused")
+          this.restartButton.style.display = "block";
+        else
+          this.restartButton.style.display = "none";
+    });
+
+    this.socket.on('waiting', () => {
+        this.scoreDisplay.textContent = 'Waiting for opponent...';
+        this.restartButton.style.display = "none";
+        this.status = "waiting";
+    });
+}
 
   private handleKeyDown(e: KeyboardEvent) {
-  if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
-  if (e.key === 'Escape') this.togglePause();
-    }
+    if (e.key === "Escape")
+      this.socket?.emit("pause");
+    else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
+    // if (e.key in this.keys) {
+    //   this.socket?.emit('keyDown', e.key, this.playerSide);
+    // }
+  }
 
-    private handleKeyUp(e: KeyboardEvent) {
+  private handleKeyUp(e: KeyboardEvent) {
     if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
-    }
+    // if (e.key in this.keys) {
+    //   this.socket?.emit('keyUp', e.key, this.playerSide);
+    // }
+  }
 
-    private handleResize() {
+  private handleResize() {
     this.onResize();
-    }
-
-  private updateScoreDisplay() {
-    this.scoreDisplay.textContent = `${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;
-  }
-
-  private resetGame() {
-    this.leftScore = 0;
-    this.rightScore = 0;
-    this.hitter = 0;
-    this.updateScoreDisplay();
-
-    this.ball.position.set(0, 0.6, 0);
-    this.ballVel.set((Math.random() > 0.5 ? 1 : -1) * 6, 0, (Math.random() - 0.5) * 4);
-    this.ball.material.color.set(0xffffff);
-    this.ball.material.emissive.set(0xffffff);
-
-    this.leftPaddle.position.set(-8.2, 0.5, 0);
-    this.rightPaddle.position.set(8.2, 0.5, 0);
-
-    if (!this.animationRunning) {
-      this.animationRunning = true;
-      this.last = performance.now();
-      this.restartButton.style.display = 'none';
-      this.gameEndTime = this.last + this.gameDuration;
-      this.animate(this.last);
-    }
-  }
-
-  private togglePause() {
-    this.animationRunning = !this.animationRunning;
-    if (this.animationRunning) {
-      this.restartButton.style.display = 'none';
-      this.last = performance.now();
-      this.animate(this.last);
-    } else {
-      this.restartButton.style.display = 'block';
-    }
   }
 
   private onResize() {
@@ -241,23 +282,15 @@ constructor(containerId: string | HTMLElement) {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  private paddleHit(paddle: THREE.Mesh) {
-    const dx = Math.abs(this.ball.position.x - paddle.position.x);
-    const dz = Math.abs(this.ball.position.z - paddle.position.z);
-    return dx < 1.5 && dz < 2.0;
-  }
-
-    dispose() {
-    this.animationRunning = false;
-
+  dispose() {
     // Remove renderer DOM element
     if (this.renderer.domElement.parentNode) {
-        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
     }
 
     // Remove HUD, Score Display, Timer Display, Restart Button from DOM
     [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton].forEach(el => {
-        if (el.parentNode) el.parentNode.removeChild(el);
+      if (el.parentNode) el.parentNode.removeChild(el);
     });
 
     // Remove event listeners
@@ -267,96 +300,67 @@ constructor(containerId: string | HTMLElement) {
 
     // Dispose three.js renderer
     this.renderer.dispose();
+
+    // Disconnect the socket
+    if (this.socket) {
+      this.socket.off();
+      this.socket.disconnect();
+      this.socket = null;
     }
+  }
 
-  private animate(now: number) {
-    if (!this.animationRunning) return;
-
-    const totalSecondsLeft = Math.max(0, Math.floor((this.gameEndTime - now) / 1000));
-    const minutes = String(Math.floor(totalSecondsLeft / 60)).padStart(2, '0');
-    const seconds = String(totalSecondsLeft % 60).padStart(2, '0');
-    this.timerDisplay.textContent = `${minutes}:${seconds}`;
-
-    if (now >= this.gameEndTime) {
-      this.animationRunning = false;
-      if (this.leftScore > this.rightScore) {
-        this.scoreDisplay.textContent = `${this.leftPlayer} Wins!`;
-      } else if (this.rightScore > this.leftScore) {
-        this.scoreDisplay.textContent = `${this.rightPlayer} Wins!`;
-      } else {
-        this.scoreDisplay.textContent = `It's a tie!`;
-      }
-      this.restartButton.style.display = 'block';
-      return;
-    }
-
-    const dt = Math.min((now - this.last) / 1000, 0.033);
-    this.last = now;
-
-    if (this.leftScore >= this.maxScore || this.rightScore >= this.maxScore) {
-      this.scoreDisplay.textContent = `Game Over! ${
-        this.leftScore >= this.maxScore ? `${this.leftPlayer} Wins!` : `${this.rightPlayer} Wins!`
-      }`;
-      this.restartButton.style.display = 'block';
-      this.animationRunning = false;
-      return;
-    }
-
+  private animate() {
+    const now = performance.now();
+    const dt = (now - this.lastFrame) / 1000;
+    this.lastFrame = now;
     // Move paddles
-    if (this.keys.w) this.leftPaddle.position.z -= this.paddleSpeed * dt;
-    if (this.keys.s) this.leftPaddle.position.z += this.paddleSpeed * dt;
-    if (this.keys.ArrowUp) this.rightPaddle.position.z -= this.paddleSpeed * dt;
-    if (this.keys.ArrowDown) this.rightPaddle.position.z += this.paddleSpeed * dt;
-
+    if (this.status != "paused" && this.status != "finished") {
+      if (this.mode === "local") {
+        if (this.keys.w) this.leftPaddle.position.z -= 12 * dt;
+        if (this.keys.s) this.leftPaddle.position.z += 12 * dt;
+        if (this.keys.ArrowUp) this.rightPaddle.position.z -= 12 * dt;
+        if (this.keys.ArrowDown) this.rightPaddle.position.z += 12 * dt;
+        this.socket?.emit("move", "left", this.leftPaddle.position.z);
+        this.socket?.emit("move", "right", this.rightPaddle.position.z);            
+      }
+      else {
+        if (this.playerSide === "left") {
+          if (this.keys.w || this.keys.ArrowUp)
+            this.leftPaddle.position.z -= 12 * dt;
+          if (this.keys.s || this.keys.ArrowDown)
+            this.leftPaddle.position.z += 12 * dt;
+          this.socket?.emit("move", this.playerSide, this.leftPaddle.position.z);
+        }
+        else if (this.playerSide === "right") {
+          if (this.keys.w || this.keys.ArrowUp)
+            this.rightPaddle.position.z -= 12 * dt;
+          if (this.keys.s || this.keys.ArrowDown)
+            this.rightPaddle.position.z += 12 * dt;
+          this.socket?.emit("move", this.playerSide, this.rightPaddle.position.z);       
+        }
+      }
+    }
     // Clamp paddles
     this.leftPaddle.position.z = THREE.MathUtils.clamp(this.leftPaddle.position.z, -this.bounds.z, this.bounds.z);
     this.rightPaddle.position.z = THREE.MathUtils.clamp(this.rightPaddle.position.z, -this.bounds.z, this.bounds.z);
 
-    // Move ball
-    this.ball.position.addScaledVector(this.ballVel, dt);
-
-    // Bounce on table sides (z)
-    if (this.ball.position.z > this.bounds.z || this.ball.position.z < -this.bounds.z) {
-      this.ball.position.z = THREE.MathUtils.clamp(this.ball.position.z, -this.bounds.z, this.bounds.z);
-      this.ballVel.z *= -1;
-    }
-
-    // Paddle collision
-    if (this.paddleHit(this.leftPaddle) && this.ballVel.x < 0) {
-      this.ballVel.x *= -1.05;
-      const deltaZ = (this.ball.position.z - this.leftPaddle.position.z) * 2.0;
-      this.ballVel.z += deltaZ;
-      this.ball.material.color.set(0xff6b6b);
-      this.ball.material.emissive.set(0xff6b6b);
-      this.hitter = 1;
-    }
-
-    if (this.paddleHit(this.rightPaddle) && this.ballVel.x > 0) {
-      this.ballVel.x *= -1.05;
-      const deltaZ = (this.ball.position.z - this.rightPaddle.position.z) * 2.0;
-      this.ballVel.z += deltaZ;
-      this.ball.material.color.set(0x6b8cff);
-      this.ball.material.emissive.set(0x6b8cff);
-      this.hitter = 2;
-    }
-
-    // Score and reset
-    if (this.ball.position.x < -this.bounds.x || this.ball.position.x > this.bounds.x) {
-      if (this.ball.position.x < -this.bounds.x && this.hitter != 0) {
-        this.hitter = 0;
-        this.rightScore++;
-      } else if (this.ball.position.x > this.bounds.x && this.hitter != 0) {
-        this.hitter = 0;
-        this.leftScore++;
+    // Predict ball movement
+    if (this.status === "in-progress")
+      this.ball.position.addScaledVector(this.ballVel, dt);
+    if (this.updated){
+      const errX = this.latestBallX - this.ball.position.x;
+      const errZ = this.latestBallZ - this.ball.position.z;
+      // if ball position differs too much from server, snap position instantly
+      if (Math.abs(errX) > 0.5 || Math.abs(errZ) > 0.5) {
+        this.ball.position.x = this.latestBallX;
+        this.ball.position.z = this.latestBallZ;
+      } else {
+        // apply a small correction toward server state
+        this.ball.position.x += errX * 0.1; // 0.1 = smoothing factor, tweakable
+        this.ball.position.z += errZ * 0.1;
+        this.updated = false;
       }
-      this.updateScoreDisplay();
-
-      this.ball.position.set(0, 0.6, 0);
-      this.ballVel.set((Math.random() > 0.5 ? 1 : -1) * 6, 0, (Math.random() - 0.5) * 4);
-      this.ball.material.color.set(0xffffff);
-      this.ball.material.emissive.set(0xffffff);
     }
-
     // Camera rotation based on ball
     const targetRotationY = THREE.MathUtils.clamp(this.ball.position.z / this.bounds.z, -0.9, 0.9);
     const smoothingFactor = 0.1;

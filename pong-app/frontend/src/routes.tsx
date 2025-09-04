@@ -14,7 +14,8 @@ const VerifyTwoFactorPage = lazy(() => import('./pages/unauthorised/verify-2fa')
 const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password'));
 const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
-const PlayPage = lazy(() => import('./pages/playasguest'));
+const PlayPage = lazy(() => import('./pages/playPage'));
+const LobbyPage = lazy(() => import('./pages/lobby'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -86,6 +87,12 @@ export const AppRoutes = () => {
             } />
             <Route path="/change-password" element={
               <PublicRoute><ChangePasswordPage /></PublicRoute>
+            } />
+            <Route path="/lobby" element={
+              <LobbyPage/>
+            } />
+            <Route path="/:game/:mode/:gameId" element={
+              <PlayPage />
             } />
           </Route>
 

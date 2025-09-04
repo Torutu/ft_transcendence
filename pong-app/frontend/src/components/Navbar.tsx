@@ -66,7 +66,7 @@ const Navbar = () => {
             </>
           ) : (
             <Link
-              to="/play"
+              to="/lobby"
               className="text-white hover:text-blue-300 text-sm sm:text-base"
             >
               Play as Guest

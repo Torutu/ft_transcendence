@@ -51,11 +51,17 @@ export default function TournamentPage() {
           
           <div className="flex justify-center gap-4 mb-6">
             <button
+              onClick={() => navigate("/lobby")}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors transform hover:scale-105"
+            >
+              🎯 Join 1v1 lobby
+            </button>
+            <button
               onClick={() => console.log('Join tournament clicked')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors transform hover:scale-105"
             >
               🎯 Join Tournament
-            </button>
+            </button>            
           </div>
         </div>
 
@@ -65,7 +71,7 @@ export default function TournamentPage() {
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-700 p-4 rounded">
               <h3 className="text-lg font-medium mb-2">Quick Match</h3>
-              <p>Find opponents quickly</p>
+              <p>Play a game against one opponent</p>
             </div>
             <div className="bg-gray-700 p-4 rounded">
               <h3 className="text-lg font-medium mb-2">Tournaments</h3>

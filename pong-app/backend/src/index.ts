@@ -5,6 +5,10 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fs from 'fs';
 import path from 'path';
+import { Server } from 'socket.io';
+import { setupLobby } from './lobby';
+import { setupPongNamespace } from './PongServer';
+import { setupKeyClash } from './KeyClashGame';
 import { fileURLToPath } from 'url';
 import env from './env';
 import authRoutes from './routes/auth';
@@ -81,7 +85,8 @@ async function buildServer() {
 
   // Register CORS with credentials
   await server.register(fastifyCors, {
-    origin: [env.FRONTEND_URL],
+    origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+              env.FRONTEND_URL ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -94,6 +99,20 @@ async function buildServer() {
   server.get('/health', async () => {
     return { status: 'OK', timestamp: new Date().toISOString() };
   });
+
+  // wrap socket.io server around the fastify server
+  const io = new Server(server.server, {
+    cors: {
+        origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+                  env.FRONTEND_URL ],
+        methods: ['GET', 'POST'],
+        credentials: true,
+    }
+  });
+
+  setupLobby(io);
+  setupPongNamespace(io);
+  setupKeyClash(io);
 
   return server;
 }
@@ -133,6 +152,3 @@ process.on('SIGTERM', async () => {
 });
 
 startServer();
-
-
-

@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
             });
           }
         },
+        '/socket.io': {
+          target: env.VITE_API_URL,
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+        }  
       },
     },
     resolve: {
