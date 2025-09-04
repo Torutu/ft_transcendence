@@ -45,8 +45,13 @@ export default defineConfig(({ mode }) => {
           ws: true,
           changeOrigin: true,
           secure: false,
-        }  
+        }
       },
+      hmr: {
+        protocol: "wss",
+        host: "brave-widely-chigger.ngrok-free.app",
+        clientPort: 443, // wss runs over 443
+      }
     },
     resolve: {
       alias: {
