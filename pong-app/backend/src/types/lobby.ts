@@ -7,7 +7,7 @@ export interface Player {
 export interface pongGame {
     id: string;
     players: { id: string | null, name: string | undefined, side: "left" | "right" | null }[];
-    status: "waiting" | "in-progress" | "finished" | "paused";
+    status: "waiting" | "in-progress" | "finished" | "paused" | "starting";
 }
 
 export interface keyClashGame {

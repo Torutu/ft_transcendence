@@ -76,8 +76,8 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     timerEl.textContent = `Time Left: ${state.timeLeft}s`;
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]] ;
-    if (Object.keys(state.players).length === 2 && 
-        state.status !== "in-progress" && state.mode === "remote")
+    if (state.players.length === 2 && 
+        state.status !== "in-progress" && state.mode === "remote") //starting
     {
       let readyCount = 0;
       if (state.player1.ready) readyCount++;

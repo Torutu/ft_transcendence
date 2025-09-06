@@ -122,8 +122,6 @@ export function setupKeyClash(io: Server) {
                 }
                 if (playerNum === 1) { state.player1ready = true; }
                 else { state.player2ready = true; }
-                console.log("p1 ready", state.player1ready);
-                console.log(state.player2ready)
                 keyClash.to(roomId).emit("gameState", getPublicState(state));
                 if (Object.keys(state.players).length === 2 && state.player1ready && state.player2ready) {
                     startGame();

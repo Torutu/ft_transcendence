@@ -46,6 +46,7 @@ export default class PingPongClient {
   private scoreDisplay: HTMLDivElement;
   private restartButton: HTMLButtonElement;
   private timerDisplay: HTMLDivElement;
+  private nextUpDisplay: HTMLButtonElement;
 
   private socket: Socket | null = null;
   private gameId: string;
@@ -197,6 +198,20 @@ export default class PingPongClient {
     });
     document.body.appendChild(this.timerDisplay);
 
+    // Next Match Display
+    this.nextUpDisplay = document.createElement('button');
+    Object.assign(this.nextUpDisplay.style, {
+      position: 'absolute',
+      top: '10px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      color: 'white',
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      display: 'block'
+    });
+    document.body.appendChild(this.nextUpDisplay);
+
     this.lastFrame = performance.now();
     this.connect(name);
     this.animate();    
@@ -249,11 +264,11 @@ export default class PingPongClient {
     });
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
-        if (this.mode === "remote" && this.playerSide === "left") {
+        if (this.mode === "remote" && (this.playerSide === "left" || !this.playerSide)) {
           this.rightPaddle.position.setZ(state.rightPaddle.z);
           if (start) this.leftPaddle.position.setZ(state.leftPaddle.z);
         }
-        else if (this.mode === "remote" && this.playerSide === "right") {
+        else if (this.mode === "remote" && (this.playerSide === "right" || !this.playerSide)) {
           this.leftPaddle.position.setZ(state.leftPaddle.z);
           if (start) this.rightPaddle.position.setZ(state.rightPaddle.z);
         }
@@ -269,11 +284,33 @@ export default class PingPongClient {
         if (this.scoreDisplay.textContent !== state.scoreDisplay)
           this.scoreDisplay.textContent = state.scoreDisplay;
         this.timerDisplay.textContent = state.timerDisplay;
+        if (this.nextUpDisplay.textContent !== state.nextUp)
+          this.nextUpDisplay.textContent === state.nextUp;
         this.status = state.status;
-        if (state.status === "finished" || state.status === "paused")
+        if (this.type === "1v1" && (state.status === "finished" || state.status === "paused"))
           this.restartButton.style.display = "block";
         else
           this.restartButton.style.display = "none";
+        // if (state.status === "starting" || state.status === "finished")
+        //   this.nextUpDisplay.style.display = "block";
+        // else
+        //   this.nextUpDisplay.style.display = "none";
+        if (((this.type === "1v1" && state.players.length === 2) ||
+            (this.type === "tournament" && state.players.length === 4)) && 
+            state.status === "starting" && state.mode === "remote")
+        {
+          let readyCount = 0;
+          if (state.player1ready) readyCount++;
+          if (state.player2ready) readyCount++;
+          this.timerDisplay.textContent = `Ready? Press SPACE (Players ready: ${readyCount}/2)`;
+        }
+        else if (this.type === "tournament" && state.players.length === 4 && 
+                state.status === "starting" && state.mode === "local") {
+          if (state.round === 1)
+            this.timerDisplay.textContent = "Press SPACE to start the tournament!";
+          else
+            this.timerDisplay.textContent = "Press SPACE to start the next round";
+        }
     });
 
     this.socket.on('waiting', () => {
@@ -285,18 +322,14 @@ export default class PingPongClient {
 
   private handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape")
-      this.socket?.emit("pause");
+      this.socket.emit("pause");
+    else if (e.code === "Space")
+      this.socket.emit("setReady");
     else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
-    // if (e.key in this.keys) {
-    //   this.socket?.emit('keyDown', e.key, this.playerSide);
-    // }
   }
 
   private handleKeyUp(e: KeyboardEvent) {
     if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
-    // if (e.key in this.keys) {
-    //   this.socket?.emit('keyUp', e.key, this.playerSide);
-    // }
   }
 
   private handleResize() {
@@ -316,7 +349,7 @@ export default class PingPongClient {
     }
 
     // Remove HUD, Score Display, Timer Display, Restart Button from DOM
-    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton].forEach(el => {
+    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.nextUpDisplay].forEach(el => {
       if (el.parentNode) el.parentNode.removeChild(el);
     });
 
