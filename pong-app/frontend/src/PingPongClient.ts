@@ -46,7 +46,7 @@ export default class PingPongClient {
   private scoreDisplay: HTMLDivElement;
   private restartButton: HTMLButtonElement;
   private timerDisplay: HTMLDivElement;
-  private nextUpDisplay: HTMLButtonElement;
+  private matchInfoDisplay: HTMLDivElement;
 
   private socket: Socket | null = null;
   private gameId: string;
@@ -165,6 +165,7 @@ export default class PingPongClient {
       fontSize: '24px',
       fontFamily: 'monospace',
       userSelect: 'none',
+      whiteSpace: 'pre-line'
     });
     document.body.appendChild(this.scoreDisplay);
 
@@ -198,19 +199,20 @@ export default class PingPongClient {
     });
     document.body.appendChild(this.timerDisplay);
 
-    // Next Match Display
-    this.nextUpDisplay = document.createElement('button');
-    Object.assign(this.nextUpDisplay.style, {
+    // Match Info Display
+    this.matchInfoDisplay = document.createElement('div');
+    Object.assign(this.matchInfoDisplay.style, {
       position: 'absolute',
-      top: '10px',
+      top: '30%',
       left: '50%',
       transform: 'translateX(-50%)',
       color: 'white',
       fontSize: '24px',
       fontFamily: 'monospace',
-      display: 'block'
+      zIndex: '9999',
+      whiteSpace: 'pre-line'
     });
-    document.body.appendChild(this.nextUpDisplay);
+    document.body.appendChild(this.matchInfoDisplay);
 
     this.lastFrame = performance.now();
     this.connect(name);
@@ -264,11 +266,11 @@ export default class PingPongClient {
     });
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
-        if (this.mode === "remote" && (this.playerSide === "left" || !this.playerSide)) {
+        if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null)) {
           this.rightPaddle.position.setZ(state.rightPaddle.z);
           if (start) this.leftPaddle.position.setZ(state.leftPaddle.z);
         }
-        else if (this.mode === "remote" && (this.playerSide === "right" || !this.playerSide)) {
+        if (this.mode === "remote" && (this.playerSide === "right" || this.playerSide === null)) {
           this.leftPaddle.position.setZ(state.leftPaddle.z);
           if (start) this.rightPaddle.position.setZ(state.rightPaddle.z);
         }
@@ -281,20 +283,22 @@ export default class PingPongClient {
           this.ball.material.color.set(state.ball.color);
           this.ball.material.emissive.set(state.ball.color);
         }
-        if (this.scoreDisplay.textContent !== state.scoreDisplay)
+        if (this.scoreDisplay.textContent !== state.scoreDisplay) {
           this.scoreDisplay.textContent = state.scoreDisplay;
+        }
         this.timerDisplay.textContent = state.timerDisplay;
-        if (this.nextUpDisplay.textContent !== state.nextUp)
-          this.nextUpDisplay.textContent === state.nextUp;
+        if (this.matchInfoDisplay.textContent !== state.matchInfo) {
+          this.matchInfoDisplay.textContent = state.matchInfo;
+        }
         this.status = state.status;
-        if (this.type === "1v1" && (state.status === "finished" || state.status === "paused"))
+        if (this.type === "1v1" && (state.status === "finished" || state.status === "paused")) {
           this.restartButton.style.display = "block";
-        else
-          this.restartButton.style.display = "none";
-        // if (state.status === "starting" || state.status === "finished")
-        //   this.nextUpDisplay.style.display = "block";
-        // else
-        //   this.nextUpDisplay.style.display = "none";
+        }
+        else this.restartButton.style.display = "none";
+        if (state.status === "starting" || state.status === "finished") {
+          this.matchInfoDisplay.style.display = "block";
+        }
+        else this.matchInfoDisplay.style.display = "none";
         if (((this.type === "1v1" && state.players.length === 2) ||
             (this.type === "tournament" && state.players.length === 4)) && 
             state.status === "starting" && state.mode === "remote")
@@ -306,18 +310,26 @@ export default class PingPongClient {
         }
         else if (this.type === "tournament" && state.players.length === 4 && 
                 state.status === "starting" && state.mode === "local") {
-          if (state.round === 1)
-            this.timerDisplay.textContent = "Press SPACE to start the tournament!";
-          else
-            this.timerDisplay.textContent = "Press SPACE to start the next round";
+          if (state.round === 1) this.timerDisplay.textContent = "Press SPACE to start the tournament!";
+          else this.timerDisplay.textContent = "Press SPACE to start the next round";
         }
     });
 
     this.socket.on('waiting', () => {
+      if (this.type === "1v1")
         this.scoreDisplay.textContent = 'Waiting for opponent...';
-        this.restartButton.style.display = "none";
-        this.status = "waiting";
+      else {
+        const players = Object.values(this.players).length;
+        this.scoreDisplay.textContent = `Waiting for opponents... (${players}/4)`;
+      }
+      this.restartButton.style.display = "none";
+      this.status = "waiting";
     });
+
+    this.socket.on('disconnection', () => {
+      alert("Tournament terminated (someone disconnected)");
+      this.navigate('/tournament_lobby');
+    })
 }
 
   private handleKeyDown(e: KeyboardEvent) {
@@ -348,8 +360,8 @@ export default class PingPongClient {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
     }
 
-    // Remove HUD, Score Display, Timer Display, Restart Button from DOM
-    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.nextUpDisplay].forEach(el => {
+    // Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display from DOM
+    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay].forEach(el => {
       if (el.parentNode) el.parentNode.removeChild(el);
     });
 

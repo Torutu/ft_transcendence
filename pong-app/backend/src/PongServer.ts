@@ -156,7 +156,9 @@ export function setupPongNamespace(io: Server) {
             socket.join(roomId);
 
             console.log('players: ', gameRoom.state.players);
-                
+            
+            if (gameRoom.state.players.length < 4)
+                gameRoom.state.scoreDisplay = `Waiting for opponents... (${gameRoom.state.players.length}/4)`;
             pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
             tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
             const player = gameRoom.state.players.find(p => p.id === socket.id);
@@ -223,6 +225,7 @@ export function setupPongNamespace(io: Server) {
                 game.state.players.splice(playerindex, 1);
 
             if (game.state.type === "tournament") {
+                pongNamespace.to(game.getId()).emit("disconnection");
                 const i = pongTournaments.findIndex(g => g.getId() === socket.data.roomId);
                 if (i !== -1) pongTournaments.splice(i, 1);
                 tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());

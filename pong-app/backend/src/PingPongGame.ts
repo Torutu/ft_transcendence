@@ -10,7 +10,7 @@ export interface GameState {
     loop: NodeJS.Timeout | undefined;
     timerDisplay: string;
     scoreDisplay: string;
-    nextUp: string;
+    matchInfo: string;
     players: Player[];
     matches: { player1: Player, player2: Player, winner: Player | null }[];
     mode: "local" | "remote";
@@ -46,7 +46,7 @@ export default class PingPongGame {
             loop: undefined,
             timerDisplay: "",
             scoreDisplay: "waiting for opponent...",
-            nextUp: "",
+            matchInfo: "",
             players: [],
             matches: [],
             mode: mode,
@@ -87,7 +87,8 @@ export default class PingPongGame {
                 this.state.matches[2].player2.side = "right";
             }
         }
-        this.state.nextUp = `Next up: ${this.leftPlayer} vs ${this.rightPlayer}!`;
+        if (this.state.round <= 3)
+            this.state.matchInfo += `Next up: ${this.leftPlayer} vs ${this.rightPlayer}!`;
     };
     public getId() { return (this.id); };
     public setPlayer(side: "left" | "right" | null, name: string | undefined, id: string | null){
@@ -110,10 +111,7 @@ export default class PingPongGame {
     public getRightPlayer() { return (this.rightPlayer) };    
 
     public updateScore() {
-        if (this.state.type === "1v1")
-            this.state.scoreDisplay = `${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;
-        else
-            this.state.scoreDisplay = `Round ${this.state.round}: ${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;    
+         this.state.scoreDisplay = `${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;   
     };
     public resetGame() {
         this.leftScore = 0;
@@ -141,18 +139,20 @@ export default class PingPongGame {
         const totalSecondsLeft = Math.max(0, Math.floor((this.state.gameEndTime - now) / 1000));
         const minutes = String(Math.floor(totalSecondsLeft / 60)).padStart(2, '0');
         const seconds = String(totalSecondsLeft % 60).padStart(2, '0');
-        this.state.timerDisplay = `${minutes}:${seconds}`;
-    
+        if (this.state.type === "1v1")
+            this.state.timerDisplay = `${minutes}:${seconds}`;
+        else
+            this.state.timerDisplay = `Round ${this.state.round}/3 ${minutes}:${seconds}`;
         if (now >= this.state.gameEndTime) {
           this.state.status = "finished";
 
             if (this.state.type === "1v1") {
                 if (this.leftScore > this.rightScore) {
-                    this.state.scoreDisplay = `${this.leftPlayer} Wins!`;
+                    this.state.matchInfo = `${this.leftPlayer} Wins!`;
                 } else if (this.rightScore > this.leftScore) {
-                    this.state.scoreDisplay = `${this.rightPlayer} Wins!`;
+                    this.state.matchInfo = `${this.rightPlayer} Wins!`;
                 } else {
-                    this.state.scoreDisplay = `It's a tie!`;
+                    this.state.matchInfo = `It's a tie!`;
                 }
             }
             else {
@@ -162,9 +162,9 @@ export default class PingPongGame {
                 else // for now in a tie, player2 advances
                     this.state.matches[i].winner = this.state.matches[i].player2;
                 if (this.state.round < 3)
-                    this.state.scoreDisplay = `Round ${this.state.round} over! ${this.state.matches[i].winner.name} Wins!`;
+                    this.state.matchInfo = `Round ${this.state.round} over! ${this.state.matches[i].winner.name} Wins!\n`;
                 else
-                    this.state.scoreDisplay = `Tournament Finished! The winner is: ${this.state.matches[i].winner.name}!`
+                    this.state.matchInfo = `Tournament Finished! The winner is: ${this.state.matches[i].winner.name}!`
             }
             return;
         }
@@ -179,11 +179,11 @@ export default class PingPongGame {
             else // for now in a tie, player2 advances
                 this.state.matches[i].winner = this.state.matches[i].player2;
             if (this.state.type === "1v1")
-                this.state.scoreDisplay = `Game Over! ${this.state.matches[i].winner.name} Wins!`;
+                this.state.matchInfo = `Game Over! ${this.state.matches[i].winner.name} Wins!`;
             else if (this.state.round < 3)
-                this.state.scoreDisplay = `Round ${this.state.round} over! ${this.state.matches[i].winner.name} Wins!`;
+                this.state.matchInfo = `Round ${this.state.round} over! ${this.state.matches[i].winner.name} Wins!\n`;
             else
-                this.state.scoreDisplay = `Tournament Finished! The winner is: ${this.state.matches[2].winner?.name}!`
+                this.state.matchInfo = `Tournament Finished! The winner is: ${this.state.matches[2].winner?.name}!`
             this.state.status = "finished";
             return;
         }
