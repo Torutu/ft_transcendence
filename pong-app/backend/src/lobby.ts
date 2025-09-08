@@ -32,7 +32,8 @@ export function setupLobby(io: Server) {
             score2: 0,
             prompts: ["-", "-"],
             timeLeft: 20,
-            players: {},
+            players: [],
+            matches: [],
             interval: null,
             player1ready: false,
             player2ready: false,
@@ -40,7 +41,8 @@ export function setupLobby(io: Server) {
             p2: undefined,
             status: "waiting",
             mode: mode,
-			type: "1v1"
+			      type: "1v1",
+            round: 1,
           }
           keyClashRooms.push(newKeyClash);
         }

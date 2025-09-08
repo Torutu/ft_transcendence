@@ -2,6 +2,13 @@ export interface Player {
     id: string | null, name: string | undefined, side: "left" | "right" | null   
 };
 
+export function shufflePlayers(array: Player[]) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+};
+
 export interface GameState {
     ball: { x: number; z: number; vx: number; vz: number, color: number };
     leftPaddle: { x: number, z: number };
@@ -61,7 +68,7 @@ export default class PingPongGame {
 
     public matchmake() {
         if (this.state.round === 1) {
-            this.shufflePlayers(this.state.players);
+            shufflePlayers(this.state.players);
             this.state.matches.push( { player1: this.state.players[0], player2: this.state.players[1], winner: null });
             this.state.matches.push( { player1: this.state.players[2], player2: this.state.players[3], winner: null });
             this.leftPlayer = this.state.matches[0].player1.name?.substring(0, 10);
@@ -240,13 +247,6 @@ export default class PingPongGame {
         const dx = Math.abs(this.state.ball.x - paddle.x);
         const dz = Math.abs(this.state.ball.z - paddle.z);
         return dx < 1.5 && dz < 2.0;
-    }
-
-    private shufflePlayers(array: Player[]) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
     }
 
     private resetPlayerSides() {

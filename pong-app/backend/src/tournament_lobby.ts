@@ -32,7 +32,8 @@ export function setupTournamentLobby(io: Server) {
             score2: 0,
             prompts: ["-", "-"],
             timeLeft: 20,
-            players: {},
+            players: [],
+            matches: [],
             interval: null,
             player1ready: false,
             player2ready: false,
@@ -40,7 +41,8 @@ export function setupTournamentLobby(io: Server) {
             p2: undefined,
             status: "waiting",
             mode: mode,
-			type: "tournament"
+			      type: "tournament",
+            round: 1,
           }
           keyClashTournaments.push(newKeyClash);
         }

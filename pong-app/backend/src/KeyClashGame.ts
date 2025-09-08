@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import  { Player, shufflePlayers } from "./PingPongGame"
 import { keyClashRooms, getLobbyState, keyClashTournaments, getTournamentLobbyState } from "./gameData.js";
 
 export interface state {
@@ -7,7 +8,8 @@ export interface state {
     score2: number,
     prompts: [string, string],
     timeLeft: number,
-    players: Record<string, number>,
+    players: Player[],
+    matches: { player1: Player, player2: Player, winner: Player | null }[],
     interval: NodeJS.Timeout | null,
     player1ready: boolean,
     player2ready: boolean,
@@ -15,7 +17,8 @@ export interface state {
     p2: string | undefined,
     status: "waiting" | "starting" | "in-progress" | "finished",
     mode: "local" | "remote",
-	type: "1v1" | "tournament"
+	type: "1v1" | "tournament",
+    round: number,
 }
 
 function getPublicState(state: state) {
@@ -34,9 +37,11 @@ function getPublicState(state: state) {
       prompts: state.prompts,
       timeLeft: state.timeLeft,
       players: state.players,
+      matches: state.matches,
       status: state.status,
       mode: state.mode,
-	  type: state.type
+	  type: state.type,
+      round: state.round,
     };
 }
 
@@ -56,7 +61,7 @@ export function setupKeyClash(io: Server) {
     keyClash.on("connection", (socket) => {
         console.log(`Player connected on key clash: ${socket.id}`);
 
-        socket.on("join_game_room", (roomId, mode, type, name, player2, callback) => {
+        socket.on("join_game_room", (roomId, mode, type, players, callback) => {
 			let roomState: state | undefined;
 			if (type === "1v1") {
 				roomState = keyClashRooms.find(r => r.id === roomId);
@@ -75,34 +80,45 @@ export function setupKeyClash(io: Server) {
                 return callback({ error: "The game is full!" });
             }
             socket.data.roomId = roomId;
-            state.mode = mode;
 
-            if (!Object.values(state.players).includes(1)) {
-                state.players[socket.id] = 1;
-                state.p1 = name?.substring(0, 10);
-            } else {
-                state.players[socket.id] = 2;
-                state.p2 = name?.substring(0, 10);
+            const player: Player = { id: socket.id, name: players.player1, side: null }; 
+
+            if (state.players.length === 0 || (state.players.length === 1 && state.players[0].side === "right")) {
+                player.side = "left";
+                state.players.push(player);
+                state.p1 = players.player1?.substring(0, 10); 
             }
+            else if (state.players.length === 1 && state.players[0].side === "left") {
+                player.side = "right";
+                state.players.push(player);
+                state.p2 = players.player1?.substring(0, 10);               
+            }
+            else
+                state.players.push(player); 
+
             if (mode === "local") {
-                state.p2 = player2?.substring(0, 10);
-                state.players["player2"] = 2;
+                state.players.push({ id: null, name: players.player2, side: "right"});
+                state.p2 = players.player2?.substring(0, 10);
+                if (type === "tournament") {
+                    state.players.push({ id: null, name: players.player3, side: null });
+                    state.players.push({ id: null, name: players.player4, side: null });
+                }
             }
-
-            const playerNum = state.players[socket.id];
-            // socket.data.player = playerNum;
         
             socket.join(roomId);
 
             console.log('players: ', state.players);
 
-            if (Object.keys(state.players).length < 2) {
+            if ((state.type === "1v1" && state.players.length < 2) || 
+            (state.type === "tournament" && state.players.length < 4)) {
                 state.status = "waiting";
-                socket.emit("waiting");
+                keyClash.to(roomId).emit("waiting", getPublicState(state));
             }
-            else
+            else {
                 state.status = "starting";
-
+                if (state.type === "tournament")
+                    matchmake();
+            }
 			if (type === "1v1")
             	lobby.emit("lobby_update", getLobbyState());
 			else
@@ -110,20 +126,19 @@ export function setupKeyClash(io: Server) {
             keyClash.to(roomId).emit("gameState", getPublicState(state));
 
             socket.on("setReady", () => {
-                if (state.status === "in-progress" || Object.keys(state.players).length < 2) return;
-                if (state.mode === "local")
+                if (state.status !== "starting" && state.status !== "finished") return;
+                if (state.mode === "local" && (state.type === "1v1" || (state.type === "tournament" && state.status !== "finished")))
                     return startGame();
-                if (state.status === "finished"){
+                if (state.status === "finished" && state.type !== "tournament") {
                     state.status = "starting";
-					if (type === "1v1")
-						lobby.emit("lobby_update", getLobbyState());
-					else
-						tournament_lobby.emit("lobby_update", getTournamentLobbyState());
+					lobby.emit("lobby_update", getLobbyState());
                 }
-                if (playerNum === 1) { state.player1ready = true; }
-                else { state.player2ready = true; }
+                if (player.side === "left") { state.player1ready = true; }
+                else if (player.side === "right") { state.player2ready = true; }
+                else return;
                 keyClash.to(roomId).emit("gameState", getPublicState(state));
-                if (Object.keys(state.players).length === 2 && state.player1ready && state.player2ready) {
+                if ((state.type === "1v1" && state.players.length === 2 && state.player1ready && state.player2ready) ||
+                (state.type === "tournament" && state.players.length === 4 && state.player1ready && state.player2ready)) {
                     startGame();
                 }
             });
@@ -148,23 +163,70 @@ export function setupKeyClash(io: Server) {
                         clearInterval(state.interval);
                         state.interval = null;
                         state.status = "finished";
-						if (type === "1v1")
-							lobby.emit("lobby_update", getLobbyState());
-						else
-							tournament_lobby.emit("lobby_update", getTournamentLobbyState());
-                        keyClash.to(roomId).emit("gameOver", getPublicState(state));
                         state.player1ready = false;
                         state.player2ready = false;
+                        if (state.score1 > state.score2)
+                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
+                        else
+                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player2; // for now if tie, player2 advances
+                        if (state.type === "tournament") {
+                            state.round++;
+                            matchmake();
+                            if (state.round <= 3)
+                                state.status = "starting";
+                            tournament_lobby.emit("lobby_update", getTournamentLobbyState());
+                        }
+						else if (type === "1v1") {
+							lobby.emit("lobby_update", getLobbyState());
+                        }
+                        keyClash.to(roomId).emit("gameOver", getPublicState(state));
+                        // keyClash.to(roomId).emit("gameState", getPublicState(state));                     
                     }
                     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
                 }, 1000);
             };
         
+            function matchmake() {
+                if (state.round === 1) {
+                    shufflePlayers(state.players);
+                    state.matches.push( { player1: state.players[0], player2: state.players[1], winner: null });
+                    state.matches.push( { player1: state.players[2], player2: state.players[3], winner: null });
+                    state.p1 = state.matches[0].player1.name?.substring(0, 10);
+                    state.p2 = state.matches[0].player2.name?.substring(0, 10);
+                    state.players.forEach(player => {
+                        player.side = null;
+                    });
+                    state.matches[0].player1.side = "left";
+                    state.matches[0].player2.side = "right";
+                }
+                else if (state.round === 2) {
+                    state.p1 = state.matches[1].player1.name?.substring(0, 10);
+                    state.p2 = state.matches[1].player2.name?.substring(0, 10);
+                    state.players.forEach(player => {
+                        player.side = null;
+                    });
+                    state.matches[1].player1.side = "left";
+                    state.matches[1].player2.side = "right";
+                }
+                else if (state.round === 3) {
+                    if (state.matches[0].winner && state.matches[1].winner) {
+                        state.matches.push( { player1: state.matches[0].winner,  player2: state.matches[1].winner, winner: null });
+                        state.p1 = state.matches[2].player1.name?.substring(0, 10);
+                        state.p2 = state.matches[2].player2.name?.substring(0, 10);
+                        state.players.forEach(player => {
+                            player.side = null;
+                        });
+                        state.matches[2].player1.side = "left";
+                        state.matches[2].player2.side = "right";
+                    }
+                }
+            };
+
             socket.on("keypress", ({ key }) => {
                 if (state.timeLeft <= 0 || state.status !== "in-progress") return;
 
                 if (mode === "remote") {
-                    if (playerNum === 1) {
+                    if (player.side === "left") {
                         if (key === state.prompts[0] ||
                             key === arrowKeys[wasdKeys.indexOf(state.prompts[0])]) {
                             state.score1++;
@@ -174,7 +236,7 @@ export function setupKeyClash(io: Server) {
                             state.score1--;
                         }
                     }
-                    if (playerNum === 2) {
+                    if (player.side === "right") {
                         if (key === state.prompts[1] || 
                             key === wasdKeys[arrowKeys.indexOf(state.prompts[1])]) {
                             state.score2++;
@@ -217,14 +279,24 @@ export function setupKeyClash(io: Server) {
 				game = keyClashTournaments.find(g => g.id === socket.data.roomId);
             if (!game) return;
 			
-            if (socket.id in game.players) {
-                if (game.players[socket.id] === 1)
+            const playerindex = game.players.findIndex(p => p.id === socket.id);
+            if (playerindex !== -1) {
+                if (game.players[playerindex].side === "left")
                     game.p1 = undefined;
-                else
+                else if (game.players[playerindex].side === "right")
                     game.p2 = undefined;
-                delete game.players[socket.id];
+                game.players.splice(playerindex, 1);
             }
-            if (Object.keys(game.players).length < 2) {
+
+            if (game.type === "tournament") {
+                keyClash.to(game.id).emit("disconnection");
+                const i = keyClashTournaments.findIndex(g => g.id === socket.data.roomId);
+                if (i !== -1) keyClashTournaments.splice(i, 1);
+                tournament_lobby.emit("lobby_update", getTournamentLobbyState());
+                return;    
+            }
+
+            if (game.players.length < 2) {
                 if (game.interval){
                     clearInterval(game.interval);
                     game.interval = null;
@@ -232,24 +304,14 @@ export function setupKeyClash(io: Server) {
                 game.status = "waiting";
                 game.player1ready = false;
                 game.player2ready = false;
-                keyClash.to(socket.data.roomId).emit("waiting");
+                keyClash.to(socket.data.roomId).emit("waiting", getPublicState(game));
             }
-			if (game.type === "1v1")
-            	lobby.emit("lobby_update", getLobbyState());
-			else
-				tournament_lobby.emit("lobby_update", getTournamentLobbyState());
+            lobby.emit("lobby_update", getLobbyState());
     
-            if (Object.keys(game.players).length === 0 || game.mode === "local") {
-				if (game.type === "1v1") {
-                	const i = keyClashRooms.findIndex(g => g.id === socket.data.roomId);
-					if (i !== -1) keyClashRooms.splice(i, 1);
+            if (game.players.length === 0 || game.mode === "local") {
+                const i = keyClashRooms.findIndex(g => g.id === socket.data.roomId);
+				if (i !== -1) keyClashRooms.splice(i, 1);
 					lobby.emit("lobby_update", getLobbyState());
-				}
-				else {
-                	const i = keyClashTournaments.findIndex(g => g.id === socket.data.roomId);
-					if (i !== -1) keyClashTournaments.splice(i, 1);
-					tournament_lobby.emit("lobby_update", getTournamentLobbyState());								
-				}
             }
         });
     });

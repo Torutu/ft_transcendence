@@ -56,7 +56,7 @@ export default function LobbyPage() {
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	  const type = "tournament";
+	    const type = "tournament";
       navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name } });
     });
 
@@ -118,7 +118,7 @@ export default function LobbyPage() {
           <button onClick={createLocalPong}>Create New Local Pong Tournament</button>
         </ul>
         <ul>
-          <button onClick={createRemotePong}>Join A Remote Pong Tournament</button> 
+          <button onClick={createRemotePong}>Create New Remote Pong Tournament</button> 
         </ul>
       </ul>
 
@@ -150,7 +150,7 @@ export default function LobbyPage() {
         <button onClick={createLocalKeyClash}>Create New Local Key Clash Tournament</button>
         </ul>
         <ul>
-          <button onClick={createRemoteKeyClash}>Join A Remote Key Clash Tournament</button> 
+          <button onClick={createRemoteKeyClash}>Create New Remote Key Clash Tournament</button> 
         </ul>                     
       </ul>
     </div>

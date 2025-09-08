@@ -46,6 +46,7 @@ export function setupPongNamespace(io: Server) {
             console.log('players: ', gameRoom.state.players);
                 
             socket.emit('playerSide', playerSide);
+
             if (gameRoom.state.players.length === 2) {
                 const p1 = gameRoom.state.players.find(p => p.side === "left");
                 const p2 = gameRoom.state.players.find(p => p.side === "right");
@@ -172,7 +173,7 @@ export function setupPongNamespace(io: Server) {
             }
 
             socket.on("setReady", () => {
-                if (gameRoom.state.status !== "starting" || Object.keys(gameRoom.state.players).length < 4) return;
+                if (gameRoom.state.status !== "starting" || gameRoom.state.players.length < 4) return;
                 if (gameRoom.state.mode === "local")
                     return startGame();
                 if (player?.side === "left") { gameRoom.state.player1ready = true; }

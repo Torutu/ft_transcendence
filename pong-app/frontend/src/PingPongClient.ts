@@ -257,7 +257,7 @@ export default class PingPongClient {
 					alert(callback.error);
 					this.navigate("tournament_lobby");
 				}
-			});			
+			});
 		}    
     });
 
