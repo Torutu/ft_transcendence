@@ -86,19 +86,22 @@ export function setupKeyClash(io: Server) {
             if (state.players.length === 0 || (state.players.length === 1 && state.players[0].side === "right")) {
                 player.side = "left";
                 state.players.push(player);
-                state.p1 = players.player1?.substring(0, 10); 
+                if (state.type === "1v1")
+                    state.p1 = players.player1?.substring(0, 10);
             }
             else if (state.players.length === 1 && state.players[0].side === "left") {
                 player.side = "right";
                 state.players.push(player);
-                state.p2 = players.player1?.substring(0, 10);               
+                if (state.type === "1v1")
+                    state.p2 = players.player1?.substring(0, 10);         
             }
             else
                 state.players.push(player); 
 
             if (mode === "local") {
                 state.players.push({ id: null, name: players.player2, side: "right"});
-                state.p2 = players.player2?.substring(0, 10);
+                if (state.type === "1v1")
+                    state.p2 = players.player2?.substring(0, 10);
                 if (type === "tournament") {
                     state.players.push({ id: null, name: players.player3, side: null });
                     state.players.push({ id: null, name: players.player4, side: null });
@@ -126,16 +129,18 @@ export function setupKeyClash(io: Server) {
             keyClash.to(roomId).emit("gameState", getPublicState(state));
 
             socket.on("setReady", () => {
-                if (state.status !== "starting" && state.status !== "finished") return;
-                if (state.mode === "local" && (state.type === "1v1" || (state.type === "tournament" && state.status !== "finished")))
+                if ((state.status !== "starting" && state.status !== "finished") || (state.type === "tournament" && state.status === "finished")) return;
+                if (state.mode === "local")
                     return startGame();
-                if (state.status === "finished" && state.type !== "tournament") {
+                if (state.status === "finished") {
                     state.status = "starting";
 					lobby.emit("lobby_update", getLobbyState());
                 }
                 if (player.side === "left") { state.player1ready = true; }
                 else if (player.side === "right") { state.player2ready = true; }
                 else return;
+                state.score1 = 0;
+                state.score2 = 0;
                 keyClash.to(roomId).emit("gameState", getPublicState(state));
                 if ((state.type === "1v1" && state.players.length === 2 && state.player1ready && state.player2ready) ||
                 (state.type === "tournament" && state.players.length === 4 && state.player1ready && state.player2ready)) {
@@ -172,15 +177,12 @@ export function setupKeyClash(io: Server) {
                         if (state.type === "tournament") {
                             state.round++;
                             matchmake();
-                            if (state.round <= 3)
-                                state.status = "starting";
                             tournament_lobby.emit("lobby_update", getTournamentLobbyState());
                         }
 						else if (type === "1v1") {
 							lobby.emit("lobby_update", getLobbyState());
                         }
-                        keyClash.to(roomId).emit("gameOver", getPublicState(state));
-                        // keyClash.to(roomId).emit("gameState", getPublicState(state));                     
+                        keyClash.to(roomId).emit("gameOver", getPublicState(state));                   
                     }
                     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
                 }, 1000);
@@ -220,6 +222,8 @@ export function setupKeyClash(io: Server) {
                         state.matches[2].player2.side = "right";
                     }
                 }
+                if (state.round <= 3)
+                    state.status = "starting";
             };
 
             socket.on("keypress", ({ key }) => {

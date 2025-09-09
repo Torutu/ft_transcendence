@@ -108,7 +108,7 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "pong", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {game.players.length} players  — {game.status}
+            <strong>Room-{game.id}</strong> — {game.players.length}/2 players  — {game.status}
             <ul>
               {game.players.map(p => <li key={p.id}>{p.name}</li>)}
             </ul>
@@ -137,7 +137,7 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {Object.keys(game.players).length} players — {game.status}
+            <strong>Room-{game.id}</strong> — {Object.keys(game.players).length}/2 players — {game.status}
             <ul>
               <li>{game.p1}</li>
               <li>{game.p2}</li>

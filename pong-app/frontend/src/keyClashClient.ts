@@ -71,48 +71,15 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
           navigate("tournament_lobby");
       }
     });
-
-    // if (type === "1v1") {
-    //   if (!name)
-    //     name = prompt("Enter name for player1:", "Guest");
-    //   let player2: string | null = null;
-    //   if (mode === "local")
-    //     player2 = prompt("Enter name for player2:", "Guest");
-    //   socket.emit('join_game_room', gameId, mode, type, name, player2, (callback: { error: string }) => {
-    //     if (callback.error) {
-    //       alert(callback.error);    
-    //       navigate("/lobby");
-    //     }
-    //   });
-    // }
-    // else if (type === "tournament") {
-    //   let players: { player1: string | null,
-		// 		player2: string | null,
-		// 		player3: string | null,
-		// 		player4: string | null
-		// 	}
-    //   players = { player1: null, player2: null, player3: null, player4: null};
-    //   if (!name)
-		// 		name = prompt("Enter name for player1:", "Guest");
-		// 	players.player1 = name;
-		// 	if (mode === "local") {
-		// 		players.player2 = prompt("Enter name for player2:", "Guest");
-		// 		players.player3 = prompt("Enter name for player3:", "Guest");
-		// 		players.player4 = prompt("Enter name for player4:", "Guest");			
-		// 	}
-		// 	socket.emit('join_tournament_room', gameId, players, (callback: { error: string }) => {
-		// 		if (callback.error) {
-		// 			alert(callback.error);
-		// 			navigate("tournament_lobby");
-		// 		}
-		// 	});			  
-    // }
   });
 
   socket.on("gameStart", (state) => {
     score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
     score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
-    timerEl.textContent = `Time Left: ${state.timeLeft}s`;
+    if (state.type === "1v1")
+      timerEl.textContent = `Time Left: ${state.timeLeft}s`;
+    else
+      timerEl.textContent = `Round ${state.round}/3\nTime Left: ${state.timeLeft}s`; 
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]];
     startPrompt.textContent = "Good Luck!";
@@ -121,7 +88,16 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   socket.on("gameState", (state) => {
     score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
     score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
-    timerEl.textContent = `Time Left: ${state.timeLeft}s`;
+    if (state.status === "in-progress") {
+      if (state.type === "1v1")
+        timerEl.textContent = `Time Left: ${state.timeLeft}s`;
+      else
+        timerEl.textContent = `Round ${state.round}/3\nTime Left: ${state.timeLeft}s`;        
+    }
+    if (state.type === "tournament" && state.status === "starting" && state.round === 1) {
+      timerEl.textContent = `Next up: ${state.matches[0].player1.name} vs ${state.matches[0].player2.name}`;
+      if (state.mode === "local") startPrompt.textContent = "Press SPACE to start the tournament!";
+    }
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]] ;
     if (((state.players.length === 2 && state.type === "1v1") || 

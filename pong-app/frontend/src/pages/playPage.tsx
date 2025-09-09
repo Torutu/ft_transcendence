@@ -14,25 +14,31 @@ const PlayPage: React.FC = () => {
   const location  = useLocation();
 
   useEffect(() => {
-    const name = location.state.name;
+    let name: string | null = null;
+    if (location.state?.name)
+      name = location.state.name;
     if (containerRef.current && gameId && mode && type && game === "pong") {
       pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name);
+      return () => {
+        if (pongInstance.current) {
+          pongInstance.current.dispose?.(); // fix the game dup
+          pongInstance.current = null; 
+        }      
+      }
     }
     else if (containerRef.current && gameId && mode && type && game === "keyclash") {
       const cleanup = KeyClashClient(containerRef.current, gameId, mode, type, navigate, name);
       return cleanup;
     }
-    return () => {
-      if (pongInstance.current) {
-        pongInstance.current.dispose?.(); // fix the game dup
-        pongInstance.current = null; 
-      }
-    };
+    else {
+      alert("No such page");
+      navigate("/");
+    }
   }, [gameId, mode, game, type, location]);
 
   if (game === "pong")
     return <div ref={containerRef} className="flex-grow relative w-full h-full bg-black" />;
-  else
+  else if (game === "keyclash")
     return (
       <div ref={containerRef} className="game-container">
         <div className="players-row">
@@ -50,6 +56,7 @@ const PlayPage: React.FC = () => {
         <div id="start-prompt">Press SPACE to Start</div>
       </div>
     );
+  else return; 
 };
 
 export default PlayPage;
