@@ -1,6 +1,7 @@
 // src/types/lobby.ts
 export interface Player {
-    id: string | null;
+    playerId: string | null;
+    socketId: string | null;
     name: string | null;
 }
   

@@ -61,7 +61,7 @@ export function setupKeyClash(io: Server) {
     keyClash.on("connection", (socket) => {
         console.log(`Player connected on key clash: ${socket.id}`);
 
-        socket.on("join_game_room", (roomId, mode, type, players, callback) => {
+        socket.on("join_game_room", (roomId, mode, type, callback) => {
 			let roomState: state | undefined;
 			if (type === "1v1") {
 				roomState = keyClashRooms.find(r => r.id === roomId);
@@ -80,74 +80,125 @@ export function setupKeyClash(io: Server) {
                 return callback({ error: "The game is full!" });
             }
             socket.data.roomId = roomId;
+            socket.emit("get_names");
+            socket.on("names", (names) => {
+                const player: Player = { id: socket.id, name: names.player1, side: null }; 
 
-            const player: Player = { id: socket.id, name: players.player1, side: null }; 
-
-            if (state.players.length === 0 || (state.players.length === 1 && state.players[0].side === "right")) {
-                player.side = "left";
-                state.players.push(player);
-                if (state.type === "1v1")
-                    state.p1 = players.player1?.substring(0, 10);
-            }
-            else if (state.players.length === 1 && state.players[0].side === "left") {
-                player.side = "right";
-                state.players.push(player);
-                if (state.type === "1v1")
-                    state.p2 = players.player1?.substring(0, 10);         
-            }
-            else
-                state.players.push(player); 
-
-            if (mode === "local") {
-                state.players.push({ id: null, name: players.player2, side: "right"});
-                if (state.type === "1v1")
-                    state.p2 = players.player2?.substring(0, 10);
-                if (type === "tournament") {
-                    state.players.push({ id: null, name: players.player3, side: null });
-                    state.players.push({ id: null, name: players.player4, side: null });
+                if (state.players.length === 0 || (state.players.length === 1 && state.players[0].side === "right")) {
+                    player.side = "left";
+                    state.players.push(player);
+                    if (state.type === "1v1")
+                        state.p1 = names.player1?.substring(0, 10);
                 }
-            }
-        
-            socket.join(roomId);
-
-            console.log('players: ', state.players);
-
-            if ((state.type === "1v1" && state.players.length < 2) || 
-            (state.type === "tournament" && state.players.length < 4)) {
-                state.status = "waiting";
-                keyClash.to(roomId).emit("waiting", getPublicState(state));
-            }
-            else {
-                state.status = "starting";
-                if (state.type === "tournament")
-                    matchmake();
-            }
-			if (type === "1v1")
-            	lobby.emit("lobby_update", getLobbyState());
-			else
-				tournament_lobby.emit("lobby_update", getTournamentLobbyState());
-            keyClash.to(roomId).emit("gameState", getPublicState(state));
-
-            socket.on("setReady", () => {
-                if ((state.status !== "starting" && state.status !== "finished") || (state.type === "tournament" && state.status === "finished")) return;
-                if (state.mode === "local")
-                    return startGame();
-                if (state.status === "finished") {
-                    state.status = "starting";
-					lobby.emit("lobby_update", getLobbyState());
+                else if (state.players.length === 1 && state.players[0].side === "left") {
+                    player.side = "right";
+                    state.players.push(player);
+                    if (state.type === "1v1")
+                        state.p2 = names.player1?.substring(0, 10);         
                 }
-                if (player.side === "left") { state.player1ready = true; }
-                else if (player.side === "right") { state.player2ready = true; }
-                else return;
-                state.score1 = 0;
-                state.score2 = 0;
-                keyClash.to(roomId).emit("gameState", getPublicState(state));
-                if ((state.type === "1v1" && state.players.length === 2 && state.player1ready && state.player2ready) ||
-                (state.type === "tournament" && state.players.length === 4 && state.player1ready && state.player2ready)) {
-                    startGame();
+                else
+                    state.players.push(player); 
+
+                if (mode === "local") {
+                    state.players.push({ id: "p2", name: names.player2, side: "right"});
+                    if (state.type === "1v1")
+                        state.p2 = names.player2?.substring(0, 10);
+                    if (type === "tournament") {
+                        state.players.push({ id: "p3", name: names.player3, side: null });
+                        state.players.push({ id: "p4", name: names.player4, side: null });
+                    }
                 }
-            });
             
+                socket.join(roomId);
+
+                console.log('players: ', state.players);
+
+                if ((state.type === "1v1" && state.players.length < 2) || 
+                (state.type === "tournament" && state.players.length < 4)) {
+                    state.status = "waiting";
+                    keyClash.to(roomId).emit("waiting", getPublicState(state));
+                }
+                else {
+                    state.status = "starting";
+                    if (state.type === "tournament")
+                        matchmake();
+                }
+                if (type === "1v1")
+                    lobby.emit("lobby_update", getLobbyState());
+                else
+                    tournament_lobby.emit("lobby_update", getTournamentLobbyState());
+                keyClash.to(roomId).emit("gameState", getPublicState(state));
+
+                socket.on("keypress", ({ key }) => {
+                    if (state.timeLeft <= 0 || state.status !== "in-progress") return;
+    
+                    if (mode === "remote") {
+                        if (player.side === "left") {
+                            if (key === state.prompts[0] ||
+                                key === arrowKeys[wasdKeys.indexOf(state.prompts[0])]) {
+                                state.score1++;
+                                state.prompts[0] = getRandomKey(wasdKeys);
+                                keyClash.to(roomId).emit("correctHit", { player: 1 });
+                            } else {
+                                state.score1--;
+                            }
+                        }
+                        if (player.side === "right") {
+                            if (key === state.prompts[1] || 
+                                key === wasdKeys[arrowKeys.indexOf(state.prompts[1])]) {
+                                state.score2++;
+                                state.prompts[1] = getRandomKey(arrowKeys);
+                                keyClash.to(roomId).emit("correctHit", { player: 2 });
+                            } else {
+                                state.score2--;
+                            }
+                        }
+                    }
+                    else {
+                        if (wasdKeys.includes(key)) {
+                            if (key === state.prompts[0]) {
+                                state.score1++;
+                                state.prompts[0] = getRandomKey(wasdKeys);
+                                keyClash.to(roomId).emit("correctHit", { player: 1 });
+                            }
+                            else
+                                state.score1--;
+                        }
+                        else if (arrowKeys.includes(key)) {
+                            if (key === state.prompts[1]) {
+                                state.score2++;
+                                state.prompts[1] = getRandomKey(arrowKeys);
+                                keyClash.to(roomId).emit("correctHit", { player: 2 });
+                            }
+                            else
+                                state.score2--;                     
+                        }
+                    }
+                    keyClash.to(roomId).emit("gameState", getPublicState(state));
+                });
+                
+                socket.on("setReady", () => {
+                    if ((state.status !== "starting" && state.status !== "finished") || (state.type === "tournament" && state.status === "finished")) return;
+                    if (state.mode === "local")
+                        return startGame();
+                    if (state.status === "finished") {
+                        state.status = "starting";
+                        lobby.emit("lobby_update", getLobbyState());
+                    }
+                    if (player.side === "left") { state.player1ready = true; }
+                    else if (player.side === "right") { state.player2ready = true; }
+                    else return;
+                    state.score1 = 0;
+                    state.score2 = 0;
+                    keyClash.to(roomId).emit("gameState", getPublicState(state));
+                    if ((state.type === "1v1" && state.players.length === 2 && state.player1ready && state.player2ready) ||
+                    (state.type === "tournament" && state.players.length === 4 && state.player1ready && state.player2ready)) {
+                        startGame();
+                    }
+                });
+
+            });
+
             function startGame() {
                 if (state.status === "in-progress") return; // game already running
 
@@ -225,56 +276,7 @@ export function setupKeyClash(io: Server) {
                 if (state.round <= 3)
                     state.status = "starting";
             };
-
-            socket.on("keypress", ({ key }) => {
-                if (state.timeLeft <= 0 || state.status !== "in-progress") return;
-
-                if (mode === "remote") {
-                    if (player.side === "left") {
-                        if (key === state.prompts[0] ||
-                            key === arrowKeys[wasdKeys.indexOf(state.prompts[0])]) {
-                            state.score1++;
-                            state.prompts[0] = getRandomKey(wasdKeys);
-                            keyClash.to(roomId).emit("correctHit", { player: 1 });
-                        } else {
-                            state.score1--;
-                        }
-                    }
-                    if (player.side === "right") {
-                        if (key === state.prompts[1] || 
-                            key === wasdKeys[arrowKeys.indexOf(state.prompts[1])]) {
-                            state.score2++;
-                            state.prompts[1] = getRandomKey(arrowKeys);
-                            keyClash.to(roomId).emit("correctHit", { player: 2 });
-                        } else {
-                            state.score2--;
-                        }
-                    }
-                }
-                else {
-                    if (wasdKeys.includes(key)) {
-                        if (key === state.prompts[0]) {
-                            state.score1++;
-                            state.prompts[0] = getRandomKey(wasdKeys);
-                            keyClash.to(roomId).emit("correctHit", { player: 1 });
-                        }
-                        else
-                            state.score1--;
-                    }
-                    else if (arrowKeys.includes(key)) {
-                        if (key === state.prompts[1]) {
-                            state.score2++;
-                            state.prompts[1] = getRandomKey(arrowKeys);
-                            keyClash.to(roomId).emit("correctHit", { player: 2 });
-                        }
-                        else
-                            state.score2--;                     
-                    }
-                }
-                keyClash.to(roomId).emit("gameState", getPublicState(state));
-            });
         });
-
         socket.on("disconnect", () => {
             console.log(`Player disconnected from key clash: ${socket.id}`);            
             if (!socket.data.roomId) return;

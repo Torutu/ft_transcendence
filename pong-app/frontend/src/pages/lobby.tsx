@@ -4,31 +4,32 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../contexts/AuthContext";
 
 interface Player {
-  id: string;
+  socketId: string;
   name: string;
 }
-interface PongRoom {
+interface GameRoom {
   id: string;
   status: "waiting" | "in-progress" | "finished";  
   players: { id: string, name: string }[];
 }
 
-interface KeyClashRoom {
-  id: string,
-  status: "waiting" | "in-progress" | "finished";  
-  players: Record<string, number>;
-  p1: string,
-  p2: string
-}
+// interface KeyClashRoom {
+//   id: string,
+//   status: "waiting" | "in-progress" | "finished";  
+//   players: Record<string, number>;
+//   p1: string,
+//   p2: string
+// }
 
 export default function LobbyPage() {
   const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
-  const [pongGames, setPongGames] = useState<PongRoom[]>([]);
-  const [keyClashGames, setKeyClashGames] = useState<KeyClashRoom[]>([]);
+  const [pongGames, setPongGames] = useState<GameRoom[]>([]);
+  const [keyClashGames, setKeyClashGames] = useState<GameRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
+  let playerId: string | null = null;
 
   useEffect(() => {
     socketRef.current = io("/lobby", {
@@ -38,9 +39,16 @@ export default function LobbyPage() {
     });
 
     socketRef.current.on("connect", () => {
-      if (user)
+      if (user) {
         name = user.name;
-      socketRef.current.emit("name", name);
+        playerId = user.id;
+      }
+      socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
+        if (res.error) {
+          alert(res.error);
+          navigate("/tournament")
+        }
+      });
     });
 
     socketRef.current.on("lobby_update", (data) => {
@@ -90,7 +98,7 @@ export default function LobbyPage() {
     <div style={{ padding: "1rem" }}>
       <h2>Players in Lobby ({players.length})</h2>
       <ul>
-        {players.map(p => <li key={p.id}>{p.name}</li>)}
+        {players.map(p => <li key={p.socketId}>{p.name}</li>)}
       </ul>
 
       <h2>Pong Games</h2>
@@ -137,10 +145,9 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {Object.keys(game.players).length}/2 players — {game.status}
+            <strong>Room-{game.id}</strong> — {game.players.length}/2 players — {game.status}
             <ul>
-              <li>{game.p1}</li>
-              <li>{game.p2}</li>
+              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
             </ul>
           </li>
         ))}      

@@ -229,41 +229,47 @@ export default class PingPongClient {
     this.socket.on('connect', () => {
         console.log('Connected to server:', this.socket?.id);
 
-		if (this.type === "1v1") {
-			if (!name)
-				name = prompt("Enter name for player1:", "Guest");
-			let player2: string | null = null;
-			if (this.mode === "local")
-				player2 = prompt("Enter name for player2:", "Guest");
-			this.socket?.emit('join_game_room', this.gameId, name, player2, (callback: { error: string }) => {
-				if (callback.error) {
-					alert(callback.error);       
-					this.navigate("/lobby");
-				}
-			});
-		}
-		else if (this.type === "tournament")
-		{
-			if (!name)
-				name = prompt("Enter name for player1:", "Guest");
-			this.players.player1 = name;
+		  if (this.type === "1v1") {
+			  this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);       
+					  this.navigate("/lobby");
+				  }
+			  });
+		  }
+		  else if (this.type === "tournament")
+		  {
+			  this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);
+					  this.navigate("/tournament_lobby");
+				  }
+			  });
+		  }    
+    });
+
+    this.socket.on('get_names', () => {
+      if (!name)
+				this.players.player1 = prompt("Enter name for player1:", "Guest");
+      else
+        this.players.player1 = name;
 			if (this.mode === "local") {
 				this.players.player2 = prompt("Enter name for player2:", "Guest");
-				this.players.player3 = prompt("Enter name for player3:", "Guest");
-				this.players.player4 = prompt("Enter name for player4:", "Guest");			
-			}
-			this.socket?.emit('join_tournament_room', this.gameId, this.players, (callback: { error: string }) => {
-				if (callback.error) {
-					alert(callback.error);
-					this.navigate("tournament_lobby");
-				}
-			});
-		}    
-    });
+        if (this.type === "tournament") {
+          this.players.player3 = prompt("Enter name for player3:", "Guest");
+				  this.players.player4 = prompt("Enter name for player4:", "Guest");
+        }
+      }
+      this.socket?.emit('names', this.players);
+    })
 
     this.socket.on('playerSide', (side) => {
         this.playerSide = side;
     });
+    this.socket.on('refreshPlayerSides', (players) => {
+      const player = players.find(p => p.id === this.socket?.id);
+      this.playerSide = player.side;
+    })
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
         if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null)) {

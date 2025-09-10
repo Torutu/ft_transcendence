@@ -9,7 +9,7 @@ export function setupPongNamespace(io: Server) {
     pongNamespace.on("connection", (socket) => {
         console.log("Client joined game:", socket.id);
 
-        socket.on("join_game_room", (roomId, name, player2, callback) => {
+        socket.on("join_game_room", (roomId, callback) => {
 			const gameRoom = pongRooms.find(g => g.getId() === roomId)
 			if (!gameRoom){
 				return callback({error: "Can't find the game room!" });
@@ -17,7 +17,36 @@ export function setupPongNamespace(io: Server) {
 			if (gameRoom.state.status !== "waiting") {
 				return callback({ error: "The game is full!" });
 			}
+            let playerSide: "left" | "right" | null = "left";  
             socket.data.roomId = roomId;
+            socket.join(roomId);
+            socket.emit('get_names');
+            socket.on('names', (names) => {
+                if (gameRoom.state.players.length === 1 && gameRoom.state.players[0].side === "left")
+                    playerSide = "right"                  
+                
+                gameRoom.setPlayer(playerSide, names.player1, socket.id);
+
+                if (gameRoom.state.mode === "local"){
+                    gameRoom.setPlayer("right", names.player2, "p2");
+                    playerSide = null;
+                    gameRoom.state.timerDisplay = "Press SPACE to Start"
+                }
+                socket.emit('playerSide', playerSide);
+                console.log('players: ', gameRoom.state.players);
+
+                if (gameRoom.state.players.length === 2) {
+                    const p1 = gameRoom.state.players.find(p => p.side === "left");
+                    const p2 = gameRoom.state.players.find(p => p.side === "right");
+                    if (!p1 || !p2) return; // add some error msg?
+                    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
+                    gameRoom.updateScore();
+                    gameRoom.state.status = "starting";
+                }
+                pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
+                lobbyNamespace.emit("lobby_update", getLobbyState());                            
+            });
+
             socket.on("move", (side, positionZ) => {
                 if (side === "left")
                     gameRoom.state.leftPaddle.z = positionZ;
@@ -27,36 +56,6 @@ export function setupPongNamespace(io: Server) {
             socket.on("pause", () => {
                 togglePause();
             })
-
-            let playerSide: "left" | "right" | null = "left";
-
-            if (gameRoom.state.players.length === 1 && gameRoom.state.players[0].side === "left")
-                playerSide = "right"                  
-            
-            gameRoom.setPlayer(playerSide, name, socket.id);
-
-            if (gameRoom.state.mode === "local"){
-                gameRoom.setPlayer("right", player2, null);
-                playerSide = null;
-                gameRoom.state.timerDisplay = "Press SPACE to Start"
-            }
-
-            socket.join(roomId);
-
-            console.log('players: ', gameRoom.state.players);
-                
-            socket.emit('playerSide', playerSide);
-
-            if (gameRoom.state.players.length === 2) {
-                const p1 = gameRoom.state.players.find(p => p.side === "left");
-                const p2 = gameRoom.state.players.find(p => p.side === "right");
-                if (!p1 || !p2) return; // add some error msg?
-                gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
-                gameRoom.updateScore();
-                gameRoom.state.status = "starting";
-            }
-            pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
-            lobbyNamespace.emit("lobby_update", getLobbyState());
 
             socket.on("setReady", () => {
                 if (gameRoom.state.status === "in-progress" || gameRoom.state.players.length < 2) return;
@@ -129,7 +128,7 @@ export function setupPongNamespace(io: Server) {
 
         });
 
-        socket.on("join_tournament_room", (roomId, players, callback) => {
+        socket.on("join_tournament_room", (roomId, callback) => {
 			const gameRoom = pongTournaments.find(g => g.getId() === roomId)
 			if (!gameRoom){
 				return callback({error: "Can't find the tournament!" });
@@ -138,54 +137,54 @@ export function setupPongNamespace(io: Server) {
 				return callback({ error: "The tournament is full!" });
 			}
             socket.data.roomId = roomId;
+            socket.join(roomId);        
+            socket.emit('get_names');
+            socket.on('names', (names) => {
+                gameRoom.setPlayer(null, names.player1, socket.id);
+                if (gameRoom.state.mode === "local"){
+                    gameRoom.setPlayer(null, names.player2, "p2");
+                    gameRoom.setPlayer(null, names.player3, "p3");
+                    gameRoom.setPlayer(null, names.player4, "p4");
+                    gameRoom.state.timerDisplay = "Press SPACE to start the tournament!"
+                }
+                console.log('players: ', gameRoom.state.players);
+            
+                if (gameRoom.state.players.length < 4)
+                    gameRoom.state.scoreDisplay = `Waiting for opponents... (${gameRoom.state.players.length}/4)`;
+                pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
+                tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
+                const player = gameRoom.state.players.find(p => p.id === socket.id);
+    
+                if (gameRoom.state.players.length === 4) {
+                    gameRoom.state.status = "starting";
+                    tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
+                    gameRoom.matchmake();
+                    pongNamespace.to(roomId).emit('refreshPlayerSides', gameRoom.state.players);
+                    gameRoom.updateScore();
+                    pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);           
+                }
+                socket.on("setReady", () => {
+                    if (gameRoom.state.status !== "starting" || gameRoom.state.players.length < 4) return;
+                    if (gameRoom.state.mode === "local")
+                        return startGame();
+                    if (player?.side === "left") { gameRoom.state.player1ready = true; }
+                    else if (player?.side === "right") { gameRoom.state.player2ready = true; }
+                    else return;
+                    pongNamespace.to(roomId).emit("stateUpdate", gameRoom.state);
+                    if (gameRoom.state.players.length === 4 && 
+                        gameRoom.state.player1ready && gameRoom.state.player2ready) {
+                        startGame();
+                    }
+                });
+            });
+
             socket.on("move", (side, positionZ) => {
                 if (side === "left")
                     gameRoom.state.leftPaddle.z = positionZ;
                 else if (side === "right")
                     gameRoom.state.rightPaddle.z = positionZ;
             });
-            
-            gameRoom.setPlayer(null, players.player1, socket.id);
 
-            if (gameRoom.state.mode === "local"){
-                gameRoom.setPlayer(null, players.player2, null);
-                gameRoom.setPlayer(null, players.player3, null);
-                gameRoom.setPlayer(null, players.player4, null);
-                gameRoom.state.timerDisplay = "Press SPACE to start the tournament!"
-            }
-
-            socket.join(roomId);
-
-            console.log('players: ', gameRoom.state.players);
-            
-            if (gameRoom.state.players.length < 4)
-                gameRoom.state.scoreDisplay = `Waiting for opponents... (${gameRoom.state.players.length}/4)`;
-            pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
-            tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
-            const player = gameRoom.state.players.find(p => p.id === socket.id);
-
-            if (gameRoom.state.players.length === 4) {
-                gameRoom.state.status = "starting";
-                tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
-                gameRoom.matchmake();
-                gameRoom.updateScore();
-                pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);           
-            }
-
-            socket.on("setReady", () => {
-                if (gameRoom.state.status !== "starting" || gameRoom.state.players.length < 4) return;
-                if (gameRoom.state.mode === "local")
-                    return startGame();
-                if (player?.side === "left") { gameRoom.state.player1ready = true; }
-                else if (player?.side === "right") { gameRoom.state.player2ready = true; }
-                else return;
-                socket.emit('playerSide', player?.side); 
-                pongNamespace.to(roomId).emit("stateUpdate", gameRoom.state);
-                if (gameRoom.state.players.length === 4 && 
-                    gameRoom.state.player1ready && gameRoom.state.player2ready) {
-                    startGame();
-                }
-            });
             // Broadcast game state at 60fps
             function startGame() {
                 if (!gameRoom) return;
@@ -203,6 +202,7 @@ export function setupPongNamespace(io: Server) {
                             gameRoom.state.loop = undefined;
 							gameRoom.state.round++;
                             gameRoom.matchmake();
+                            pongNamespace.to(roomId).emit('refreshPlayerSides', gameRoom.state.players);
 							if (gameRoom.state.round <= 3) {
                                 gameRoom.state.status = "starting";
                                 pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);

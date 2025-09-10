@@ -46,6 +46,18 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   window.addEventListener("keydown", onKeyDown);
 
   socket.on('connect', () => {
+    socket.emit('join_game_room', gameId, mode, type, (callback: { error: string }) => {
+      if (callback.error) {
+        alert(callback.error);
+        if (type === "1v1")
+          navigate("/lobby");
+        else
+          navigate("/tournament_lobby");
+      }
+    });
+  });
+
+  socket.on("get_names", () => {
     let players: { player1: string | null,
       player2: string | null,
       player3: string | null,
@@ -53,8 +65,9 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     }
     players = { player1: null, player2: null, player3: null, player4: null};
     if (!name)
-      name = prompt("Enter name for player1:", "Guest");
-    players.player1 = name;
+      players.player1 = prompt("Enter name for player1:", "Guest");
+    else
+      players.player1 = name;
     if (mode === "local") {
       players.player2 = prompt("Enter name for player2:", "Guest");
       if (type === "tournament") {
@@ -62,15 +75,7 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
         players.player4 = prompt("Enter name for player4:", "Guest");
       }
     }
-    socket.emit('join_game_room', gameId, mode, type, players, (callback: { error: string }) => {
-      if (callback.error) {
-        alert(callback.error);
-        if (type === "1v1")
-          navigate("/lobby");
-        else
-          navigate("tournament_lobby");
-      }
-    });
+    socket.emit("names", players);
   });
 
   socket.on("gameStart", (state) => {

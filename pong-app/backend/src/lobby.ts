@@ -9,13 +9,15 @@ export function setupLobby(io: Server) {
     lobbyNamespace.on("connection", (socket: Socket) => {
       console.log(`Player connected: ${socket.id}`);
 
-      socket.on("name", (name: string | null) => {
+      socket.on("name", (name: string | null, playerId: string | null, callback: Function) => {
+        if (playerId && playersOnline.some(p => p.playerId === playerId))
+          return callback({ error: "You're already in the lobby" });
         if (name)
           socket.data.name = name
         else
           socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
 
-        playersOnline.push({ id: socket.id, name: socket.data.name });
+        playersOnline.push({ playerId: playerId, socketId: socket.id, name: socket.data.name });
 
         lobbyNamespace.emit("lobby_update", getLobbyState());        
       })
@@ -61,7 +63,7 @@ export function setupLobby(io: Server) {
           if (gameRoom.status !== "waiting") return callback({ error: "Game already started" });          
         } 
         // remove player from list of players in lobby
-        const i = playersOnline.findIndex(p => p.id === socket.id);
+        const i = playersOnline.findIndex(p => p.socketId === socket.id);
         if (i !== -1) playersOnline.splice(i, 1);
 
         lobbyNamespace.emit("lobby_update", getLobbyState());        
@@ -72,7 +74,7 @@ export function setupLobby(io: Server) {
       socket.on("disconnect", () => {
         console.log(`Player disconnected: ${socket.id}`);
 
-        const player = playersOnline.findIndex(p => p.id === socket.id);
+        const player = playersOnline.findIndex(p => p.socketId === socket.id);
         if (player !== -1) playersOnline.splice(player, 1);
   
         lobbyNamespace.emit("lobby_update", getLobbyState());

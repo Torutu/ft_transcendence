@@ -7,28 +7,29 @@ interface Player {
   id: string;
   name: string;
 }
-interface PongRoom {
+interface GameRoom {
   id: string;
   status: "waiting" | "in-progress" | "finished";  
   players: { id: string, name: string }[];
 }
 
-interface KeyClashRoom {
-  id: string,
-  status: "waiting" | "in-progress" | "finished";  
-  players: Record<string, number>;
-  p1: string,
-  p2: string
-}
+// interface KeyClashRoom {
+//   id: string,
+//   status: "waiting" | "in-progress" | "finished";  
+//   players: Record<string, number>;
+//   p1: string,
+//   p2: string
+// }
 
 export default function LobbyPage() {
   const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
-  const [pongTournaments, setPongTournaments] = useState<PongRoom[]>([]);
-  const [keyClashTournaments, setKeyClashTournaments] = useState<KeyClashRoom[]>([]);
+  const [pongTournaments, setPongTournaments] = useState<GameRoom[]>([]);
+  const [keyClashTournaments, setKeyClashTournaments] = useState<GameRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
+  let playerId: string | null = null;
 
   useEffect(() => {
     socketRef.current = io("/tournament_lobby", {
@@ -38,9 +39,16 @@ export default function LobbyPage() {
     });
 
     socketRef.current.on("connect", () => {
-      if (user)
+      if (user) {
         name = user.name;
-      socketRef.current.emit("name", name);
+        playerId = user.id;
+      }
+      socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
+        if (res.error) {
+          alert(res.error);
+          navigate("/tournament")
+        }
+      });
     });
 
     socketRef.current.on("lobby_update", (data) => {
@@ -137,12 +145,9 @@ export default function LobbyPage() {
               if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
             }}
           >
-            <strong>Tournament-{game.id}</strong> — {Object.keys(game.players).length}/4 players — {game.status}
+            <strong>Tournament-{game.id}</strong> — {game.players.length}/4 players — {game.status}
             <ul>
-              <li>{game.p1}</li>
-              <li>{game.p2}</li>
-              <li>{game.p3}</li>
-              <li>{game.p4}</li>
+              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
             </ul>
           </li>
         ))}      

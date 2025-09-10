@@ -21,9 +21,7 @@ export function getLobbyState(): LobbyState {
     keyClashGames: keyClashRooms.map(g => ({
       id: g.id,
       status: g.status,
-      players: g.players,
-      p1: g.p1,
-      p2: g.p2
+      players: g.players
       })),
   }
 };
@@ -39,9 +37,7 @@ export function getTournamentLobbyState(): LobbyState {
     keyClashGames: keyClashTournaments.map(g => ({
       id: g.id,
       status: g.status,
-      players: g.players,
-      p1: g.p1,
-      p2: g.p2
+      players: g.players
       })),
   }
 };
