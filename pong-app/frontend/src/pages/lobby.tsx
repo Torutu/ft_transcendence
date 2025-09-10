@@ -13,14 +13,6 @@ interface GameRoom {
   players: { id: string, name: string }[];
 }
 
-// interface KeyClashRoom {
-//   id: string,
-//   status: "waiting" | "in-progress" | "finished";  
-//   players: Record<string, number>;
-//   p1: string,
-//   p2: string
-// }
-
 export default function LobbyPage() {
   const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();

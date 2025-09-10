@@ -1,5 +1,6 @@
 import { NavigateFunction } from "react-router-dom";
 import { io } from "socket.io-client";
+import validator from 'validator';
 
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
                                         mode: "local" | "remote", type: "1v1" | "tournament",
@@ -57,22 +58,31 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     });
   });
 
-  socket.on("get_names", () => {
+  socket.on("get_names", (existing) => {
     let players: { player1: string | null,
       player2: string | null,
       player3: string | null,
       player4: string | null
     }
     players = { player1: null, player2: null, player3: null, player4: null};
+    if (existing.length >= 1)
+      players.player1 = existing[0].name;
+    if (existing.length >= 2)
+      players.player2 = existing[1].name;
+    if (existing.length >= 3)
+      players.player3 = existing[2].name;
+    if (existing.length >= 4)
+      players.player4 = existing[3].name;         
+
     if (!name)
-      players.player1 = prompt("Enter name for player1:", "Guest");
+      players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", players);
     else
       players.player1 = name;
     if (mode === "local") {
-      players.player2 = prompt("Enter name for player2:", "Guest");
+      players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", players);
       if (type === "tournament") {
-        players.player3 = prompt("Enter name for player3:", "Guest");
-        players.player4 = prompt("Enter name for player4:", "Guest");
+        players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", players);
+        players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", players);
       }
     }
     socket.emit("names", players);
@@ -174,4 +184,31 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
         socket.disconnect();
       }
   };
+}
+
+export function getValidatedPlayerName(message: string, placeholder: string, existing: {player1: string | null,
+  player2: string | null,
+  player3: string | null,
+  player4: string | null }) {
+
+  let name = prompt(message, placeholder);
+  if (!name) {
+    alert("Name can't be empty");
+    return getValidatedPlayerName(message, placeholder, existing);
+  }
+  name = name.trim();
+  if (!validator.isLength(name, {min: 1, max: 13})) {
+    alert("Name must be between 1-10 characters long");
+    return getValidatedPlayerName(message, placeholder, existing);    
+  }
+  if (!validator.isAlphanumeric(name)) {
+    alert("Name must be alphanumeric");
+    return getValidatedPlayerName(message, placeholder, existing);    
+  }
+  if (name === existing.player1 || name === existing.player2 ||
+    name === existing.player3 || name === existing.player3) {
+      alert("That name is already taken");
+      return getValidatedPlayerName(message, placeholder, existing);       
+    }
+  return name;
 }

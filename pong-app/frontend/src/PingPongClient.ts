@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
+import { getValidatedPlayerName } from './keyClashClient';
 
 export default class PingPongClient {
   private groundEmission = 0.5;
@@ -250,17 +251,17 @@ export default class PingPongClient {
 
     this.socket.on('get_names', () => {
       if (!name)
-				this.players.player1 = prompt("Enter name for player1:", "Guest");
+        this.players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", this.players);
       else
         this.players.player1 = name;
-			if (this.mode === "local") {
-				this.players.player2 = prompt("Enter name for player2:", "Guest");
+      if (this.mode === "local") {
+        this.players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", this.players);
         if (this.type === "tournament") {
-          this.players.player3 = prompt("Enter name for player3:", "Guest");
-				  this.players.player4 = prompt("Enter name for player4:", "Guest");
+          this.players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", this.players);
+          this.players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", this.players);
         }
       }
-      this.socket?.emit('names', this.players);
+      this.socket?.emit("names", this.players);
     })
 
     this.socket.on('playerSide', (side) => {
@@ -321,12 +322,11 @@ export default class PingPongClient {
         }
     });
 
-    this.socket.on('waiting', () => {
+    this.socket.on('waiting', (state) => {
       if (this.type === "1v1")
         this.scoreDisplay.textContent = 'Waiting for opponent...';
       else {
-        const players = Object.values(this.players).length;
-        this.scoreDisplay.textContent = `Waiting for opponents... (${players}/4)`;
+        this.scoreDisplay.textContent = `Waiting for opponents... (${state.players.length}/4)`;
       }
       this.restartButton.style.display = "none";
       this.status = "waiting";

@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState } from "./gameData.js";
+import { validatePlayerNames } from "./KeyClashGame";
 
 export function setupPongNamespace(io: Server) {
     const pongNamespace = io.of("/pong");
@@ -22,9 +23,15 @@ export function setupPongNamespace(io: Server) {
             socket.join(roomId);
             socket.emit('get_names');
             socket.on('names', (names) => {
+                const p_num = validatePlayerNames(names, gameRoom.state.type, gameRoom.state.mode);
+                if (p_num > 0)
+                    return callback({ error: `Invalid name for player${p_num}`});
+                if (gameRoom.state.players.length === 1 && gameRoom.state.players[0].name === names.player1)
+                    return callback({ error: `The name "${names.player1}" is already taken`});
+
                 if (gameRoom.state.players.length === 1 && gameRoom.state.players[0].side === "left")
                     playerSide = "right"                  
-                
+
                 gameRoom.setPlayer(playerSide, names.player1, socket.id);
 
                 if (gameRoom.state.mode === "local"){
@@ -140,6 +147,15 @@ export function setupPongNamespace(io: Server) {
             socket.join(roomId);        
             socket.emit('get_names');
             socket.on('names', (names) => {
+                const p_num = validatePlayerNames(names, gameRoom.state.type, gameRoom.state.mode);
+                if (p_num > 0)
+                    return callback({ error: `Invalid name for player${p_num}`});
+                if (gameRoom.state.players.length >= 1 && gameRoom.state.players[0].name === names.player1)
+                    return callback({ error: `The name "${names.player1}" is already taken`});
+                if (gameRoom.state.players.length >= 2 && gameRoom.state.players[1].name === names.player1)
+                    return callback({ error: `The name "${names.player1}" is already taken`});
+                if (gameRoom.state.players.length === 3 && gameRoom.state.players[2].name === names.player1)
+                    return callback({ error: `The name "${names.player1}" is already taken`});
                 gameRoom.setPlayer(null, names.player1, socket.id);
                 if (gameRoom.state.mode === "local"){
                     gameRoom.setPlayer(null, names.player2, "p2");
@@ -226,9 +242,13 @@ export function setupPongNamespace(io: Server) {
                 game.state.players.splice(playerindex, 1);
 
             if (game.state.type === "tournament") {
-                pongNamespace.to(game.getId()).emit("disconnection");
-                const i = pongTournaments.findIndex(g => g.getId() === socket.data.roomId);
-                if (i !== -1) pongTournaments.splice(i, 1);
+                if (game.state.status !== "waiting" || game.state.players.length === 0 || game.state.mode === "local") {
+                    pongNamespace.to(game.getId()).emit("disconnection");
+                    const i = pongTournaments.findIndex(g => g.getId() === socket.data.roomId);
+                    if (i !== -1) pongTournaments.splice(i, 1);
+                }
+                if (game.state.status === "waiting")
+                    pongNamespace.to(game.getId()).emit("waiting", game.state);
                 tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
                 return;    
             }
@@ -236,7 +256,7 @@ export function setupPongNamespace(io: Server) {
                 clearInterval(game.state.loop)
                 game.state.loop = undefined;
                 game.state.status = "waiting";
-                pongNamespace.to(socket.data.roomId).emit("waiting");
+                pongNamespace.to(socket.data.roomId).emit("waiting", game.state);
             }
 			if (game.state.type === "1v1")
             	lobbyNamespace.emit("lobby_update", getLobbyState());
