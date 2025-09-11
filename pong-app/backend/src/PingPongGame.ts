@@ -58,7 +58,7 @@ export default class PingPongGame {
             matches: [],
             mode: mode,
 			type: type,
-			round: 1,
+			round: 0,
             gameEndTime: performance.now() + this.gameDuration,
             whenPaused: performance.now(),
             player1ready: false,
@@ -71,15 +71,15 @@ export default class PingPongGame {
             shufflePlayers(this.state.players);
             this.state.matches.push( { player1: this.state.players[0], player2: this.state.players[1], winner: null });
             this.state.matches.push( { player1: this.state.players[2], player2: this.state.players[3], winner: null });
-            this.leftPlayer = this.state.matches[0].player1.name?.substring(0, 10);
-            this.rightPlayer = this.state.matches[0].player2.name?.substring(0, 10);
+            this.leftPlayer = this.state.matches[0].player1.name;
+            this.rightPlayer = this.state.matches[0].player2.name;
             this.resetPlayerSides();
             this.state.matches[0].player1.side = "left";
             this.state.matches[0].player2.side = "right";
         }
         else if (this.state.round === 2) {
-            this.leftPlayer = this.state.matches[1].player1.name?.substring(0, 10);
-            this.rightPlayer = this.state.matches[1].player2.name?.substring(0, 10);
+            this.leftPlayer = this.state.matches[1].player1.name;
+            this.rightPlayer = this.state.matches[1].player2.name;
             this.resetPlayerSides();
             this.state.matches[1].player1.side = "left";
             this.state.matches[1].player2.side = "right";
@@ -87,31 +87,31 @@ export default class PingPongGame {
         else if (this.state.round === 3) {
             if (this.state.matches[0].winner && this.state.matches[1].winner) {
                 this.state.matches.push( { player1: this.state.matches[0].winner,  player2: this.state.matches[1].winner, winner: null });
-                this.leftPlayer = this.state.matches[2].player1.name?.substring(0, 10);
-                this.rightPlayer = this.state.matches[2].player2.name?.substring(0, 10);
+                this.leftPlayer = this.state.matches[2].player1.name;
+                this.rightPlayer = this.state.matches[2].player2.name;
                 this.resetPlayerSides();
                 this.state.matches[2].player1.side = "left";
                 this.state.matches[2].player2.side = "right";
             }
         }
         if (this.state.round <= 3)
-            this.state.matchInfo += `Next up: ${this.leftPlayer} vs ${this.rightPlayer}!`;
+            this.state.matchInfo += `Next up, Round ${this.state.round}/3:\n${this.leftPlayer} vs ${this.rightPlayer}!`;
     };
     public getId() { return (this.id); };
     public setPlayer(side: "left" | "right" | null, name: string | undefined, id: string | null){
         if (side === "left")
-            this.leftPlayer = name?.substring(0, 10);
+            this.leftPlayer = name;
         else if (side === "right")
-            this.rightPlayer = name?.substring(0, 10);
+            this.rightPlayer = name;
         this.state.players.push({ id: id, name: name, side: side });
     };
 	public updatePlayers() {
 		for (let i = 0; i < this.state.players.length ; i++) {
 			let player = this.state.players[i];
 			if (player.side === "left")
-            	this.leftPlayer = player.name?.substring(0, 10);
+            	this.leftPlayer = player.name;
         	else if (player.side === "right")
-            	this.rightPlayer = player.name?.substring(0, 10);			
+            	this.rightPlayer = player.name;			
 		}
 	};
     public getLeftPlayer() { return (this.leftPlayer) };

@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState } from "./gameData.js";
 import { validatePlayerNames } from "./KeyClashGame";
+import PingPongGame from "./PingPongGame.js";
 
 export function setupPongNamespace(io: Server) {
     const pongNamespace = io.of("/pong");
@@ -43,10 +44,7 @@ export function setupPongNamespace(io: Server) {
                 console.log('players: ', gameRoom.state.players);
 
                 if (gameRoom.state.players.length === 2) {
-                    const p1 = gameRoom.state.players.find(p => p.side === "left");
-                    const p2 = gameRoom.state.players.find(p => p.side === "right");
-                    if (!p1 || !p2) return; // add some error msg?
-                    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
+					gameRoom.resetGame();
                     gameRoom.updateScore();
                     gameRoom.state.status = "starting";
                 }
@@ -61,11 +59,14 @@ export function setupPongNamespace(io: Server) {
                     gameRoom.state.rightPaddle.z = positionZ;
             });
             socket.on("pause", () => {
-                togglePause();
+				if (gameRoom.state.mode === "local")
+                	togglePause(gameRoom);
             })
 
             socket.on("setReady", () => {
-                if (gameRoom.state.status === "in-progress" || gameRoom.state.players.length < 2) return;
+                if (gameRoom.state.status === "in-progress" || 
+					gameRoom.state.status === "paused" || gameRoom.state.players.length < 2)
+					return;
                 if (gameRoom.state.mode === "local")
                     return startGame();
                 if (gameRoom.state.status !== "starting")
@@ -80,8 +81,14 @@ export function setupPongNamespace(io: Server) {
                 }
             });
 
-            socket.on("restart", () => { 
-                startGame();
+            socket.on("restart", () => {
+				if (gameRoom.state.mode === "local")
+                	return startGame();
+				gameRoom.resetGame();
+                gameRoom.updateScore();
+				gameRoom.state.status = "starting";
+				pongNamespace.to(roomId).emit("stateUpdate", gameRoom.state);
+				console.log("remote", gameRoom.state.status);	
             });
 
             function startGame() {
@@ -89,6 +96,11 @@ export function setupPongNamespace(io: Server) {
                 gameRoom.state.status = "in-progress";
             	lobbyNamespace.emit("lobby_update", getLobbyState());
                 if (!gameRoom.state.loop) {
+					const p1 = gameRoom.state.players.find(p => p.side === "left");
+                    const p2 = gameRoom.state.players.find(p => p.side === "right");
+                    if (!p1 || !p2) return; // add some error msg?
+                    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
+					gameRoom.state.round++;
                     // Broadcast game state at 60fps
                     gameRoom.resetGame();
                     pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state, "start");
@@ -105,34 +117,6 @@ export function setupPongNamespace(io: Server) {
                     }, 1000 / 60);
                 }
             };
-
-            function togglePause() {
-                if (gameRoom?.state.loop) {
-                    gameRoom.state.whenPaused = performance.now();
-                    clearInterval(gameRoom.state.loop);
-                    gameRoom.state.loop = undefined;
-                    gameRoom.state.status = "paused";
-                    gameRoom.state.scoreDisplay = "PAUSED (press Esc to resume)"
-                    pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
-					lobbyNamespace.emit("lobby_update", getLobbyState());
-                }
-                else if (gameRoom?.state.players.length === 2 && gameRoom.state.status === "paused"){
-                    gameRoom.state.status = "in-progress";
-                    gameRoom.updateScore();
-					lobbyNamespace.emit("lobby_update", getLobbyState());       
-                    gameRoom.state.gameEndTime += (performance.now() - gameRoom.state.whenPaused);
-                    gameRoom.state.loop = setInterval(() => {
-                        gameRoom.update();
-                        pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
-                        if (gameRoom.state.status === "finished") {
-                            clearInterval(gameRoom.state.loop);
-                            gameRoom.state.loop = undefined;
-							lobbyNamespace.emit("lobby_update", getLobbyState());
-                        }
-                    }, 1000 / 60);       
-                }
-            }; 
-
         });
 
         socket.on("join_tournament_room", (roomId, callback) => {
@@ -173,6 +157,7 @@ export function setupPongNamespace(io: Server) {
     
                 if (gameRoom.state.players.length === 4) {
                     gameRoom.state.status = "starting";
+					gameRoom.state.round++;
                     tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
                     gameRoom.matchmake();
                     pongNamespace.to(roomId).emit('refreshPlayerSides', gameRoom.state.players);
@@ -200,6 +185,10 @@ export function setupPongNamespace(io: Server) {
                 else if (side === "right")
                     gameRoom.state.rightPaddle.z = positionZ;
             });
+            socket.on("pause", () => {
+				if (gameRoom.state.mode === "local")
+                	togglePause(gameRoom);
+            })
 
             // Broadcast game state at 60fps
             function startGame() {
@@ -229,6 +218,50 @@ export function setupPongNamespace(io: Server) {
                 }
             }
         });
+
+        function togglePause(gameRoom: PingPongGame) {
+            if (gameRoom?.state.loop) {
+                gameRoom.state.whenPaused = performance.now();
+                clearInterval(gameRoom.state.loop);
+                gameRoom.state.loop = undefined;
+                gameRoom.state.status = "paused";
+                gameRoom.state.scoreDisplay = "PAUSED (press Esc to resume)"
+                pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
+				if (gameRoom.state.type === "1v1")
+					lobbyNamespace.emit("lobby_update", getLobbyState());
+				else
+					tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
+            }
+            else if (gameRoom.state.status === "paused"){
+                gameRoom.state.status = "in-progress";
+                gameRoom.updateScore();
+				if (gameRoom.state.type === "1v1")
+					lobbyNamespace.emit("lobby_update", getLobbyState());
+				else
+					tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
+                gameRoom.state.gameEndTime += (performance.now() - gameRoom.state.whenPaused);
+                gameRoom.state.loop = setInterval(() => {
+                    gameRoom.update();
+                    pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
+                    if (gameRoom.state.status === "finished") {
+                        clearInterval(gameRoom.state.loop);
+                        gameRoom.state.loop = undefined;
+						if (gameRoom.state.type === "tournament") {
+							gameRoom.state.round++;
+                            gameRoom.matchmake();
+                            pongNamespace.to(gameRoom.getId()).emit('refreshPlayerSides', gameRoom.state.players);
+							if (gameRoom.state.round <= 3) {
+                                gameRoom.state.status = "starting";
+                                pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
+							}
+							tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
+						}
+						else
+							lobbyNamespace.emit("lobby_update", getLobbyState());
+                    }
+                }, 1000 / 60);       
+            }
+        };
 
         socket.on('disconnect', () => {
             if (!socket.data.roomId) return;

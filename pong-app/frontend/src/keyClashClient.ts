@@ -103,21 +103,21 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   socket.on("gameState", (state) => {
     score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
     score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
-    if (state.status === "in-progress") {
+    if (state.status === "in-progress" || state.status === "starting") {
       if (state.type === "1v1")
         timerEl.textContent = `Time Left: ${state.timeLeft}s`;
       else
         timerEl.textContent = `Round ${state.round}/3\nTime Left: ${state.timeLeft}s`;        
     }
     if (state.type === "tournament" && state.status === "starting" && state.round === 1) {
-      timerEl.textContent = `Next up: ${state.matches[0].player1.name} vs ${state.matches[0].player2.name}`;
+      timerEl.textContent = `Next up, Round ${state.round}/3:\n${state.matches[0].player1.name} vs ${state.matches[0].player2.name}`;
       if (state.mode === "local") startPrompt.textContent = "Press SPACE to start the tournament!";
     }
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]] ;
     if (((state.players.length === 2 && state.type === "1v1") || 
         (state.players.length === 4 && state.type === "tournament")) &&
-        state.status !== "in-progress" && state.mode === "remote") //starting
+        state.status === "starting" && state.mode === "remote")
     {
       let readyCount = 0;
       if (state.player1.ready) readyCount++;
@@ -143,8 +143,8 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     else if (state.type === "tournament") {
       const i = state.round - 2;
       if (state.round <= 3) {
-        timerEl.textContent = `Round ${state.round - 1} over! ${state.matches[i].winner.name} wins!`;        
-        timerEl.textContent += `\nNext up: ${state.matches[i + 1].player1.name} vs ${state.matches[i + 1].player2.name}`;
+        timerEl.textContent = `Round ${state.round - 1} over, ${state.matches[i].winner.name} wins!`;        
+        timerEl.textContent += `\nNext up, Round ${state.round}/3:\n${state.matches[i + 1].player1.name} vs ${state.matches[i + 1].player2.name}`;
         if (mode === "remote") {
           let readyCount = 0;
           if (state.player1.ready) readyCount++;

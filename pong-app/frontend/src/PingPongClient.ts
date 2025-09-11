@@ -204,7 +204,7 @@ export default class PingPongClient {
     this.matchInfoDisplay = document.createElement('div');
     Object.assign(this.matchInfoDisplay.style, {
       position: 'absolute',
-      top: '30%',
+      top: '20%',
       left: '50%',
       transform: 'translateX(-50%)',
       color: 'white',
@@ -273,14 +273,14 @@ export default class PingPongClient {
     })
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
-        if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null)) {
+        if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null))
           this.rightPaddle.position.setZ(state.rightPaddle.z);
-          if (start) this.leftPaddle.position.setZ(state.leftPaddle.z);
-        }
-        if (this.mode === "remote" && (this.playerSide === "right" || this.playerSide === null)) {
+        if (this.mode === "remote" && (this.playerSide === "right" || this.playerSide === null))
           this.leftPaddle.position.setZ(state.leftPaddle.z);
-          if (start) this.rightPaddle.position.setZ(state.rightPaddle.z);
-        }
+        if (start) {
+			this.rightPaddle.position.setZ(state.rightPaddle.z);
+			this.leftPaddle.position.setZ(state.leftPaddle.z);
+		}
         this.latestBallX = state.ball.x;
         this.latestBallZ = state.ball.z;
         this.updated = true;
@@ -298,11 +298,11 @@ export default class PingPongClient {
           this.matchInfoDisplay.textContent = state.matchInfo;
         }
         this.status = state.status;
-        if (this.type === "1v1" && (state.status === "finished" || state.status === "paused")) {
+        if (this.type === "1v1" && (state.status === "finished")) {
           this.restartButton.style.display = "block";
         }
         else this.restartButton.style.display = "none";
-        if (state.status === "starting" || state.status === "finished") {
+        if (state.status === "finished" || state.type === "tournament" && state.status === "starting") {
           this.matchInfoDisplay.style.display = "block";
         }
         else this.matchInfoDisplay.style.display = "none";
@@ -329,6 +329,7 @@ export default class PingPongClient {
         this.scoreDisplay.textContent = `Waiting for opponents... (${state.players.length}/4)`;
       }
       this.restartButton.style.display = "none";
+	  this.matchInfoDisplay.style.display = "none";
       this.status = "waiting";
     });
 

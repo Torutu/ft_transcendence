@@ -44,7 +44,7 @@ export function setupTournamentLobby(io: Server) {
             status: "waiting",
             mode: mode,
 			      type: "tournament",
-            round: 1,
+            round: 0,
           }
           keyClashTournaments.push(newKeyClash);
         }

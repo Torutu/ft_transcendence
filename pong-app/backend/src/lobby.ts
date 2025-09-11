@@ -44,7 +44,7 @@ export function setupLobby(io: Server) {
             status: "waiting",
             mode: mode,
 			      type: "1v1",
-            round: 1,
+            round: 0,
           }
           keyClashRooms.push(newKeyClash);
         }

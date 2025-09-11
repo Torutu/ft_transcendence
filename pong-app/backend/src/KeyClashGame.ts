@@ -130,8 +130,15 @@ export function setupKeyClash(io: Server) {
                 }
                 else {
                     state.status = "starting";
-                    if (state.type === "tournament")
+                    if (state.type === "tournament") {
+						state.round++;
                         matchmake();
+					}
+					else {
+						state.score1 = 0;
+                		state.score2 = 0;
+                		state.timeLeft = 20;
+					}
                 }
                 if (type === "1v1")
                     lobby.emit("lobby_update", getLobbyState());
@@ -213,8 +220,11 @@ export function setupKeyClash(io: Server) {
                 if (state.status === "in-progress") return; // game already running
 
                 state.status = "in-progress";
-				if (type === "1v1")
+				if (type === "1v1") {
+					state.round++;
+					state.matches.push( { player1: state.players[0], player2: state.players[1], winner: null });
 					lobby.emit("lobby_update", getLobbyState());
+				}
 				else
 					tournament_lobby.emit("lobby_update", getTournamentLobbyState());
                 state.score1 = 0;
@@ -283,8 +293,10 @@ export function setupKeyClash(io: Server) {
                         state.matches[2].player2.side = "right";
                     }
                 }
-                if (state.round <= 3)
+                if (state.round <= 3) {
                     state.status = "starting";
+					state.timeLeft = 20;
+				}
             };
         });
         socket.on("disconnect", () => {
