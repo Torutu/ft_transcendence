@@ -563,7 +563,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         where: { id: user.id },
         data: { 
           online_status: "online",
-          last_activity: new Date().getTime(),
           lastLogin: new Date()
         }
       });
@@ -674,7 +673,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
               googleId: payload.sub,
                // ⭐ ADD THIS: Set as online for new Google users
             online_status: "online",
-            last_activity: new Date().getTime(),
             lastLogin: new Date()
             }
           });
@@ -684,7 +682,6 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           where: { id: user.id },
           data: {
             online_status: "online", 
-            last_activity: new Date().getTime(),
             lastLogin: new Date()
           }
         });
