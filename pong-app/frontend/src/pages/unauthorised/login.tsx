@@ -1,12 +1,10 @@
 // frontend/src/pages/unauthorised/login.tsx
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import validator from 'validator';
 import api from '../../utils/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
-import Alert from '../../components/Alert';
+import { Alert } from '../../components/general';
 
 declare global {
   interface Window {
@@ -114,7 +112,7 @@ export default function LoginPage() {
       
       if (res.data.user) {
         login(res.data.user);
-        navigate('/tournament');
+        navigate('/lobby');
       } else {
         setApiError('Google sign-in failed');
       }

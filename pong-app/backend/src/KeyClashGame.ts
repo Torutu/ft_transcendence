@@ -1,5 +1,12 @@
+// backend/src/KeyClashGame.ts
 import { Server } from "socket.io";
 import { keyClashRooms, getLobbyState } from "./gameData.js";
+
+// added by poonkodi - begin
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+// added by poonkodi - end
 
 export interface state {
     id: string,
@@ -45,6 +52,54 @@ function getRandomKey(keys: string[]) {
 const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 const wasdKeys = ['w', 's', 'a', 'd'];
 
+
+// 🎯 Added by poonkodi - begin
+async function saveKeyClashMatchResult(player1Name: string, player2Name: string, winnerName: string, player1Score: number, player2Score: number) {
+  try {
+    if (!player1Name || !player2Name || !winnerName) {
+      console.error("❌ Invalid player names provided");
+      return;
+    }
+
+    console.log(`⌨️ Saving KeyClash match: ${player1Name} (${player1Score}) vs ${player2Name} (${player2Score}), winner: ${winnerName}`);
+    
+    const [player1, player2, winner] = await Promise.all([
+      prisma.user.findUnique({ where: { name: player1Name } }),
+      prisma.user.findUnique({ where: { name: player2Name } }),
+      prisma.user.findUnique({ where: { name: winnerName } })
+    ]);
+
+    if (!player1 || !player2 || !winner) {
+      console.error("❌ Some players not found in database:", { 
+        player1Found: !!player1, 
+        player2Found: !!player2, 
+        winnerFound: !!winner 
+      });
+      return;
+    }
+
+    const match = await prisma.match.create({
+      data: {
+        player1Id: player1.id,
+        player2Id: player2.id,
+        player1Name: player1Name,
+        player2Name: player2Name,
+        player1Score: player1Score,
+        player2Score: player2Score,
+        winnerId: winner.id
+      }
+    });
+
+    console.log(`✅ KeyClash match saved successfully! Match ID: ${match.id}`);
+  } catch (error) {
+    console.error("❌ Error saving KeyClash match:", error);
+  }
+}
+
+// 🎯 Added by poonkodi - end
+
+
+
 export function setupKeyClash(io: Server) {
 
     const keyClash = io.of("/keyclash");
@@ -67,10 +122,10 @@ export function setupKeyClash(io: Server) {
 
             if (!Object.values(state.players).includes(1)) {
                 state.players[socket.id] = 1;
-                state.p1 = name?.substring(0, 10);
+                state.p1 = name;  // changed by Poonkodi
             } else {
                 state.players[socket.id] = 2;
-                state.p2 = name?.substring(0, 10);
+                state.p2 = player2;  // Changed by Poonkodi
             }
             if (mode === "local") {
                 state.p2 = player2?.substring(0, 10);
@@ -122,21 +177,56 @@ export function setupKeyClash(io: Server) {
                 state.timeLeft = 20;
                 state.prompts = [getRandomKey(wasdKeys), getRandomKey(arrowKeys)];
                 keyClash.to(roomId).emit("gameStart", getPublicState(state));
+
+    // Added by poonkodi - begin
             
+                // state.interval = setInterval(() => {
+                //     state.timeLeft--;
+                //     if (state.timeLeft <= 0 && state.interval) {
+                //         clearInterval(state.interval);
+                //         state.interval = null;
+                //         state.status = "finished";
+                //         lobby.emit("lobby_update", getLobbyState());
+                //         keyClash.to(roomId).emit("gameOver", getPublicState(state));
+                //         state.player1ready = false;
+                //         state.player2ready = false;
+                //     }
+                //     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
+                // }, 1000);
+
                 state.interval = setInterval(() => {
-                    state.timeLeft--;
-                    if (state.timeLeft <= 0 && state.interval) {
-                        clearInterval(state.interval);
-                        state.interval = null;
-                        state.status = "finished";
-                        lobby.emit("lobby_update", getLobbyState());
-                        keyClash.to(roomId).emit("gameOver", getPublicState(state));
-                        state.player1ready = false;
-                        state.player2ready = false;
-                    }
-                    else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
-                }, 1000);
+    state.timeLeft--;
+if (state.timeLeft <= 0 && state.interval) {
+    clearInterval(state.interval);
+    state.interval = null;
+    state.status = "finished";
+    lobby.emit("lobby_update", getLobbyState());
+    keyClash.to(roomId).emit("gameOver", getPublicState(state));
+    
+    if (state.mode === "remote" && state.p1 && state.p2) {
+        let winnerName = '';
+        
+        if (state.score1 > state.score2) {
+            winnerName = state.p1;
+        } else if (state.score2 > state.score1) {
+            winnerName = state.p2;
+        }
+        
+        if (winnerName) {
+            console.log(`⌨️ KeyClash finished: ${winnerName} beat ${winnerName === state.p1 ? state.p2 : state.p1} (${state.score1}-${state.score2})`);
+            // ✅ Pass actual scores
+            saveKeyClashMatchResult(state.p1, state.p2, winnerName, state.score1, state.score2);
+        }
+            }
+    
+            state.player1ready = false;
+            state.player2ready = false;
+        }
+            else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
+        }, 1000);
             };
+            // Added by poonkodi - end
+
         
             socket.on("keypress", ({ key }) => {
                 if (state.timeLeft <= 0 || state.status !== "in-progress") return;

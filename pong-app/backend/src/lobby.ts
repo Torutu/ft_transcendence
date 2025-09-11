@@ -1,3 +1,4 @@
+// backend/src/lobby.ts
 import { Server, Socket } from "socket.io";
 import { playersOnline, pongRooms, keyClashRooms, getLobbyState } from "./gameData";
 import PingPongGame from "./PingPongGame";

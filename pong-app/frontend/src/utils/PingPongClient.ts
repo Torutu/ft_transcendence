@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
 
+type StatusChangeCallback = (status: 'waiting' | 'in-progress' | 'finished') => void;
+
+
 export default class PingPongClient {
   private groundEmission = 0.5;
   private groundColor = 0xffffff;
@@ -55,7 +58,9 @@ export default class PingPongClient {
   private updated: boolean;
   private navigate: NavigateFunction;
 
-  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null) {
+  private onStatusChange?: StatusChangeCallback;
+
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null, onStatusChange?: StatusChangeCallback) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -71,6 +76,8 @@ export default class PingPongClient {
     this.updated = false;
 
     this.navigate = navigate;
+
+    this.onStatusChange = onStatusChange;
 
     this.animate = this.animate.bind(this);
 
@@ -214,7 +221,9 @@ export default class PingPongClient {
             alert(callback.error);          
             this.navigate("/lobby");
           }
-        });         
+        });   
+        // On connect, always waiting
+        if (this.onStatusChange) this.onStatusChange("waiting");      
     });
 
     this.socket.on('playerSide', (side) => {
@@ -243,6 +252,12 @@ export default class PingPongClient {
           this.scoreDisplay.textContent = state.scoreDisplay;
         this.timerDisplay.textContent = state.timerDisplay;
         this.status = state.status;
+                // Call status change callback when status transitions
+        if (this.onStatusChange) {
+          if (state.status === "in-progress") this.onStatusChange("in-progress");
+          else if (state.status === "finished" || state.status === "paused") this.onStatusChange("finished");
+          else if (state.status === "waiting") this.onStatusChange("waiting");
+        }
         if (state.status === "finished" || state.status === "paused")
           this.restartButton.style.display = "block";
         else
@@ -253,6 +268,7 @@ export default class PingPongClient {
         this.scoreDisplay.textContent = 'Waiting for opponent...';
         this.restartButton.style.display = "none";
         this.status = "waiting";
+        if (this.onStatusChange) this.onStatusChange("waiting");
     });
 }
 

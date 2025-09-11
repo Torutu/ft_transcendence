@@ -1,9 +1,13 @@
+// pong-app/frontend/src/utils/keyClashClient.ts
 import { NavigateFunction } from "react-router-dom";
 import { io } from "socket.io-client";
 
+type StatusChangeCallback = (status: 'waiting' | 'in-progress' | 'finished') => void;
+
+
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
                                         mode: "local" | "remote", 
-                                        navigate: NavigateFunction, name: string | null):() => void {
+                                        navigate: NavigateFunction, name: string | null, onStatusChange?: StatusChangeCallback):() => void {
   const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   const wasdKeys = ['w', 'a', 's', 'd'];
 
@@ -56,6 +60,8 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
           navigate("/lobby");
         }
       });
+      // On connect, always waiting
+      if (onStatusChange) onStatusChange("waiting");
   });
 
   socket.on("gameStart", (state) => {
@@ -65,6 +71,7 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]];
     startPrompt.textContent = "Good Luck!";
+    if (onStatusChange) onStatusChange("in-progress");
   });
 
   socket.on("gameState", (state) => {
@@ -81,10 +88,17 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       if (state.player2.ready) readyCount++;
       startPrompt.textContent = `Ready? Press SPACE (Players ready: ${readyCount}/2)`;
     }
+    // Track status change
+       if (onStatusChange) {
+      if (state.status === "in-progress") onStatusChange("in-progress");
+      else if (state.status === "finished") onStatusChange("finished");
+      else if (state.status === "waiting") onStatusChange("waiting");
+    }
   });
 
   socket.on("waiting", () => {
     startPrompt.textContent = "Waiting for opponent...";
+    if (onStatusChange) onStatusChange("waiting");
   })
 
   socket.on("gameOver", (state) => {
@@ -92,6 +106,7 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     const p2 = state.player2;
     timerEl.textContent = `Time's Up! Final Score ${p1.name}: ${p1.score} | ${p2.name}: ${p2.score}`;
     startPrompt.textContent = "Press SPACE to Restart";
+    if (onStatusChange) onStatusChange("finished");
   });
 
   socket.on("correctHit", ({ player }) => {

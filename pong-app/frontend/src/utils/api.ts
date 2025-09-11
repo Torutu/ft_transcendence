@@ -1,4 +1,4 @@
-// frontend/src/utils/api.js or api.ts
+// frontend/src/utils/api.ts
 import axios from 'axios';
 
 const api = axios.create({
@@ -9,6 +9,33 @@ const api = axios.create({
     'Content-Type': 'application/json',
   }
 });
+
+// Generic user profile fetch (used in AuthContext, My Locker, etc)
+export async function getUserProfile() {
+  const res = await api.get("/api/lobby/profile");
+  return res.data;
+}
+
+// Generic update user profile
+export async function updateUserProfile(data: {
+  firstName?: string;
+  lastName?: string;
+  profilePic?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  favAvatar?: string;
+  language?: string;
+}) {
+  const res = await api.post("/api/lobby/profile", data);
+  return res.data;
+}
+
+// Generic logout
+export async function logoutUser() {
+  const res = await api.post("/auth/logout");
+  return res.data;
+}
+
 
 // Add request interceptor for debugging
 api.interceptors.request.use(

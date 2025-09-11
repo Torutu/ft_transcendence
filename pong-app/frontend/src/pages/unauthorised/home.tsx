@@ -1,8 +1,8 @@
-// frontend/src/pages/menu.tsx
+// frontend/src/pages/home.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Menu: React.FC = () => {
+const Home = () => {
   const navigate = useNavigate();
   
   const handleStart = () => {
@@ -47,4 +47,4 @@ const Menu: React.FC = () => {
   );
 };
 
-export default Menu;
+export default Home;

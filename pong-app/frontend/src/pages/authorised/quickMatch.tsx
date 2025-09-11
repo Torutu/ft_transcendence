@@ -1,3 +1,4 @@
+// frontend/src/pages/authorised/quickMatch.tsx
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
@@ -21,7 +22,7 @@ interface KeyClashRoom {
 	p2: string
 }
 
-export default function LobbyPage() {
+export default function QuickMatchPage() {
 	const socketRef = useRef<Socket | null>(null);
 	const navigate = useNavigate();
 	const [players, setPlayers] = useState<Player[]>([]);

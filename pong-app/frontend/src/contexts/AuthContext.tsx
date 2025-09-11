@@ -1,6 +1,6 @@
 // frontend/src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
-import api from '../utils/api';
+import { getUserProfile, logoutUser } from '../utils/api';
 
 interface User {
   id: string;
@@ -34,10 +34,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isLoggingOut = useRef(false);
   const authRequestSent = useRef(false);
 
+  // Use utility function for auth check
   const checkAuth = async (): Promise<User | null> => {
     try {
-      const response = await api.get('/profile');
-      return response.data;
+      const userData = await getUserProfile();
+      return userData;
     } catch (error: any) {
       if (error.response?.status !== 401) {
         console.error('Auth check failed:', error);
@@ -115,12 +116,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Use utility function for logout
   const logout = async () => {
     if (isLoggingOut.current) return;
     
     isLoggingOut.current = true;
     try {
-      await api.post('/auth/logout');
+      await logoutUser();
       setUser(null);
       setIsLoading(false);
       setAuthChecked(true);

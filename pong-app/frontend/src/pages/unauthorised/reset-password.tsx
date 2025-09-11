@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import validator from 'validator';
 import api from '../../utils/api';
-import Alert from '../../components/Alert';
+import { Alert } from '../../components/general';
 import { useNavigate } from 'react-router-dom';
 
 

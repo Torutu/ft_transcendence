@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import Alert from '../../components/Alert';
+import { Alert } from '../../components/general';
 
 export default function VerifyEmailPage() {
   const location = useLocation();

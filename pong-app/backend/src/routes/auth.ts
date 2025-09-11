@@ -414,7 +414,14 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
         },
       });
 
-      const resetLink = `${env.FRONTEND_URL}/change-password?token=${resetToken}`;
+
+      const getBaseUrl = (request: FastifyRequest) => {
+        const origin = request.headers.origin;
+        return origin?.includes('ngrok') ? env.FRONTEND_REMOTE_URL : env.CP_URL;
+      };
+      const baseUrl = getBaseUrl(request);
+
+      const resetLink = `${baseUrl}/change-password?token=${resetToken}`;
 
       // Send password reset email using the proper function from email.ts
       await sendPasswordResetEmail(user.email, resetLink);
@@ -550,6 +557,16 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           data: { twoFactorRegistered: true }
         });
       }
+
+            // ⭐ ADD THIS: Update user online status after successful 2FA
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          online_status: "online",
+          last_activity: new Date().getTime(),
+          lastLogin: new Date()
+        }
+      });
       
       const authToken = generateToken(user.id);
       setAuthCookie(reply, authToken);
@@ -594,7 +611,11 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
           email: true,
           isVerified: true,
           avatarUrl: true,
-          createdAt: true
+          createdAt: true,
+          wins: true,
+          losses: true,
+          level: true,
+          lastLogin: true
         }
       });
       
@@ -650,10 +671,24 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
               password: '',
               name: payload.name,
               isVerified: payload.email_verified || false,
-              googleId: payload.sub
+              googleId: payload.sub,
+               // ⭐ ADD THIS: Set as online for new Google users
+            online_status: "online",
+            last_activity: new Date().getTime(),
+            lastLogin: new Date()
             }
           });
-        }
+        } else {
+        // ⭐ ADD THIS: Update existing user as online
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            online_status: "online", 
+            last_activity: new Date().getTime(),
+            lastLogin: new Date()
+          }
+        });
+      }
 
         const authToken = generateToken(user.id);
         setAuthCookie(reply, authToken);
@@ -674,17 +709,48 @@ export default function authRoutes(fastify: FastifyInstance, options: AuthRoutes
   );
 
   // Logout endpoint
-  fastify.post(
-    '/auth/logout',
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      clearAuthCookie(reply);
+  // fastify.post(
+  //   '/auth/logout',
+  //   async (request: FastifyRequest, reply: FastifyReply) => {
+  //     clearAuthCookie(reply);
       
-      return reply.send({
-        success: true,
-        message: 'Logged out successfully'
-      });
+  //     return reply.send({
+  //       success: true,
+  //       message: 'Logged out successfully'
+  //     });
+  //   }
+  // );
+
+
+  // Logout endpoint
+fastify.post(
+  '/auth/logout',
+  async (request: FastifyRequest, reply: FastifyReply) => {
+    // ⭐ ADD THIS: Get user ID from token before clearing cookie
+    const token = request.cookies.authToken;
+    
+    if (token) {
+      try {
+        const decoded = verifyToken(token) as { userId: string };
+        // Set user as offline
+        await prisma.user.update({
+          where: { id: decoded.userId },
+          data: { online_status: "offline" }
+        });
+      } catch (error) {
+        // Token invalid, but still clear cookie
+        fastify.log.warn('Invalid token during logout:', error);
+      }
     }
-  );
+    
+    clearAuthCookie(reply);
+    
+    return reply.send({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  }
+);
 
 // Add this at the top of your auth routes
 fastify.addHook('preHandler', async (request, reply) => {

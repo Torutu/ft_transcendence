@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import Alert from '../../components/Alert';
-import QRCode from '../../components/QRCode';
+import { Alert, QRCode } from '../../components/general';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function VerifyTwoFactorPage() {
@@ -58,7 +57,7 @@ export default function VerifyTwoFactorPage() {
       // Login user and redirect
       if (response.data.user) {
         login(response.data.user);
-        navigate('/tournament', { replace: true });
+        navigate('/lobby', { replace: true });
       } else {
         setError('Authentication failed. Please try again.');
       }

@@ -7,36 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum FriendshipStatus {
+  NotFriend
+  Pending
+  Friend
+  Blocked
+}
+
 model User {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  password  String
-  name      String  @unique
-  avatarUrl String?
-  isVerified Boolean @default(false)
-  twoFactorSecret String?
-  twoFactorURL String?
-  twoFactorRegistered Boolean @default(false)
-  googleId String?
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  password             String
+  name                 String   @unique
+  firstName            String?
+  lastName             String?
+  avatarUrl            String?
+  isVerified           Boolean  @default(false)
+  twoFactorSecret      String?
+  twoFactorURL         String?
+  twoFactorRegistered  Boolean  @default(false)
+  googleId             String?
+  dateOfBirth          DateTime?
+  gender               String? // 'male', 'female', 'other'
+  favAvatar            String?
+  language             String?
+  wins                 Int      @default(0)
+  losses               Int      @default(0)
+  level                String   @default("beginner")
+  profilePic           String?
+  lastLogin            DateTime?
+  online_status        String? // 'offline', 'online'
+  last_activity        Int?
+  auth_provider        String? // 'email', 'google'
+  createdAt            DateTime @default(now())
 
-  // Many-to-many self relation for friends (implicit join table)
-  friends  User[] @relation("UserFriends")
-  friendOf User[] @relation("UserFriends")
+  verificationCodes    VerificationCode[]
+  passwordResetToken   PasswordResetToken?
 
-  // Matches where this user is player1
-  player1Matches Match[] @relation("Player1Matches")
+  // Friendship relations
+  sentFriendRequests   Friendship[] @relation("Sender")
+  receivedFriendRequests Friendship[] @relation("Receiver")
 
-  // Matches where this user is player2
-  player2Matches Match[] @relation("Player2Matches")
+  // Matches
+  player1Matches       Match[] @relation("Player1Matches")
+  player2Matches       Match[] @relation("Player2Matches")
+  winnerMatches        Match[] @relation("WinnerMatches")
+}
 
-  // Matches where this user is winner
-  winnerMatches Match[] @relation("WinnerMatches")
-
-  verificationCodes VerificationCode[]
-
-  passwordResetToken PasswordResetToken?
-
-  createdAt DateTime @default(now())
+model Friendship {
+  id         String           @id @default(cuid())
+  sender     User             @relation("Sender", fields: [senderId], references: [id])
+  senderId   String
+  receiver   User             @relation("Receiver", fields: [receiverId], references: [id])
+  receiverId String
+  status     FriendshipStatus
+  createdAt  DateTime         @default(now())
 }
 
 model VerificationCode {
@@ -59,14 +84,17 @@ model PasswordResetToken {
 }
 
 model Match {
-  id        String   @id @default(cuid())
-  player1Id String
-  player2Id String
-  winnerId  String
-  date      DateTime @default(now())
-
-  player1 User @relation("Player1Matches", fields: [player1Id], references: [id])
-  player2 User @relation("Player2Matches", fields: [player2Id], references: [id])
-  winner  User @relation("WinnerMatches", fields: [winnerId], references: [id])
+  id            String   @id @default(uuid())
+  player1Id     String
+  player2Id     String
+  player1Name   String
+  player2Name   String
+  player1Score  Int
+  player2Score  Int
+  winnerId      String
+  playedAt      DateTime @default(now())
+  // Relations
+  player1       User     @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2       User     @relation("Player2Matches", fields: [player2Id], references: [id])
+  winner        User     @relation("WinnerMatches", fields: [winnerId], references: [id])
 }
-

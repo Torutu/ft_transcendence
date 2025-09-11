@@ -21,7 +21,7 @@ interface KeyClashRoom {
 	p2: string
 }
 
-export default function LobbyPage() {
+export default function ChampionshipPage() {
 	const socketRef = useRef<Socket | null>(null);
 	const navigate = useNavigate();
 	const [players, setPlayers] = useState<Player[]>([]);

@@ -1,3 +1,4 @@
+// backend/src/PingPongGame.ts
 export interface GameState {
     ball: { x: number; z: number; vx: number; vz: number, color: number };
     leftPaddle: { x: number, z: number };
@@ -48,14 +49,17 @@ export default class PingPongGame {
 
     public getId() { return (this.id); };
     public setPlayer(side: "left" | "right", name: string | undefined, id: string | null){
-        if (side === "left")
-            this.leftPlayer = name?.substring(0, 10);
-        else if (side === "right")
-            this.rightPlayer = name?.substring(0, 10);
-        this.state.players.push({ id: id, name: name, side: side });
-    };
+    if (side === "left")
+        this.leftPlayer = name;  // changed by Poonkodi
+    else if (side === "right")
+        this.rightPlayer = name;  // Changed by Poonkodi
+    this.state.players.push({ id: id, name: name, side: side });
+};
     public getLeftPlayer() { return (this.leftPlayer) };
-    public getRightPlayer() { return (this.rightPlayer) };    
+    public getRightPlayer() { return (this.rightPlayer) };  
+
+    public getLeftScore(): number { return this.leftScore; }   // added by poonkodi
+    public getRightScore(): number { return this.rightScore; }  // added by poonkodi
 
     public updateScore() {
         this.state.scoreDisplay = `${this.leftPlayer}: ${this.leftScore}  —  ${this.rightPlayer}: ${this.rightScore}`;   
