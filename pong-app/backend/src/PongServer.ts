@@ -110,6 +110,7 @@ export function setupPongNamespace(io: Server) {
                         gameRoom.update();
                         pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
                         if (gameRoom.state.status === "finished") {
+                            // winner is gameRoom.state.matches[gameRoom.state.round - 1].winner <-- store to database (in case of tie, what do?)
                             clearInterval(gameRoom.state.loop);
                             gameRoom.state.loop = undefined;
 							lobbyNamespace.emit("lobby_update", getLobbyState());
@@ -212,6 +213,8 @@ export function setupPongNamespace(io: Server) {
                                 gameRoom.state.status = "starting";
                                 pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
                             }
+                            // else
+                                // winner is gameRoom.state.matches[2].winner <-- for now tournament has 3 matches  
 							tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
                         }
                     }, 1000 / 60);

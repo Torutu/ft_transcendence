@@ -151,27 +151,23 @@ export default class PingPongGame {
         else
             this.state.timerDisplay = `Round ${this.state.round}/3 ${minutes}:${seconds}`;
         if (now >= this.state.gameEndTime) {
-          this.state.status = "finished";
-
-            if (this.state.type === "1v1") {
-                if (this.leftScore > this.rightScore) {
-                    this.state.matchInfo = `${this.leftPlayer} Wins!`;
-                } else if (this.rightScore > this.leftScore) {
-                    this.state.matchInfo = `${this.rightPlayer} Wins!`;
-                } else {
-                    this.state.matchInfo = `It's a tie!`;
-                }
-            }
-            else {
-                let i = this.state.round - 1;
-                if (this.leftScore > this.rightScore)
-                    this.state.matches[i].winner = this.state.matches[i].player1;
-                else // for now in a tie, player2 advances
-                    this.state.matches[i].winner = this.state.matches[i].player2;
+            this.state.status = "finished";
+            let i = this.state.round - 1;
+            if (this.leftScore > this.rightScore)
+                this.state.matches[i].winner = this.state.matches[i].player1;
+            else if (this.rightScore > this.leftScore)
+                this.state.matches[i].winner = this.state.matches[i].player2;
+            else if (this.state.type === "1v1")
+                this.state.matchInfo = `It's a tie!`;
+            else // for now in a tie in tournament, player 2 advances
+                this.state.matches[i].winner = this.state.matches[i].player2; 
+            if (this.state.type === "1v1" && this.state.matches[i].winner)
+                this.state.matchInfo = `${this.state.matches[i].winner} Wins!`;
+            else if (this.state.type === "tournament") {
                 if (this.state.round < 3)
-                    this.state.matchInfo = `Round ${this.state.round} over! ${this.state.matches[i].winner.name} Wins!\n`;
+                    this.state.matchInfo = `Round ${this.state.round} over! ${this.state.matches[i].winner?.name} Wins!\n`;
                 else
-                    this.state.matchInfo = `Tournament Finished! The winner is: ${this.state.matches[i].winner.name}!`
+                    this.state.matchInfo = `Tournament Finished! The winner is: ${this.state.matches[i].winner?.name}!`
             }
             return;
         }
@@ -183,7 +179,7 @@ export default class PingPongGame {
             let i = this.state.round - 1;
             if (this.leftScore > this.rightScore)
                 this.state.matches[i].winner = this.state.matches[i].player1;
-            else // for now in a tie, player2 advances
+            else
                 this.state.matches[i].winner = this.state.matches[i].player2;
             if (this.state.type === "1v1")
                 this.state.matchInfo = `Game Over! ${this.state.matches[i].winner.name} Wins!`;

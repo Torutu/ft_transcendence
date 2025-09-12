@@ -253,7 +253,13 @@ export function setupKeyClash(io: Server) {
 						else if (type === "1v1") {
 							lobby.emit("lobby_update", getLobbyState());
                         }
-                        keyClash.to(roomId).emit("gameOver", getPublicState(state));                   
+                        keyClash.to(roomId).emit("gameOver", getPublicState(state)); 
+                        // if (state.status === "finished") {
+                        //  if (state.type === "1v1")
+                        //      winner is state.matches[state.round - 1].winner <-- store to database
+                        //  else
+                        //      winner is state.matches[2].winner <-- for now tournament has 3 matches   
+                        //}                  
                     }
                     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
                 }, 1000);
