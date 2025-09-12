@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
+import { getValidatedPlayerName } from './keyClashClient';
 
 export default class PingPongClient {
   private groundEmission = 0.5;
@@ -46,16 +47,23 @@ export default class PingPongClient {
   private scoreDisplay: HTMLDivElement;
   private restartButton: HTMLButtonElement;
   private timerDisplay: HTMLDivElement;
+  private matchInfoDisplay: HTMLDivElement;
 
   private socket: Socket | null = null;
   private gameId: string;
   private playerSide: "left" | "right" | null = null;
   private mode: "local" | "remote" | undefined;
+  private type: "1v1" | "tournament";
   private status: "waiting" | "in-progress" | "finished" | "paused" = "waiting";
   private updated: boolean;
   private navigate: NavigateFunction;
+  private players: { player1: string | null,
+				player2: string | null,
+				player3: string | null,
+				player4: string | null
+			}
 
-  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", navigate: NavigateFunction, name: string | null) {
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", type: "1v1" | "tournament", navigate: NavigateFunction, name: string | null) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -66,8 +74,10 @@ export default class PingPongClient {
       throw new Error('Invalid container argument');
     }
 
+	this.players = { player1: null, player2: null, player3: null, player4: null};
     this.gameId = gameId;
     this.mode = mode;
+	this.type = type;
     this.updated = false;
 
     this.navigate = navigate;
@@ -156,6 +166,7 @@ export default class PingPongClient {
       fontSize: '24px',
       fontFamily: 'monospace',
       userSelect: 'none',
+      whiteSpace: 'pre-line'
     });
     document.body.appendChild(this.scoreDisplay);
 
@@ -189,6 +200,21 @@ export default class PingPongClient {
     });
     document.body.appendChild(this.timerDisplay);
 
+    // Match Info Display
+    this.matchInfoDisplay = document.createElement('div');
+    Object.assign(this.matchInfoDisplay.style, {
+      position: 'absolute',
+      top: '20%',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      color: 'white',
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      zIndex: '9999',
+      whiteSpace: 'pre-line'
+    });
+    document.body.appendChild(this.matchInfoDisplay);
+
     this.lastFrame = performance.now();
     this.connect(name);
     this.animate();    
@@ -204,32 +230,57 @@ export default class PingPongClient {
     this.socket.on('connect', () => {
         console.log('Connected to server:', this.socket?.id);
 
-        if (!name)
-          name = prompt("Enter name for player1:", "Guest");
-        let player2: string | null = null;
-        if (this.mode === "local")
-          player2 = prompt("Enter name for player2:", "Guest");
-        this.socket?.emit('join_game_room', this.gameId, name, player2, (callback: { error: string }) => {
-          if (callback.error) {
-            alert(callback.error);          
-            this.navigate("/lobby");
-          }
-        });         
+		  if (this.type === "1v1") {
+			  this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);       
+					  this.navigate("/lobby");
+				  }
+			  });
+		  }
+		  else if (this.type === "tournament")
+		  {
+			  this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);
+					  this.navigate("/tournament_lobby");
+				  }
+			  });
+		  }    
     });
+
+    this.socket.on('get_names', () => {
+      if (!name)
+        this.players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", this.players);
+      else
+        this.players.player1 = name;
+      if (this.mode === "local") {
+        this.players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", this.players);
+        if (this.type === "tournament") {
+          this.players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", this.players);
+          this.players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", this.players);
+        }
+      }
+      this.socket?.emit("names", this.players);
+    })
 
     this.socket.on('playerSide', (side) => {
         this.playerSide = side;
     });
+    this.socket.on('refreshPlayerSides', (players) => {
+      const player = players.find(p => p.id === this.socket?.id);
+      this.playerSide = player.side;
+    })
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
-        if (this.mode === "remote" && this.playerSide === "left") {
+        if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null))
           this.rightPaddle.position.setZ(state.rightPaddle.z);
-          if (start) this.leftPaddle.position.setZ(state.leftPaddle.z);
-        }
-        else if (this.mode === "remote" && this.playerSide === "right") {
+        if (this.mode === "remote" && (this.playerSide === "right" || this.playerSide === null))
           this.leftPaddle.position.setZ(state.leftPaddle.z);
-          if (start) this.rightPaddle.position.setZ(state.rightPaddle.z);
-        }
+        if (start) {
+			this.rightPaddle.position.setZ(state.rightPaddle.z);
+			this.leftPaddle.position.setZ(state.leftPaddle.z);
+		}
         this.latestBallX = state.ball.x;
         this.latestBallZ = state.ball.z;
         this.updated = true;
@@ -239,37 +290,65 @@ export default class PingPongClient {
           this.ball.material.color.set(state.ball.color);
           this.ball.material.emissive.set(state.ball.color);
         }
-        if (this.scoreDisplay.textContent !== state.scoreDisplay)
+        if (this.scoreDisplay.textContent !== state.scoreDisplay) {
           this.scoreDisplay.textContent = state.scoreDisplay;
+        }
         this.timerDisplay.textContent = state.timerDisplay;
+        if (this.matchInfoDisplay.textContent !== state.matchInfo) {
+          this.matchInfoDisplay.textContent = state.matchInfo;
+        }
         this.status = state.status;
-        if (state.status === "finished" || state.status === "paused")
+        if (this.type === "1v1" && (state.status === "finished")) {
           this.restartButton.style.display = "block";
-        else
-          this.restartButton.style.display = "none";
+        }
+        else this.restartButton.style.display = "none";
+        if (state.status === "finished" || state.type === "tournament" && state.status === "starting") {
+          this.matchInfoDisplay.style.display = "block";
+        }
+        else this.matchInfoDisplay.style.display = "none";
+        if (((this.type === "1v1" && state.players.length === 2) ||
+            (this.type === "tournament" && state.players.length === 4)) && 
+            state.status === "starting" && state.mode === "remote")
+        {
+          let readyCount = 0;
+          if (state.player1ready) readyCount++;
+          if (state.player2ready) readyCount++;
+          this.timerDisplay.textContent = `Ready? Press SPACE (Players ready: ${readyCount}/2)`;
+        }
+        else if (this.type === "tournament" && state.players.length === 4 && 
+                state.status === "starting" && state.mode === "local") {
+          if (state.round === 1) this.timerDisplay.textContent = "Press SPACE to start the tournament!";
+          else this.timerDisplay.textContent = "Press SPACE to start the next round";
+        }
     });
 
-    this.socket.on('waiting', () => {
+    this.socket.on('waiting', (state) => {
+      if (this.type === "1v1")
         this.scoreDisplay.textContent = 'Waiting for opponent...';
-        this.restartButton.style.display = "none";
-        this.status = "waiting";
+      else {
+        this.scoreDisplay.textContent = `Waiting for opponents... (${state.players.length}/4)`;
+      }
+      this.restartButton.style.display = "none";
+	  this.matchInfoDisplay.style.display = "none";
+      this.status = "waiting";
     });
+
+    this.socket.on('disconnection', () => {
+      alert("Tournament terminated (someone disconnected)");
+      this.navigate('/tournament_lobby');
+    })
 }
 
   private handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape")
-      this.socket?.emit("pause");
+      this.socket.emit("pause");
+    else if (e.code === "Space")
+      this.socket.emit("setReady");
     else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
-    // if (e.key in this.keys) {
-    //   this.socket?.emit('keyDown', e.key, this.playerSide);
-    // }
   }
 
   private handleKeyUp(e: KeyboardEvent) {
     if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
-    // if (e.key in this.keys) {
-    //   this.socket?.emit('keyUp', e.key, this.playerSide);
-    // }
   }
 
   private handleResize() {
@@ -288,8 +367,8 @@ export default class PingPongClient {
       this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
     }
 
-    // Remove HUD, Score Display, Timer Display, Restart Button from DOM
-    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton].forEach(el => {
+    // Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display from DOM
+    [this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay].forEach(el => {
       if (el.parentNode) el.parentNode.removeChild(el);
     });
 

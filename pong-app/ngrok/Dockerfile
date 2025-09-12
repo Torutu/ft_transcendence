@@ -17,12 +17,12 @@ RUN printf '#!/bin/sh\n' > /entrypoint.sh \
     && printf 'fi\n\n' >> /entrypoint.sh \
     && printf '# Default VITE port if not set\n' >> /entrypoint.sh \
     && printf 'NGROK_PORT=${VITE_PORT:-5173}\n\n' >> /entrypoint.sh \
-    && printf 'NGROK_HOST=${VITE_HOST:-frontend}\n\n' >> /entrypoint.sh \    
+    && printf 'NGROK_HOST=${VITE_HOST:-frontend}\n\n' >> /entrypoint.sh \
     && printf '# Create config file\n' >> /entrypoint.sh \
     && printf 'cat > /tmp/ngrok.yml << EOF\n' >> /entrypoint.sh \
     && printf 'version: "2"\n' >> /entrypoint.sh \
     && printf 'authtoken: ${NGROK_AUTHTOKEN}\n' >> /entrypoint.sh \
-    && printf 'web_addr: 0.0.0.0:4040\n' >> /entrypoint.sh \ 
+    && printf 'web_addr: 0.0.0.0:4040\n' >> /entrypoint.sh \
     && printf 'log_level: info\n' >> /entrypoint.sh \
     && printf 'log_format: logfmt\n' >> /entrypoint.sh \
     && printf 'tunnels:\n' >> /entrypoint.sh \

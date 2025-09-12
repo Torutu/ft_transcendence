@@ -57,7 +57,7 @@ export default function TournamentPage() {
               🎯 Join 1v1 lobby
             </button>
             <button
-              onClick={() => console.log('Join tournament clicked')}
+              onClick={() => navigate("/tournament_lobby")}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors transform hover:scale-105"
             >
               🎯 Join Tournament
