@@ -55,8 +55,8 @@ const wasdKeys = ['w', 's', 'a', 'd'];
 export function setupKeyClash(io: Server) {
 
     const keyClash = io.of("/keyclash");
-    const lobby = io.of("/lobby");
-	const tournament_lobby = io.of("tournament_lobby");
+    const lobby = io.of("/quickmatch");
+	const tournament_lobby = io.of("tournament");
 
     keyClash.on("connection", (socket) => {
         console.log(`Player connected on key clash: ${socket.id}`);
@@ -360,20 +360,20 @@ export function validatePlayerNames(players: {player1: string, player2: string,
                                     type: "1v1" | "tournament", mode: "local" | "remote") {
     let count = 1;
     const validNameRegex = /^[A-Za-z0-9 _-]+$/;
-    if (!players.player1 || players.player1.length > 13 || !validNameRegex.test(players.player1))
+    if (!players.player1 || players.player1.length > 20 || !validNameRegex.test(players.player1))
         return count;
     count++;
     if (mode === "local") {
-        if (!players.player2 || players.player2.length > 13 || !validNameRegex.test(players.player2) ||
+        if (!players.player2 || players.player2.length > 20 || !validNameRegex.test(players.player2) ||
             players.player2 === players.player1)
             return count;
         count++;
         if (type === "tournament") {
-            if (!players.player3 || players.player3.length > 13 || !validNameRegex.test(players.player3) ||
+            if (!players.player3 || players.player3.length > 20 || !validNameRegex.test(players.player3) ||
                 players.player3 === players.player2)
                 return count;
             count++;
-            if (!players.player4 || players.player4.length > 13 || !validNameRegex.test(players.player4) ||
+            if (!players.player4 || players.player4.length > 20 || !validNameRegex.test(players.player4) ||
                 players.player4 === players.player3)
                 return count;              
         }

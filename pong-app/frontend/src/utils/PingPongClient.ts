@@ -234,7 +234,7 @@ export default class PingPongClient {
 			  this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
 				  if (callback.error) {
 					  alert(callback.error);       
-					  this.navigate("/lobby");
+					  this.navigate("/quickmatch");
 				  }
 			  });
 		  }
@@ -243,7 +243,7 @@ export default class PingPongClient {
 			  this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
 				  if (callback.error) {
 					  alert(callback.error);
-					  this.navigate("/tournament_lobby");
+					  this.navigate("/tournament");
 				  }
 			  });
 		  }    
@@ -335,7 +335,7 @@ export default class PingPongClient {
 
     this.socket.on('disconnection', () => {
       alert("Tournament terminated (someone disconnected)");
-      this.navigate('/tournament_lobby');
+      this.navigate('/tournament');
     })
 }
 
