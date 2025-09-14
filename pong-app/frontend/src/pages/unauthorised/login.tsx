@@ -1,12 +1,9 @@
 // frontend/src/pages/unauthorised/login.tsx
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import validator from 'validator';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../utils/api';
-import LoadingSpinner from '../../components/general/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
-import Alert from '../../components/general/Alert';
+import { Alert } from '../../components/general';
 
 declare global {
   interface Window {
@@ -14,7 +11,7 @@ declare global {
   }
 }
 
-export default function LoginPage() {
+const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -271,3 +268,5 @@ export default function LoginPage() {
   </div>
 );
 }
+
+export default LoginPage;

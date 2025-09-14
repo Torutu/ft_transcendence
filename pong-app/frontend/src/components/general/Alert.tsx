@@ -7,7 +7,7 @@ interface AlertProps {
   message: string;
 }
 
-const Alert: React.FC<AlertProps> = ({ type, message }) => {
+export const Alert = ({ type, message }: AlertProps) => {
   if (!message) return null;
 
   return (
@@ -24,4 +24,3 @@ const Alert: React.FC<AlertProps> = ({ type, message }) => {
   );
 };
 
-export default Alert;

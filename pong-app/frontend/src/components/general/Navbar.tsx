@@ -1,10 +1,9 @@
 // pong-app/frontend/src/components/Navbar.tsx
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import api from '../../utils/api';
 
-const Navbar = () => {
+export const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -78,6 +77,5 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
 
 
