@@ -2,21 +2,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'; 
 import { lazy, Suspense } from 'react';
 import { useAuth } from './contexts/AuthContext';
-import Layout from './components/Layout';
-import LoadingSpinner from './components/LoadingSpinner';
-import ErrorBoundary from './components/ErrorBoundary';
+import Layout from './components/general/Layout';
+import LoadingSpinner from './components/general/LoadingSpinner';
+import ErrorBoundary from './components/general/ErrorBoundary';
 
-const Menu = lazy(() => import('./pages/home'));
+const Menu = lazy(() => import('./pages/unauthorised/home'));
 const LoginPage = lazy(() => import('./pages/unauthorised/login'));
 const RegisterPage = lazy(() => import('./pages/unauthorised/register'));
 const VerifyEmailPage = lazy(() => import('./pages/unauthorised/verify-email'));
 const VerifyTwoFactorPage = lazy(() => import('./pages/unauthorised/verify-2fa'));
 const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password'));
-const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
+const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
-const PlayPage = lazy(() => import('./pages/playPage'));
-const LobbyPage = lazy(() => import('./pages/lobby'));
-const TournamentLobbyPage = lazy(() => import('./pages/tournament_lobby'));
+const PlayPage = lazy(() => import('./pages/game/playPage'));
+const QuickmatchPage = lazy(() => import('./pages/authorised/quickmatch'));
+const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -43,7 +43,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  return !user ? <>{children}</> : <Navigate to="/tournament" replace />;
+  return !user ? <>{children}</> : <Navigate to="/lobby" replace />;
 };
 
 export const AppRoutes = () => {
@@ -89,11 +89,11 @@ export const AppRoutes = () => {
             <Route path="/change-password" element={
               <PublicRoute><ChangePasswordPage /></PublicRoute>
             } />
-            <Route path="/lobby" element={
-              <LobbyPage/>
+            <Route path="/quickmatch" element={
+              <QuickmatchPage/>
             } />
-            <Route path="/tournament_lobby" element={
-              <TournamentLobbyPage/>
+            <Route path="/tournament" element={
+              <TournamentPage/>
             } />			
             <Route path="/:game/:mode/:type/:gameId" element={
               <PlayPage />
@@ -101,7 +101,7 @@ export const AppRoutes = () => {
           </Route>
 
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/tournament" element={<TournamentPage />} />
+            <Route path="/lobby" element={<LobbyPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

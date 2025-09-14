@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import PingPongClient from '../PingPongClient';
+import PingPongClient from '../../utils/PingPongClient';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import KeyClashClient from '../keyClashClient';
+import KeyClashClient from '../../utils/keyClashClient';
 
 const PlayPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);

@@ -51,9 +51,9 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       if (callback.error) {
         alert(callback.error);
         if (type === "1v1")
-          navigate("/lobby");
+          navigate("/quickmatch");
         else
-          navigate("/tournament_lobby");
+          navigate("/tournament");
       }
     });
   });
@@ -173,7 +173,7 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
 
   socket.on('disconnection', () => {
     alert("Tournament terminated (someone disconnected)");
-    navigate('/tournament_lobby');
+    navigate('/tournament');
   });
 
   // Return cleanup function

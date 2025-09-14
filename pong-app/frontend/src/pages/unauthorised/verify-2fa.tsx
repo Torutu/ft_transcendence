@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import Alert from '../../components/Alert';
-import QRCode from '../../components/QRCode';
+import Alert from '../../components/general/Alert';
+import QRCode from '../../components/general/QRCode';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function VerifyTwoFactorPage() {

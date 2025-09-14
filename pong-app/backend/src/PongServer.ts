@@ -5,8 +5,8 @@ import PingPongGame from "./PingPongGame.js";
 
 export function setupPongNamespace(io: Server) {
     const pongNamespace = io.of("/pong");
-    const lobbyNamespace = io.of("/lobby");
-	const tournamentLobbyNamespace = io.of("/tournament_lobby");
+    const lobbyNamespace = io.of("/quickmatch");
+	const tournamentLobbyNamespace = io.of("/tournament");
 
     pongNamespace.on("connection", (socket) => {
         console.log("Client joined game:", socket.id);

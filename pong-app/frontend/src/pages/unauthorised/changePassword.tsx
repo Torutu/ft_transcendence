@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from '../../utils/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import LoadingSpinner from '../../components/general/LoadingSpinner';
 
 const ChangePasswordPage = () => {
   const [searchParams] = useSearchParams();

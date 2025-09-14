@@ -1,8 +1,8 @@
 // pong-app/frontend/src/components/Navbar.tsx
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import api from '../utils/api';
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../utils/api';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
