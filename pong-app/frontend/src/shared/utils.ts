@@ -33,19 +33,6 @@ export const saveAvatarData = (key: string, avatar: AvatarData | null): void => 
   }
 };
 
-export const getNextAvatar = (
-  availableAvatars: Avatar[], 
-  currentAvatar: AvatarData | null
-): AvatarData | null => {
-  if (availableAvatars.length === 0) return null;
-  
-  const currentIndex = currentAvatar ? 
-    availableAvatars.findIndex(a => a.id === currentAvatar.name) : -1;
-  const nextIndex = (currentIndex + 1) % availableAvatars.length;
-  const selectedAvatar = availableAvatars[nextIndex];
-  
-  return { name: selectedAvatar.id, image: selectedAvatar.imageUrl };
-};
 
 // Cleanup localStorage on mount
 export const cleanupGameStorage = (): void => {
