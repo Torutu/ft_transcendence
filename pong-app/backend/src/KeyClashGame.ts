@@ -1,3 +1,4 @@
+// pong-app/backend/src/KeyClashGame.ts
 import { Server } from "socket.io";
 import  { Player, shufflePlayers } from "./PingPongGame"
 import { keyClashRooms, getLobbyState, keyClashTournaments, getTournamentLobbyState } from "./gameData.js";
@@ -241,10 +242,22 @@ export function setupKeyClash(io: Server) {
                         state.status = "finished";
                         state.player1ready = false;
                         state.player2ready = false;
-                        if (state.score1 > state.score2)
-                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
-                        else
-                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player2; // for now if tie, player2 advances
+                        
+                        const winner = state.score1 > state.score2 ? 
+                                      state.matches[state.round - 1].player1 : 
+                                      state.matches[state.round - 1].player2;
+                                      
+                        state.matches[state.round - 1].winner = winner;
+
+                        // ADDED: Emit gameOver event with data for saving
+                        keyClash.to(roomId).emit("gameOver", {
+                          player1: { name: state.p1, score: state.score1 },
+                          player2: { name: state.p2, score: state.score2 },
+                          duration: 20 - state.timeLeft,
+                          finalScore: `${state.score1} - ${state.score2}`,
+                          winner: winner.name
+                        });
+
                         if (state.type === "tournament") {
                             state.round++;
                             matchmake();
@@ -254,12 +267,6 @@ export function setupKeyClash(io: Server) {
 							lobby.emit("lobby_update", getLobbyState());
                         }
                         keyClash.to(roomId).emit("gameOver", getPublicState(state)); 
-                        // if (state.status === "finished") {
-                        //  if (state.type === "1v1")
-                        //      winner is state.matches[state.round - 1].winner <-- store to database
-                        //  else
-                        //      winner is state.matches[2].winner <-- for now tournament has 3 matches   
-                        //}                  
                     }
                     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
                 }, 1000);

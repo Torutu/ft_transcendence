@@ -1,10 +1,14 @@
+// frontend/src/utils/keyClashClient.ts
 import { NavigateFunction } from "react-router-dom";
 import { io } from "socket.io-client";
 import validator from 'validator';
 
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
                                         mode: "local" | "remote", type: "1v1" | "tournament",
-                                        navigate: NavigateFunction, name: string | null):() => void {
+                                        navigate: NavigateFunction, 
+                                        names: { player1: string | null, player2: string | null, player3: string | null, player4: string | null } | string | null,
+                                        onGameEnd?: () => void,
+                                        onStatusUpdate?: (status: "waiting" | "starting" | "in-progress" | "finished" | "paused", players?: {player1: string | null, player2: string | null}) => void): () => void {
   const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   const wasdKeys = ['w', 'a', 's', 'd'];
 
@@ -22,6 +26,20 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     d: '→'
   };
 
+  // Handle both string and object parameter types
+  let playerNames: { player1: string | null, player2: string | null, player3: string | null, player4: string | null };
+  
+  if (typeof names === 'string' || names === null) {
+    playerNames = { 
+      player1: names as string | null, 
+      player2: null, 
+      player3: null, 
+      player4: null 
+    };
+  } else {
+    playerNames = names;
+  }
+
   // Query inside the container instead of the whole document
   const prompt1 = container.querySelector('#prompt1') as HTMLDivElement;
   const prompt2 = container.querySelector('#prompt2') as HTMLDivElement;
@@ -36,6 +54,52 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     transports: ['websocket'],
     secure: true
   });
+
+  // Game saving function
+  const saveGameResult = async (winner: string, loser: string, finalScore: string, duration: number) => {
+    try {
+      // Determine actual player names
+      const p1Name = playerNames.player1 || "Player 1";
+      const p2Name = playerNames.player2 || "Player 2";
+      
+      const gameData = {
+        gameType: "keyclash" as const,
+        mode: mode,
+        player1Data: {
+          username: p1Name,
+          avatar: "default",
+          score: parseInt(finalScore.split(" - ")[0]),
+          isWinner: p1Name === winner
+        },
+        player2Data: {
+          username: p2Name,
+          avatar: "default",
+          score: parseInt(finalScore.split(" - ")[1]),
+          isWinner: p2Name === winner
+        },
+        duration,
+        rounds: [],
+        gameId: gameId
+      };
+
+      const response = await fetch('/api/games/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save game result');
+      } else {
+        console.log('Game result saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving game result:', error);
+    }
+  };
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.code === "Space" || e.key === "r")
@@ -59,12 +123,9 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   });
 
   socket.on("get_names", (existing) => {
-    let players: { player1: string | null,
-      player2: string | null,
-      player3: string | null,
-      player4: string | null
-    }
-    players = { player1: null, player2: null, player3: null, player4: null};
+    let players: { player1: string | null, player2: string | null, player3: string | null, player4: string | null };
+    players = { player1: null, player2: null, player3: null, player4: null };
+    
     if (existing.length >= 1)
       players.player1 = existing[0].name;
     if (existing.length >= 2)
@@ -74,15 +135,32 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     if (existing.length >= 4)
       players.player4 = existing[3].name;         
 
-    if (!name)
+    // Use names from quickmatch if available
+    if (playerNames.player1) {
+      players.player1 = playerNames.player1;
+    } else if (!players.player1) {
       players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", players);
-    else
-      players.player1 = name;
+    }
+
     if (mode === "local") {
-      players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", players);
+      if (playerNames.player2) {
+        players.player2 = playerNames.player2;
+      } else if (!players.player2) {
+        players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", players);
+      }
+      
       if (type === "tournament") {
-        players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", players);
-        players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", players);
+        if (playerNames.player3) {
+          players.player3 = playerNames.player3;
+        } else if (!players.player3) {
+          players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", players);
+        }
+        
+        if (playerNames.player4) {
+          players.player4 = playerNames.player4;
+        } else if (!players.player4) {
+          players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", players);
+        }
       }
     }
     socket.emit("names", players);
@@ -98,6 +176,14 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
     prompt1.textContent = wasdSymbols[state.prompts[0]];
     prompt2.textContent = arrowSymbols[state.prompts[1]];
     startPrompt.textContent = "Good Luck!";
+    
+    // Call status update callback
+    if (onStatusUpdate) {
+      onStatusUpdate("in-progress", {
+        player1: state.player1.name,
+        player2: state.player2.name
+      });
+    }
   });
 
   socket.on("gameState", (state) => {
@@ -124,6 +210,14 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       if (state.player2.ready) readyCount++;
       startPrompt.textContent = `Ready? Press SPACE (Players ready: ${readyCount}/2)`;
     }
+    
+    // Call status update callback
+    if (onStatusUpdate && state.status) {
+      onStatusUpdate(state.status, {
+        player1: state.player1?.name || null,
+        player2: state.player2?.name || null
+      });
+    }
   });
 
   socket.on("waiting", (state) => {
@@ -131,14 +225,46 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       startPrompt.textContent = "Waiting for opponent...";
     else
       startPrompt.textContent = `Waiting for opponents... (${state.players.length}/4)`;
+    
+    // Call status update callback
+    if (onStatusUpdate) {
+      onStatusUpdate("waiting");
+    }
   });
 
+  // ENHANCED: GameOver event listener with callback
   socket.on("gameOver", (state) => {
+    console.log("🏁 KeyClash game over event received:", state);
+    
     let p1 = state.player1;
     let p2 = state.player2;
+    
+    // Save game result
+    const winner = p1.score > p2.score ? p1.name : p2.name;
+    const loser = p1.score > p2.score ? p2.name : p1.name;
+    const finalScore = `${p1.score} - ${p2.score}`;
+    
+    saveGameResult(winner, loser, finalScore, state.duration || 0);
+
     if (state.type === "1v1") {
       timerEl.textContent = `Time's Up! Final Score ${p1.name}: ${p1.score} | ${p2.name}: ${p2.score}`;
       startPrompt.textContent = "Press SPACE to Restart";
+      
+      // Call status update callback
+      if (onStatusUpdate) {
+        onStatusUpdate("finished", {
+          player1: p1.name,
+          player2: p2.name
+        });
+      }
+      
+      // Call the game end callback to notify playPage for 1v1 games
+      if (onGameEnd) {
+        console.log("🎯 Calling game end callback for 1v1 keyclash game");
+        setTimeout(() => {
+          onGameEnd();
+        }, 1000); // Small delay to let UI update
+      }
     }
     else if (state.type === "tournament") {
       const i = state.round - 2;
@@ -157,6 +283,22 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
       else {
         timerEl.textContent = `Tournament finished! The winner is: ${state.matches[i].winner.name}!`;
         startPrompt.textContent = "Congratulations!";
+        
+        // Call status update callback
+        if (onStatusUpdate) {
+          onStatusUpdate("finished", {
+            player1: p1.name,
+            player2: p2.name
+          });
+        }
+        
+        // Call the game end callback to notify playPage for completed tournaments
+        if (onGameEnd) {
+          console.log("🎯 Calling game end callback for completed tournament");
+          setTimeout(() => {
+            onGameEnd();
+          }, 1000); // Small delay to let UI update
+        }
       }
     }
   });

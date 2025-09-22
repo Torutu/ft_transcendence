@@ -15,8 +15,12 @@ const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
 const PlayPage = lazy(() => import('./pages/game/playPage'));
 const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
-const QuickMatchPage = lazy(() => import('./pages/authorised/quickmatch'));
 const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
+const QuickmatchLocalPage = lazy(() => import('./pages/authorised/quickmatch-local'));
+const QuickmatchRemotePage = lazy(() => import('./pages/authorised/quickmatch-remote'));
+
+const AvatarPage = lazy(() => import('./shared/avatar'));
+
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -78,6 +82,7 @@ const App = () => {
           <Routes>
             {/* Public routes without layout */}
             <Route path="/" element={<Home />} />
+            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/play" element={<PlayPage />} />
             <Route path="/:game/:mode/:type/:gameId" element={<PlayPage />} />
 
@@ -109,7 +114,8 @@ const App = () => {
             {/* Protected routes with layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/lobby" element={<LobbyPage />} />
-              <Route path="/quickmatch" element={<QuickMatchPage />} />
+              <Route path="/quickmatch-local" element={<QuickmatchLocalPage />} />
+              <Route path="/quickmatch-remote" element={<QuickmatchRemotePage />} />
               <Route path="/tournament" element={<TournamentPage />} />
             </Route>
 
