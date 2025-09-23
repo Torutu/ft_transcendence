@@ -99,47 +99,53 @@ const PlayPage: React.FC = () => {
 
   // ========== CANCEL GAME LOGIC ==========
   const saveCancelResult = async (losingPlayer: string, winningPlayer: string) => {
-    try {
-      const gameData = {
-        gameType: game,
-        mode: mode,
-        player1Data: {
-          username: playerNames.player1 || "Player 1",
-          avatar: "default",
-          score: playerNames.player1 === losingPlayer ? 0 : 1, // Losing player = 0 points
-          isWinner: playerNames.player1 === winningPlayer
-        },
-        player2Data: {
-          username: playerNames.player2 || "Player 2", 
-          avatar: "default",
-          score: playerNames.player2 === losingPlayer ? 0 : 1, // Losing player = 0 points
-          isWinner: playerNames.player2 === winningPlayer
-        },
-        duration: 0, // Cancelled games have 0 duration
-        rounds: [],
-        gameId: gameId,
-        cancelled: true,
-        cancelledBy: losingPlayer
-      };
+  try {
+    const state = location.state as PlayPageLocationState;
+    
+    const gameData = {
+      gameType: game,
+      mode: mode,
+      player1Data: {
+        username: playerNames.player1 || "Player 1",
+        avatar: "default",
+        score: playerNames.player1 === losingPlayer ? 0 : 1,
+        isWinner: playerNames.player1 === winningPlayer
+      },
+      player2Data: {
+        username: playerNames.player2 || "Player 2", 
+        avatar: "default",
+        score: playerNames.player2 === losingPlayer ? 0 : 1,
+        isWinner: playerNames.player2 === winningPlayer
+      },
+      duration: 0,
+      rounds: [], // Empty rounds for cancelled games
+      gameId: gameId,
+      timestamp: new Date().toISOString(),
+      winner: winningPlayer,
+      finalScore: playerNames.player1 === winningPlayer ? "1 - 0" : "0 - 1",
+      userIsPlayer1: playerNames.player1 === (playerNames.player1 || "Player 1"),
+      cancelled: true,
+      cancelledBy: losingPlayer
+    };
 
-      const response = await fetch('/api/games/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gameData),
-        credentials: 'include'
-      });
+    const response = await fetch('/api/games/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(gameData),
+      credentials: 'include'
+    });
 
-      if (!response.ok) {
-        console.error('Failed to save cancel result');
-      } else {
-        console.log('✅ Cancel result saved successfully');
-      }
-    } catch (error) {
-      console.error('❌ Error saving cancel result:', error);
+    if (!response.ok) {
+      console.error('Failed to save cancel result');
+    } else {
+      console.log('✅ Cancel result saved successfully');
     }
-  };
+  } catch (error) {
+    console.error('❌ Error saving cancel result:', error);
+  }
+};
 
   // ========== WINDOW/TAB CLOSE DETECTION ==========
   useEffect(() => {

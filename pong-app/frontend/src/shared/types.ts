@@ -44,3 +44,48 @@ export interface SentInvitation {
 
 export type GameType = "pong" | "keyclash";
 export type GameMode = "local" | "remote";
+
+
+export interface GameRound {
+  roundNumber: number;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  player1Score: number;
+  player2Score: number;
+  winner?: string;
+  events?: GameEvent[];
+}
+
+export interface GameEvent {
+  type: 'point' | 'fault' | 'timeout' | 'round_start' | 'round_end';
+  player: 'player1' | 'player2';
+  timestamp: number;
+  details?: string;
+}
+
+export interface GameSaveData {
+  gameType: 'pong' | 'keyclash';
+  mode: 'local' | 'remote';
+  player1Data: {
+    username: string;
+    avatar: string;
+    score: number;
+    isWinner: boolean;
+  };
+  player2Data: {
+    username: string;
+    avatar: string;
+    score: number;
+    isWinner: boolean;
+  };
+  duration: number;
+  rounds: GameRound[];
+  gameId: string;
+  timestamp?: string;
+  winner?: string;
+  finalScore?: string;
+  userIsPlayer1?: boolean;
+  cancelled?: boolean;
+  cancelledBy?: string;
+}

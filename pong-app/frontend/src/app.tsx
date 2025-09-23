@@ -18,7 +18,6 @@ const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
 const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
 const QuickmatchLocalPage = lazy(() => import('./pages/authorised/quickmatch-local'));
 const QuickmatchRemotePage = lazy(() => import('./pages/authorised/quickmatch-remote'));
-
 const AvatarPage = lazy(() => import('./shared/avatar'));
 
 
@@ -82,8 +81,8 @@ const App = () => {
           <Routes>
             {/* Public routes without layout */}
             <Route path="/" element={<Home />} />
-            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/play" element={<PlayPage />} />
+            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/:game/:mode/:type/:gameId" element={<PlayPage />} />
 
             {/* Public routes with layout */}

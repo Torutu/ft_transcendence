@@ -83,55 +83,71 @@ export default function lobbyRoutes(fastify: FastifyInstance, options: LobbyRout
       const winRate = totalMatches > 0 ? parseFloat(((userRecord.wins / totalMatches) * 100).toFixed(1)) : 0.0;
 
       // Get recent games for win streak calculation
-      const recentGames = await prisma.game.findMany({
+      const allGames = await prisma.game.findMany({
         where: { id_user: userId },
         orderBy: { date: 'desc' },
         take: 20
       });
 
       let currentWinStreak = 0;
-      for (const game of recentGames) {
-        try {
-          const rounds = JSON.parse(game.rounds_json || '{}');
-          if (rounds.winner === userRecord.username || rounds.winnerId === userId || rounds.userWon) {
-            currentWinStreak++;
-          } else {
-            break;
-          }
-        } catch (error) {
-          break;
-        }
-      }
+      let longestWinStreak = 0;
+      let tempStreak = 0;
 
-      // Calculate monthly wins
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const monthlyGames = recentGames.filter(game => {
-        const gameDate = new Date(game.date);
-        return gameDate.getMonth() === currentMonth && gameDate.getFullYear() === currentYear;
-      });
+for (const game of allGames) {
+  try {
+    const rounds = JSON.parse(game.rounds_json || '{}');
+    const userWon = rounds.winner === userRecord.username || 
+                   rounds.winnerId === userId || 
+                   rounds.userWon === true;
+    
+    if (userWon) {
+      currentWinStreak = currentWinStreak === 0 ? 1 : currentWinStreak + 1;
+      tempStreak++;
+      longestWinStreak = Math.max(longestWinStreak, tempStreak);
+    } else {
+      // Only break if we've started counting current streak
+      if (currentWinStreak > 0) break;
+      tempStreak = 0;
+    }
+  } catch (error) {
+    // Don't break on JSON errors, just skip this game
+    console.warn('Error parsing game data for streak calculation:', error);
+    continue;
+  }
+}
 
-      let monthlyWins = 0;
-      monthlyGames.forEach(game => {
-        try {
-          const rounds = JSON.parse(game.rounds_json || '{}');
-          if (rounds.winner === userRecord.username || rounds.winnerId === userId || rounds.userWon) {
-            monthlyWins++;
-          }
-        } catch (error) {
-          // Skip invalid JSON
-        }
-      });
+// Calculate monthly wins properly
+const currentMonth = new Date().getMonth();
+const currentYear = new Date().getFullYear();
+const monthlyGames = allGames.filter(game => {
+  const gameDate = new Date(game.date);
+  return gameDate.getMonth() === currentMonth && gameDate.getFullYear() === currentYear;
+});
 
-      return reply.send({
-        totalMatches,
-        winRate,
-        currentWinStreak,
-        monthlyWins,
-        wins: userRecord.wins,
-        losses: userRecord.losses,
-        draws: 0
-      });
+let monthlyWins = 0;
+monthlyGames.forEach(game => {
+  try {
+    const rounds = JSON.parse(game.rounds_json || '{}');
+    if (rounds.winner === userRecord.username || rounds.winnerId === userId || rounds.userWon) {
+      monthlyWins++;
+    }
+  } catch (error) {
+    // Skip invalid JSON
+  }
+});
+
+// Add longestWinStreak to your response
+return reply.send({
+  totalMatches,
+  winRate,
+  currentWinStreak,
+  monthlyWins,
+  wins: userRecord.wins,
+  losses: userRecord.losses,
+  draws: 0,
+  longestWinStreak // Add this
+});
+
 
     } catch (error) {
       fastify.log.error(error);
@@ -182,71 +198,118 @@ export default function lobbyRoutes(fastify: FastifyInstance, options: LobbyRout
   });
 
   // GET /lobby/recent-matches - For OverviewTab and MatchHistoryTab
-  fastify.get('/recent-matches', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = getAuthenticatedUser(request);
-      const userId = user.userId;
-      const userRecord = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { username: true }
-      });
+  // Replace the current recent-matches endpoint in lobbyRoutes.ts with this:
 
-      if (!userRecord) {
-        return reply.status(404).send({ error: 'User not found' });
+// GET /lobby/recent-matches - For OverviewTab and MatchHistoryTab
+fastify.get('/recent-matches', async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const user = getAuthenticatedUser(request);
+    const userId = user.userId;
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true }
+    });
+
+    if (!userRecord) {
+      return reply.status(404).send({ error: 'User not found' });
+    }
+
+    const recentGames = await prisma.game.findMany({
+      where: { id_user: userId },
+      orderBy: { date: 'desc' },
+      take: 10
+    });
+
+    const processedMatches = recentGames.map(game => {
+      let opponent = 'Unknown';
+      let score = '0-0';
+      let isUserWinner = false;
+      let userScore = 0;
+      let opponentScore = 0;
+
+      try {
+        if (game.rounds_json) {
+          const rounds = JSON.parse(game.rounds_json);
+          
+          // Extract opponent
+          if (rounds.opponent) opponent = rounds.opponent;
+          if (rounds.opponentName) opponent = rounds.opponentName;
+          if (rounds.player2 && rounds.player2 !== userRecord.username) opponent = rounds.player2;
+          if (rounds.player1 && rounds.player1 !== userRecord.username) opponent = rounds.player1;
+          
+          // Extract result
+          if (rounds.winner === userRecord.username) isUserWinner = true;
+          if (rounds.winnerId === userId) isUserWinner = true;
+          if (rounds.userWon !== undefined) isUserWinner = rounds.userWon;
+          
+          // EXTRACT ACTUAL SCORES - FIXED LOGIC
+          if (rounds.finalScore) {
+            score = rounds.finalScore;
+            // Parse scores from finalScore string like "3-2"
+            const scores = rounds.finalScore.split('-');
+            if (scores.length === 2) {
+              userScore = parseInt(scores[0]) || 0;
+              opponentScore = parseInt(scores[1]) || 0;
+            }
+          } else if (rounds.score) {
+            score = rounds.score;
+            const scores = rounds.score.split('-');
+            if (scores.length === 2) {
+              userScore = parseInt(scores[0]) || 0;
+              opponentScore = parseInt(scores[1]) || 0;
+            }
+          } else if (rounds.player1 && rounds.player2) {
+            // Extract from player objects if available
+            const p1Score = rounds.player1?.score || rounds.player1Score || 0;
+            const p2Score = rounds.player2?.score || rounds.player2Score || 0;
+            
+            const isUserPlayer1 = rounds.player1?.username === userRecord.username || 
+                                 rounds.player1 === userRecord.username;
+            
+            if (isUserPlayer1) {
+              userScore = p1Score;
+              opponentScore = p2Score;
+            } else {
+              userScore = p2Score;
+              opponentScore = p1Score;
+            }
+            score = `${userScore}-${opponentScore}`;
+          } else {
+            // Default scores based on win/loss
+            userScore = isUserWinner ? 3 : 0;
+            opponentScore = isUserWinner ? 0 : 3;
+            score = `${userScore}-${opponentScore}`;
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing rounds_json:', error);
+        // Set default scores on error
+        userScore = isUserWinner ? 3 : 0;
+        opponentScore = isUserWinner ? 0 : 3;
+        score = `${userScore}-${opponentScore}`;
       }
 
-      const recentGames = await prisma.game.findMany({
-        where: { id_user: userId },
-        orderBy: { date: 'desc' },
-        take: 10
-      });
+      return {
+        id: game.id_game.toString(),
+        opponent,
+        result: isUserWinner ? 'win' : 'loss',
+        score: score,
+        userScore: userScore,
+        opponentScore: opponentScore,
+        matchType: game.game_name,
+        date: game.date.toISOString(),
+        duration: '5 min'
+      };
+    });
 
-      const processedMatches = recentGames.map(game => {
-        let opponent = 'Unknown';
-        let score = 'N/A';
-        let isUserWinner = false;
+    return reply.send(processedMatches);
 
-        try {
-          if (game.rounds_json) {
-            const rounds = JSON.parse(game.rounds_json);
-            
-            // Extract opponent
-            if (rounds.opponent) opponent = rounds.opponent;
-            if (rounds.opponentName) opponent = rounds.opponentName;
-            if (rounds.player2 && rounds.player2 !== userRecord.username) opponent = rounds.player2;
-            if (rounds.player1 && rounds.player1 !== userRecord.username) opponent = rounds.player1;
-            
-            // Extract result
-            if (rounds.winner === userRecord.username) isUserWinner = true;
-            if (rounds.winnerId === userId) isUserWinner = true;
-            if (rounds.userWon !== undefined) isUserWinner = rounds.userWon;
-            
-            // Extract score
-            if (rounds.finalScore) score = rounds.finalScore;
-            if (rounds.score) score = rounds.score;
-          }
-        } catch (error) {
-          console.error('Error parsing rounds_json:', error);
-        }
+  } catch (error) {
+    fastify.log.error(error);
+    return reply.status(500).send({ error: 'Failed to fetch recent matches' });
+  }
+});
 
-        return {
-          id: game.id_game.toString(),
-          opponent,
-          result: isUserWinner ? 'win' : 'loss',
-          score,
-          matchType: game.game_name,
-          date: game.date.toISOString(),
-          duration: '5 min'
-        };
-      });
-
-      return reply.send(processedMatches);
-
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ error: 'Failed to fetch recent matches' });
-    }
-  });
 
   // GET /lobby/profile - For MyLockerTab and MatchHistoryTab
   fastify.get('/profile', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -268,6 +331,7 @@ export default function lobbyRoutes(fastify: FastifyInstance, options: LobbyRout
           twoFactorRegistered: true,
           createdAt: true,
           firstName: true,
+          online_status: true,
           lastName: true,
           dateOfBirth: true,
           gender: true
@@ -284,9 +348,10 @@ export default function lobbyRoutes(fastify: FastifyInstance, options: LobbyRout
         profilePic: userRecord.profilePic,
         firstName: userRecord.firstName,
         lastName: userRecord.lastName,
+        online_status: userRecord.online_status,
         dateOfBirth: userRecord.dateOfBirth,
         gender: userRecord.gender,
-        language: 'English', // Default
+        language: 'English', 
         favAvatar: userRecord.favAvatar,
         wins: userRecord.wins,
         losses: userRecord.losses,
@@ -352,32 +417,61 @@ export default function lobbyRoutes(fastify: FastifyInstance, options: LobbyRout
     }
   });
 
-  // GET /lobby/avatars - For MyLockerTab avatar selection
-  // fastify.get('/avatars', async (request: FastifyRequest, reply: FastifyReply) => {
-  //   try {
-  //     // Define available avatars based on your FavAvatar enum
-  //     const avatars = [
-  //       { id: 'AstroAce', name: 'Astro Ace', imageUrl: '/avatars/av1.jpeg' },
-  //       { id: 'PixelPirate', name: 'Pixel Pirate', imageUrl: '/avatars/av2.jpeg' },
-  //       { id: 'RoboRacer', name: 'Robo Racer', imageUrl: '/avatars/av3.jpeg' },
-  //       { id: 'ShadowNinja', name: 'Shadow Ninja', imageUrl: '/avatars/av4.jpeg' },
-  //       { id: 'CyberKitty', name: 'Cyber Kitty', imageUrl: '/avatars/av5.jpeg' },
-  //       { id: 'MysticMage', name: 'Mystic Mage', imageUrl: '/avatars/av6.jpeg' },
-  //       { id: 'CaptainQuasar', name: 'Captain Quasar', imageUrl: '/avatars/av7.jpeg' },
-  //       { id: 'NeonSamurai', name: 'Neon Samurai', imageUrl: '/avatars/av8.jpg' },
-  //       { id: 'RocketRaccoon', name: 'Rocket Raccoon', imageUrl: '/avatars/av9.jpeg' },
-  //       { id: 'JungleJaguar', name: 'Jungle Jaguar', imageUrl: '/avatars/jungle-jaguar.png' },
-  //       { id: 'AquaSpirit', name: 'Aqua Spirit', imageUrl: '/avatars/aqua-spirit.png' },
-  //       { id: 'DesertPhantom', name: 'Desert Phantom', imageUrl: '/avatars/desert-phantom.png' }
-  //     ];
 
-  //     return reply.send(avatars);
-  //   } catch (error) {
-  //     fastify.log.error(error);
-  //     return reply.status(500).send({ error: 'Failed to fetch avatars' });
-  //   }
-  // });
 
+
+
+// Add this to your existing lobbyRoutes.ts file, with the other GET endpoints
+
+// GET /lobby/leaderboard - Get complete leaderboard data
+fastify.get('/leaderboard', async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const user = getAuthenticatedUser(request);
+    
+    // Get all users with their stats, ordered by performance
+    const allUsers = await prisma.user.findMany({
+      where: {
+        // Optional: only include users who have played games
+        OR: [
+          { wins: { gt: 0 } },
+          { losses: { gt: 0 } }
+        ]
+      },
+      select: {
+        id: true,
+        username: true,
+        wins: true,
+        losses: true,
+        profilePic: true,
+        online_status: true,
+        createdAt: true
+      },
+      orderBy: [
+        { wins: 'desc' },     // Highest wins first
+        { losses: 'asc' },    // Fewer losses as tiebreaker
+        { createdAt: 'asc' }  // Older accounts as second tiebreaker
+      ]
+    });
+
+    // Calculate points and rank (same formula as your friend: wins + losses/2)
+    const leaderboard = allUsers.map((user, index) => ({
+      rank: index + 1,
+      username: user.username,
+      wins: user.wins,
+      losses: user.losses,
+      points: user.wins + (user.losses / 2), // Exact same calculation as your friend
+      profilePic: user.profilePic,
+      online_status: user.online_status,
+      totalGames: user.wins + user.losses
+    }));
+
+    return reply.send(leaderboard);
+
+  } catch (error) {
+    fastify.log.error(error);
+    return reply.status(500).send({ error: 'Failed to fetch leaderboard' });
+  }
+});
 
 
 fastify.get('/avatars', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -387,49 +481,49 @@ fastify.get('/avatars', async (request: FastifyRequest, reply: FastifyReply) => 
       {
         id: 'AstroAce',
         name: 'Astro Ace', 
-        imageUrl: '/avatars/av1.jpeg',
+        imageUrl: '/avatars/astro_ace.png',
         description: 'Space explorer, ready for any cosmic challenge.'
       },
       {
         id: 'PixelPirate',
         name: 'Pixel Pirate',
-        imageUrl: '/avatars/av2.jpeg', 
+        imageUrl: '/avatars/pixel_pirate.png', 
         description: 'A swashbuckler who sails the digital seas.'
       },
       {
         id: 'RoboRacer', 
         name: 'Robo Racer',
-        imageUrl: '/avatars/av3.jpeg',
+        imageUrl: '/avatars/robo_racer.png',
         description: 'Futuristic racer, built for speed and style.'
       },
       {
         id: 'ShadowNinja',
         name: 'Shadow Ninja', 
-        imageUrl: '/avatars/av4.jpeg',
+        imageUrl: '/avatars/shadow_ninja.png',
         description: 'Silent, swift, and always in control.'
       },
       {
         id: 'CyberKitty',
         name: 'Cyber Kitty',
-        imageUrl: '/avatars/av5.jpeg', 
+        imageUrl: '/avatars/cyber_kitty.png', 
         description: 'Sleek, curious, and a master of the cyber world.'
       },
       {
         id: 'MysticMage',
         name: 'Mystic Mage',
-        imageUrl: '/avatars/av6.jpeg',
+        imageUrl: '/avatars/mystic_mage.png',
         description: 'Wielder of ancient arcane powers.'
       },
       {
         id: 'CaptainQuasar', 
         name: 'Captain Quasar',
-        imageUrl: '/avatars/av7.jpeg',
+        imageUrl: '/avatars/captain_quasar.png',
         description: 'Defender of the galaxies, always vigilant.'
       },
       {
         id: 'NeonSamurai',
         name: 'Neon Samurai',
-        imageUrl: '/avatars/av8.jpg', 
+        imageUrl: '/avatars/neon_samurai.png', 
         description: 'Blade of light, honor in every move.'
       },
       {

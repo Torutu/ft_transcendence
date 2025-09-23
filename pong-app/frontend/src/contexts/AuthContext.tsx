@@ -5,7 +5,7 @@ import api from '../utils/api';
 interface User {
   id: string;
   email: string;
-  name: string;
+  username: string;
   isVerified: boolean;
 }
 

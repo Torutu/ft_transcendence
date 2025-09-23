@@ -237,56 +237,86 @@ fastify.post<{ Body: GameSaveRequest }>('/save', async (request, reply) => {
   });
 
   // Get recent matches
-  fastify.get('/recent-matches', async (request, reply) => {
-    try {
-      const user = getAuthenticatedUser(request);
-      const { limit = 20 } = request.query as { limit?: number };
+  // Replace the recent-matches endpoint in gameRoutes.ts with this:
 
-      const games = await prisma.game.findMany({
-        where: { id_user: user.userId },
-        orderBy: { date: 'desc' },
-        take: Number(limit)
-      });
+// Get recent matches
+fastify.get('/recent-matches', async (request, reply) => {
+  try {
+    const user = getAuthenticatedUser(request);
+    const { limit = 20 } = request.query as { limit?: number };
 
-      const matches = games.map(game => {
-        try {
-          const gameData = JSON.parse(game.rounds_json);
-          
-          const userIsPlayer1 = gameData.userIsPlayer1;
-          const userPlayer = userIsPlayer1 ? gameData.player1 : gameData.player2;
-          const opponentPlayer = userIsPlayer1 ? gameData.player2 : gameData.player1;
+    const games = await prisma.game.findMany({
+      where: { id_user: user.userId },
+      orderBy: { date: 'desc' },
+      take: Number(limit)
+    });
 
-          return {
-            id: game.id_game.toString(),
-            gameType: game.game_name,
-            opponent: opponentPlayer?.username || 'Unknown',
-            result: gameData.userWon ? 'win' : 'loss',
-            score: gameData.finalScore || `${userPlayer?.score || 0} - ${opponentPlayer?.score || 0}`,
-            duration: `${Math.floor(gameData.duration / 60)}:${String(gameData.duration % 60).padStart(2, '0')}`,
-            date: game.date.toISOString(),
-            mode: gameData.mode || 'unknown'
-          };
-        } catch (e) {
-          return {
-            id: game.id_game.toString(),
-            gameType: game.game_name,
-            opponent: 'Unknown',
-            result: 'unknown',
-            score: 'N/A',
-            duration: '0:00',
-            date: game.date.toISOString(),
-            mode: 'unknown'
-          };
+    const matches = games.map(game => {
+      try {
+        const gameData = JSON.parse(game.rounds_json);
+        
+        const userIsPlayer1 = gameData.userIsPlayer1;
+        const userPlayer = userIsPlayer1 ? gameData.player1 : gameData.player2;
+        const opponentPlayer = userIsPlayer1 ? gameData.player2 : gameData.player1;
+
+        // Extract actual scores
+        let userScore = 0;
+        let opponentScore = 0;
+        let displayScore = '0-0';
+
+        if (gameData.finalScore) {
+          displayScore = gameData.finalScore;
+          const scores = gameData.finalScore.split('-');
+          if (scores.length === 2) {
+            userScore = parseInt(scores[0]) || 0;
+            opponentScore = parseInt(scores[1]) || 0;
+          }
+        } else if (userPlayer?.score !== undefined && opponentPlayer?.score !== undefined) {
+          userScore = userPlayer.score || 0;
+          opponentScore = opponentPlayer.score || 0;
+          displayScore = `${userScore}-${opponentScore}`;
+        } else {
+          // Fallback to win/loss based scoring
+          userScore = gameData.userWon ? 3 : 0;
+          opponentScore = gameData.userWon ? 0 : 3;
+          displayScore = `${userScore}-${opponentScore}`;
         }
-      });
 
-      return reply.send(matches);
+        return {
+          id: game.id_game.toString(),
+          gameType: game.game_name,
+          opponent: opponentPlayer?.username || 'Unknown',
+          result: gameData.userWon ? 'win' : 'loss',
+          score: displayScore,
+          userScore: userScore,
+          opponentScore: opponentScore,
+          duration: `${Math.floor(gameData.duration / 60)}:${String(gameData.duration % 60).padStart(2, '0')}`,
+          date: game.date.toISOString(),
+          mode: gameData.mode || 'unknown'
+        };
+      } catch (e) {
+        return {
+          id: game.id_game.toString(),
+          gameType: game.game_name,
+          opponent: 'Unknown',
+          result: 'unknown',
+          score: '0-0',
+          userScore: 0,
+          opponentScore: 0,
+          duration: '0:00',
+          date: game.date.toISOString(),
+          mode: 'unknown'
+        };
+      }
+    });
 
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ error: 'Failed to fetch recent matches' });
-    }
-  });
+    return reply.send(matches);
+
+  } catch (error) {
+    fastify.log.error(error);
+    return reply.status(500).send({ error: 'Failed to fetch recent matches' });
+  }
+});
 
   // Get detailed match information
   fastify.get('/matches/:matchId', async (request, reply) => {

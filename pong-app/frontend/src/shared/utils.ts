@@ -33,7 +33,6 @@ export const saveAvatarData = (key: string, avatar: AvatarData | null): void => 
   }
 };
 
-
 // Cleanup localStorage on mount
 export const cleanupGameStorage = (): void => {
   localStorage.removeItem("points1");

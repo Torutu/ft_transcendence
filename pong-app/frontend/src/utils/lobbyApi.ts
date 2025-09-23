@@ -35,6 +35,8 @@ export interface Match {
   opponent: string;
   result: string;
   score: string;
+  userScore?: number;
+  opponentScore?: number;
   matchType: string;
   date: string;
   duration: string;
@@ -87,6 +89,75 @@ export interface DetailedMatchStats {
     roundsLost: number;
   };
 }
+
+
+// // Add to lobbyApi.ts
+// export interface LeaderboardPlayer {
+//   rank: number;
+//   username: string;
+//   wins: number;
+//   losses: number;
+//   points: number;
+//   profilePic?: string;
+//   online_status?: string;
+// }
+
+// export async function getLeaderboard(): Promise<LeaderboardPlayer[]> {
+//   try {
+//     const response = await api.get('/lobby/leaderboard');
+//     return response.data;
+//   } catch (error) {
+//     console.error('Failed to fetch leaderboard:', error);
+//     throw error;
+//   }
+// }
+
+
+export interface LeaderboardPlayer {
+  rank: number;
+  username: string;
+  wins: number;
+  losses: number;
+  points: number;
+  profilePic?: string;
+  online_status?: string;
+  totalGames: number;
+}
+
+export interface EnhancedLeaderboardPlayer extends LeaderboardPlayer {
+  isCurrentUser?: boolean;
+  winRate: number;
+}
+
+// Add these functions to your existing lobbyApi exports
+export async function getLeaderboard(): Promise<LeaderboardPlayer[]> {
+  try {
+    console.log('Fetching leaderboard data...');
+    const response = await api.get('/lobby/leaderboard');
+    console.log('Leaderboard response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to fetch leaderboard:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
+
+export async function getEnhancedLeaderboard(currentUsername?: string): Promise<EnhancedLeaderboardPlayer[]> {
+  try {
+    const leaderboard = await getLeaderboard();
+    
+    return leaderboard.map(player => ({
+      ...player,
+      isCurrentUser: player.username === currentUsername,
+      winRate: player.totalGames > 0 ? (player.wins / player.totalGames) * 100 : 0
+    }));
+  } catch (error) {
+    console.error('Failed to fetch enhanced leaderboard:', error);
+    throw error;
+  }
+}
+
 
 // Individual API functions
 export async function getLobbyStats(): Promise<Stats> {
@@ -169,6 +240,8 @@ export async function searchUsers(query: string = ''): Promise<User[]> {
     throw error;
   }
 }
+
+
 
 export async function sendFriendRequest(userId: string): Promise<{ message: string }> {
   try {
@@ -400,6 +473,7 @@ export async function getEnhancedStats(): Promise<EnhancedStats> {
   }
 }
 
+
 // API object for backward compatibility
 export const lobbyApi = {
   getStats: getLobbyStats,
@@ -415,7 +489,9 @@ export const lobbyApi = {
   respondToFriendRequest: respondToFriendRequest,
   removeFriend: removeFriend,
   getEnhancedFriends: getEnhancedFriends,
-  getRallySquad: getRallySquadData
+  getRallySquad: getRallySquadData,
+  getLeaderboard,
+  getEnhancedLeaderboard
 };
 
 // Enhanced API object with game data functions
@@ -425,7 +501,9 @@ export const enhancedLobbyApi = {
   getSavedRecentMatches,
   getSavedMatchDetails,
   getEnhancedRecentMatches,
-  getEnhancedStats
+  getEnhancedStats,
+  getLeaderboard,
+  getEnhancedLeaderboard
 };
 
 // Custom hook for data fetching with error handling

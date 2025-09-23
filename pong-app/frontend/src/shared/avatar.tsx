@@ -118,8 +118,8 @@ export const AvatarPage = () => {
 
   return (
     <div
-      className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center"
-      style={{ backgroundImage: "url('/background/gray_background.jpg')" }}
+      className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center bg-gray-700 text-white"
+     
     >
       <button
         onClick={() => navigate(returnTo)}
