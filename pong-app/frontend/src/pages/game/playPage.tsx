@@ -52,6 +52,13 @@ const PlayPage: React.FC = () => {
     
     // Clean up any pairing data (for remote games)
     localStorage.removeItem("pairingData");
+
+    // Clear guest player data for quickmatch-local
+    localStorage.removeItem("quickmatch_guestName");
+    localStorage.removeItem("quickmatch_guestAvatar");
+
+    // Dispatch custom event to notify other tabs/components
+    window.dispatchEvent(new CustomEvent('gameEnded'));
     
     // Mark game as ended to prevent multiple cleanups
     setGameHasEnded(true);
@@ -65,6 +72,9 @@ const PlayPage: React.FC = () => {
     
     console.log("🎯 Game ended - callback triggered from game client");
     clearGameState();
+
+    // Also trigger cleanup in the current component state
+    setGameHasEnded(true);
   };
 
   // ========== GAME STATUS UPDATE CALLBACK ==========

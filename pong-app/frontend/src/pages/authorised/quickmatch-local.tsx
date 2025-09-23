@@ -122,6 +122,9 @@ export default function QuickmatchLocalPage() {
     });
   }, [isInGame, navigate]);
 
+
+  
+
   // ========== CLEAR GUEST DATA FUNCTION ==========
   const clearGuestData = useCallback(() => {
     console.log("🧹 Clearing guest player data after game end");
@@ -133,6 +136,11 @@ export default function QuickmatchLocalPage() {
     // Clear guest avatar
     setGuestAvatar(null);
     localStorage.removeItem("quickmatch_guestAvatar");
+
+    // Clear any temporary game state
+  localStorage.removeItem("userInGame");
+  localStorage.removeItem("activeGameInfo");
+  localStorage.removeItem("currentGameId");
     
     console.log("✅ Guest player data cleared successfully");
   }, []);
