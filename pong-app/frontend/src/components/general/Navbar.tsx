@@ -1,5 +1,5 @@
 // pong-app/frontend/src/components/Navbar.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,10 +29,10 @@ export const Navbar = () => {
       <div className="container mx-auto flex flex-wrap justify-between items-center">
         {/* Logo */}
         <Link to="/" className="mb-2 sm:mb-0">
-          <span className="block text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+          <span className="text-2xl font-bold text-[#c82fb3]">
             H5 Asteroids
           </span>
-          <span className="block text-sm uppercase tracking-wide text-red-400">
+          <span className="block text-sm uppercase tracking-wide text-yellow-400 font-bold">
             Pong Game
           </span>
         </Link>
@@ -43,33 +43,34 @@ export const Navbar = () => {
             <>
               {/* Avatar + User info */}
               <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
                   {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="text-white font-medium text-sm sm:text-base">
-                    Hello, {user?.name || 'User'}
+                  <p className="font-semibold">
+                    Hello, {user?.username || 'User'}
                   </p>
-                  <p className="text-gray-300 text-xs sm:text-sm">{user?.email}</p>
+                  <p className="text-gray-300 text-xs">{user?.email}</p>
                 </div>
               </div>
 
               {/* Logout button */}
               <button
                 onClick={handleLogout}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
+                className="bg-gray-700 hover:bg-red-600 px-5 py-2 rounded-lg text-white font-semibold"
                 disabled={isLoggingOut}
               >
                 🚪 Logout
               </button>
             </>
           ) : (
-            <Link
-              to="/lobby"
-              className="text-white hover:text-blue-300 text-sm sm:text-base"
-            >
-              Play as Guest
-            </Link>
+            <></>
+            // <Link
+            //   to="/lobby"
+            //   className="text-white hover:text-blue-300 text-sm sm:text-base"
+            // >
+            //   Play as Guest
+            // </Link>
           )}
         </div>
       </div>
@@ -78,4 +79,4 @@ export const Navbar = () => {
 };
 
 
-
+// export default Navbar;

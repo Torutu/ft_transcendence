@@ -1,3 +1,5 @@
+// pong-app/backend/src/PingPongGame.ts
+
 export interface Player {
     id: string | null, name: string | undefined, side: "left" | "right" | null   
 };

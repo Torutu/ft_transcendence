@@ -1,3 +1,4 @@
+// pong-app/backend/src/PongServer.ts
 import { Server } from "socket.io";
 import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState } from "./gameData.js";
 import { validatePlayerNames } from "./KeyClashGame";
@@ -91,33 +92,48 @@ export function setupPongNamespace(io: Server) {
 				console.log("remote", gameRoom.state.status);	
             });
 
-            function startGame() {
-                if (!gameRoom) return;
-                gameRoom.state.status = "in-progress";
-            	lobbyNamespace.emit("lobby_update", getLobbyState());
-                if (!gameRoom.state.loop) {
-					const p1 = gameRoom.state.players.find(p => p.side === "left");
-                    const p2 = gameRoom.state.players.find(p => p.side === "right");
-                    if (!p1 || !p2) return; // add some error msg?
-                    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
-					gameRoom.state.round++;
-                    // Broadcast game state at 60fps
-                    gameRoom.resetGame();
-                    pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state, "start");
-                    gameRoom.state.player1ready = false;
-                    gameRoom.state.player2ready = false;                           
-                    gameRoom.state.loop = setInterval(() => {
-                        gameRoom.update();
-                        pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
-                        if (gameRoom.state.status === "finished") {
-                            // winner is gameRoom.state.matches[gameRoom.state.round - 1].winner <-- store to database (in case of tie, what do?)
-                            clearInterval(gameRoom.state.loop);
-                            gameRoom.state.loop = undefined;
-							lobbyNamespace.emit("lobby_update", getLobbyState());
-                        }
-                    }, 1000 / 60);
-                }
-            };
+// In PongServer.ts - Modify the startGame function
+function startGame() {
+  if (!gameRoom) return;
+  gameRoom.state.status = "in-progress";
+  lobbyNamespace.emit("lobby_update", getLobbyState());
+  if (!gameRoom.state.loop) {
+    const p1 = gameRoom.state.players.find(p => p.side === "left");
+    const p2 = gameRoom.state.players.find(p => p.side === "right");
+    if (!p1 || !p2) return; // add some error msg?
+    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
+    gameRoom.state.round++;
+    // Broadcast game state at 60fps
+    gameRoom.resetGame();
+    pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state, "start");
+    gameRoom.state.player1ready = false;
+    gameRoom.state.player2ready = false;                           
+    gameRoom.state.loop = setInterval(() => {
+      gameRoom.update();
+      pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
+      if (gameRoom.state.status === "finished") {
+        // winner is gameRoom.state.matches[gameRoom.state.round - 1].winner <-- store to database (in case of tie, what do?)
+        clearInterval(gameRoom.state.loop);
+        gameRoom.state.loop = undefined;
+        
+        // ADDED: Emit gameOver event with game data
+        const winner = gameRoom.state.matches[gameRoom.state.round - 1].winner;
+        const p1Score = gameRoom.getLeftPlayer() === winner?.name ? 3 : 0;
+        const p2Score = gameRoom.getRightPlayer() === winner?.name ? 3 : 0;
+        
+        pongNamespace.to(gameRoom.getId()).emit("gameOver", {
+          player1: { name: gameRoom.getLeftPlayer(), score: p1Score },
+          player2: { name: gameRoom.getRightPlayer(), score: p2Score },
+          duration: 120 - Math.floor((gameRoom.state.gameEndTime - performance.now()) / 1000),
+          finalScore: `${p1Score} - ${p2Score}`,
+          winner: winner?.name
+        });
+        
+        lobbyNamespace.emit("lobby_update", getLobbyState());
+      }
+    }, 1000 / 60);
+  }
+};
         });
 
         socket.on("join_tournament_room", (roomId, callback) => {
@@ -314,6 +330,5 @@ export function setupPongNamespace(io: Server) {
         })
     });  
 }
-
 
 
