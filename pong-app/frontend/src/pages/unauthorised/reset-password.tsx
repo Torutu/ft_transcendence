@@ -1,10 +1,9 @@
 // frontend/src/pages/reset-password.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
 import api from '../../utils/api';
 import Alert from '../../components/general/Alert';
-import { useNavigate } from 'react-router-dom';
 
 
 export default function ResetPasswordPage() {

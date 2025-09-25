@@ -7,33 +7,34 @@ import Alert from '../../components/general/Alert';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    name: '',
+    username: '', // Changed from 'name' to 'username'
     email: '',
     password: '',
   });
   
   const [errors, setErrors] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     form: '',
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
     
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { name: '', email: '', password: '', form: '' };
+    const newErrors = { username: '', email: '', password: '', form: '' };
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Username is required';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
       isValid = false;
-    } else if (!validator.isAlphanumeric(formData.name)) {
-      newErrors.name = 'Only letters and numbers allowed';
+    } else if (!validator.isAlphanumeric(formData.username)) {
+      newErrors.username = 'Username must contain only letters and numbers';
       isValid = false;
-    } else if (!validator.isLength(formData.name, { min: 3, max: 16 })) {
-      newErrors.name = 'Must be 3-16 characters';
+    } else if (!validator.isLength(formData.username, { min: 3, max: 16 })) {
+      newErrors.username = 'Must be 3-16 characters';
       isValid = false;
     }
 
@@ -64,22 +65,23 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await api.post('/auth/register', {
-        name: formData.name,
+        username: formData.username, // Changed from 'name' to 'username'
         email: formData.email,
         password: formData.password,
       });
 
-      if (response.data.requiresVerification) {
-        // ✅ BOTH: sessionStorage for recovery + navigation state for immediate use
-        sessionStorage.setItem('pendingUserId', response.data.userId);
-        sessionStorage.setItem('pendingEmail', formData.email);
-        
-        navigate('/verify-email', { 
-          state: { 
-            email: formData.email,
-            userId: response.data.userId 
-          } 
-        });
+      if (response.data.success) {
+        setSuccessMessage('Account created successfully! You can now log in.');
+        // Clear form
+        setFormData({ username: '', email: '', password: '' });
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { 
+              message: 'Account created successfully! Please log in to continue.' 
+            } 
+          });
+        }, 2000);
       } else {
         setErrors(prev => ({
           ...prev,
@@ -87,7 +89,12 @@ export default function RegisterPage() {
         }));
       }
     } catch (error: any) {
-      if (error.response?.data?.error === 'USER_EXISTS') {
+      if (error.response?.data?.error === 'USERNAME_EXISTS') {
+        setErrors(prev => ({
+          ...prev,
+          username: error.response.data.message
+        }));
+      } else if (error.response?.data?.error === 'EMAIL_EXISTS') {
         setErrors(prev => ({
           ...prev,
           email: error.response.data.message
@@ -110,6 +117,7 @@ export default function RegisterPage() {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '', form: '' }));
     }
+    setSuccessMessage('');
   };
 
   return (
@@ -142,25 +150,26 @@ export default function RegisterPage() {
           </h1>
           <p className="text-gray-300 text-center mb-6">Join us today</p>
 
+          <Alert type="success" message={successMessage} />
           <Alert type="error" message={errors.form} />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <input
-                id="name"
-                name="name"
+                id="username"
+                name="username"
                 type="text"
                 placeholder="Username"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
-                  errors.name
+                  errors.username
                     ? 'border-red-500 focus:ring-red-200'
                     : 'border-gray-300 focus:ring-blue-200'
                 }`}
-                value={formData.name}
+                value={formData.username}
                 onChange={handleChange}
                 autoFocus
               />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}
             </div>
 
             <div>
