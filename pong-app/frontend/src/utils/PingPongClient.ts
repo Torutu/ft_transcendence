@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
 import { getValidatedPlayerName } from './keyClashClient';
-import { saveGameResult, createGameResult } from './gameDataManager';
 
 export default class PingPongClient {
   private groundEmission = 0.5;
@@ -58,31 +57,13 @@ export default class PingPongClient {
   private status: "waiting" | "in-progress" | "finished" | "paused" = "waiting";
   private updated: boolean;
   private navigate: NavigateFunction;
-  private players: { 
-    player1: string | null,
-    player2: string | null,
-    player3: string | null,
-    player4: string | null
-  };
+  private players: { player1: string | null,
+				player2: string | null,
+				player3: string | null,
+				player4: string | null
+			}
 
-  // Add new callback properties
-  private onGameEnd?: () => void;
-  private onStatusUpdate?: (status: "waiting" | "starting" | "in-progress" | "finished" | "paused", players?: {player1: string | null, player2: string | null}) => void;
-  
-  // Game state tracking for saving
-  private gameStartTime: number = 0;
-  private currentGameState: any = null;
-
-  constructor(
-    containerId: string | HTMLElement, 
-    gameId: string, 
-    mode: "local" | "remote", 
-    type: "1v1" | "tournament", 
-    navigate: NavigateFunction, 
-    name: string | null | { player1: string | null, player2: string | null, player3: string | null, player4: string | null },
-    onGameEnd?: () => void,
-    onStatusUpdate?: (status: "waiting" | "starting" | "in-progress" | "finished" | "paused", players?: {player1: string | null, player2: string | null}) => void
-  ) {
+  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", type: "1v1" | "tournament", navigate: NavigateFunction, name: string | null) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -93,22 +74,13 @@ export default class PingPongClient {
       throw new Error('Invalid container argument');
     }
 
+	this.players = { player1: null, player2: null, player3: null, player4: null};
     this.gameId = gameId;
     this.mode = mode;
-    this.type = type;
+	this.type = type;
     this.updated = false;
+
     this.navigate = navigate;
-
-    // Store callbacks
-    this.onGameEnd = onGameEnd;
-    this.onStatusUpdate = onStatusUpdate;
-
-    // Handle both old (string) and new (object) name parameter formats
-    if (typeof name === 'object' && name !== null) {
-      this.players = name;
-    } else {
-      this.players = { player1: null, player2: null, player3: null, player4: null };
-    }
 
     this.animate = this.animate.bind(this);
 
@@ -244,11 +216,11 @@ export default class PingPongClient {
     document.body.appendChild(this.matchInfoDisplay);
 
     this.lastFrame = performance.now();
-    this.connect(typeof name === 'string' ? name : null);
+    this.connect(name);
     this.animate();    
   }
 
-  private connect(name: string | null) {
+  private connect(name: string | null){
     this.socket = io("/pong", {
         path: '/socket.io',
         transports: ['websocket'],
@@ -258,73 +230,57 @@ export default class PingPongClient {
     this.socket.on('connect', () => {
         console.log('Connected to server:', this.socket?.id);
 
-        if (this.type === "1v1") {
-            this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
-                if (callback.error) {
-                    alert(callback.error);       
-                    this.navigate("/quickmatch");
-                }
-            });
-        }
-        else if (this.type === "tournament") {
-            this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
-                if (callback.error) {
-                    alert(callback.error);
-                    this.navigate("/tournament");
-                }
-            });
-        }    
+		  if (this.type === "1v1") {
+			  this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);       
+					  this.navigate("/quickmatch");
+				  }
+			  });
+		  }
+		  else if (this.type === "tournament")
+		  {
+			  this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
+				  if (callback.error) {
+					  alert(callback.error);
+					  this.navigate("/tournament");
+				  }
+			  });
+		  }    
     });
 
     this.socket.on('get_names', () => {
-      if (!name && !this.players.player1) {
+      if (!name)
         this.players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", this.players);
-      } else if (name && !this.players.player1) {
+      else
         this.players.player1 = name;
-      }
-      
       if (this.mode === "local") {
-        if (!this.players.player2) {
-          this.players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", this.players);
-        }
+        this.players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", this.players);
         if (this.type === "tournament") {
-          if (!this.players.player3) {
-            this.players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", this.players);
-          }
-          if (!this.players.player4) {
-            this.players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", this.players);
-          }
+          this.players.player3 = getValidatedPlayerName("Enter name for player3:", "Guest", this.players);
+          this.players.player4 = getValidatedPlayerName("Enter name for player4:", "Guest", this.players);
         }
       }
       this.socket?.emit("names", this.players);
-    });
+    })
 
     this.socket.on('playerSide', (side) => {
         this.playerSide = side;
     });
-    
     this.socket.on('refreshPlayerSides', (players) => {
       const player = players.find(p => p.id === this.socket?.id);
       this.playerSide = player.side;
-    });
+    })
 
     this.socket.on('stateUpdate', (state, start: string | null) => {
-        // Store current game state for potential saving
-        this.currentGameState = state;
-        
-        // Track game start time
-        if (state.status === "in-progress" && this.gameStartTime === 0) {
-          this.gameStartTime = Date.now();
-        }
-
         if (this.mode === "remote" && (this.playerSide === "left" || this.playerSide === null))
           this.rightPaddle.position.setZ(state.rightPaddle.z);
         if (this.mode === "remote" && (this.playerSide === "right" || this.playerSide === null))
           this.leftPaddle.position.setZ(state.leftPaddle.z);
         if (start) {
-            this.rightPaddle.position.setZ(state.rightPaddle.z);
-            this.leftPaddle.position.setZ(state.leftPaddle.z);
-        }
+			this.rightPaddle.position.setZ(state.rightPaddle.z);
+			this.leftPaddle.position.setZ(state.leftPaddle.z);
+		}
         this.latestBallX = state.ball.x;
         this.latestBallZ = state.ball.z;
         this.updated = true;
@@ -341,34 +297,15 @@ export default class PingPongClient {
         if (this.matchInfoDisplay.textContent !== state.matchInfo) {
           this.matchInfoDisplay.textContent = state.matchInfo;
         }
-
-        // Handle status changes
-        const previousStatus = this.status;
         this.status = state.status;
-
-        // Call status update callback
-        if (this.onStatusUpdate) {
-          this.onStatusUpdate(this.status, {
-            player1: this.players.player1,
-            player2: this.players.player2
-          });
-        }
-
-        // Handle game end - Save results when game finishes
-        if (previousStatus !== "finished" && state.status === "finished") {
-          this.handleGameFinished(state);
-        }
-
         if (this.type === "1v1" && (state.status === "finished")) {
           this.restartButton.style.display = "block";
         }
         else this.restartButton.style.display = "none";
-        
         if (state.status === "finished" || state.type === "tournament" && state.status === "starting") {
           this.matchInfoDisplay.style.display = "block";
         }
         else this.matchInfoDisplay.style.display = "none";
-        
         if (((this.type === "1v1" && state.players.length === 2) ||
             (this.type === "tournament" && state.players.length === 4)) && 
             state.status === "starting" && state.mode === "remote")
@@ -392,91 +329,21 @@ export default class PingPongClient {
         this.scoreDisplay.textContent = `Waiting for opponents... (${state.players.length}/4)`;
       }
       this.restartButton.style.display = "none";
-      this.matchInfoDisplay.style.display = "none";
+	  this.matchInfoDisplay.style.display = "none";
       this.status = "waiting";
-      
-      // Call status update callback
-      if (this.onStatusUpdate) {
-        this.onStatusUpdate("waiting");
-      }
     });
 
     this.socket.on('disconnection', () => {
       alert("Tournament terminated (someone disconnected)");
       this.navigate('/tournament');
-    });
-  }
-
-  private async handleGameFinished(state: any) {
-    try {
-      console.log('🎯 Game finished - saving results...', state);
-      
-      // Calculate game duration
-      const gameDuration = this.gameStartTime > 0 ? Math.floor((Date.now() - this.gameStartTime) / 1000) : 60;
-      
-      // Extract scores from the score display or state
-      let player1Score = 0;
-      let player2Score = 0;
-      let winner = '';
-
-      // Try to parse scores from the score display
-      if (this.scoreDisplay.textContent) {
-        const scoreText = this.scoreDisplay.textContent;
-        const scoreMatch = scoreText.match(/(\w+):\s*(\d+).*?(\w+):\s*(\d+)/);
-        if (scoreMatch) {
-          const [, p1Name, p1Score, p2Name, p2Score] = scoreMatch;
-          player1Score = parseInt(p1Score);
-          player2Score = parseInt(p2Score);
-          winner = player1Score > player2Score ? p1Name : p2Name;
-        }
-      }
-
-      // Fallback: try to get from state
-      if (player1Score === 0 && player2Score === 0 && state) {
-        player1Score = state.player1Score || state.leftScore || 0;
-        player2Score = state.player2Score || state.rightScore || 0;
-      }
-
-      // Create game result
-      const gameResult = createGameResult(
-        this.gameId,
-        'pong',
-        this.mode || 'local',
-        this.players.player1 || 'Player 1',
-        'default', // avatar
-        player1Score,
-        this.players.player2 || 'Player 2', 
-        'default', // avatar
-        player2Score,
-        gameDuration,
-        [] // rounds data - could be enhanced later
-      );
-
-      console.log('💾 Saving game result:', gameResult);
-
-      // Save to database
-      await saveGameResult(gameResult);
-      console.log('✅ Game result saved successfully');
-
-      // Call the game end callback
-      if (this.onGameEnd) {
-        this.onGameEnd();
-      }
-
-    } catch (error) {
-      console.error('❌ Error saving game result:', error);
-      // Don't prevent the game from ending even if save fails
-      if (this.onGameEnd) {
-        this.onGameEnd();
-      }
-    }
-  }
+    })
+}
 
   private handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape")
-      this.socket?.emit("pause");
+      this.socket.emit("pause");
     else if (e.code === "Space")
-      this.socket?.emit("setReady");
+      this.socket.emit("setReady");
     else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
   }
 
@@ -525,7 +392,6 @@ export default class PingPongClient {
     const now = performance.now();
     const dt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
-    
     // Move paddles
     if (this.status != "paused" && this.status != "finished") {
       if (this.mode === "local") {
@@ -553,7 +419,6 @@ export default class PingPongClient {
         }
       }
     }
-    
     // Clamp paddles
     this.leftPaddle.position.z = THREE.MathUtils.clamp(this.leftPaddle.position.z, -this.bounds.z, this.bounds.z);
     this.rightPaddle.position.z = THREE.MathUtils.clamp(this.rightPaddle.position.z, -this.bounds.z, this.bounds.z);
@@ -575,7 +440,6 @@ export default class PingPongClient {
         this.updated = false;
       }
     }
-    
     // Camera rotation based on ball
     const targetRotationY = THREE.MathUtils.clamp(this.ball.position.z / this.bounds.z, -0.9, 0.9);
     const smoothingFactor = 0.1;

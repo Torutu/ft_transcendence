@@ -15,12 +15,8 @@ const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
 const PlayPage = lazy(() => import('./pages/game/playPage'));
 const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
-const TournamentLocalPage = lazy(() => import('./pages/authorised/tournament-local'));
-const TournamentRemotePage = lazy(() => import('./pages/authorised/tournament-remote'));
-const QuickmatchLocalPage = lazy(() => import('./pages/authorised/quickmatch-local'));
-const QuickmatchRemotePage = lazy(() => import('./pages/authorised/quickmatch-remote'));
-const AvatarPage = lazy(() => import('./shared/avatar'));
-
+const QuickMatchPage = lazy(() => import('./pages/authorised/quickmatch'));
+const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -83,7 +79,6 @@ const App = () => {
             {/* Public routes without layout */}
             <Route path="/" element={<Home />} />
             <Route path="/play" element={<PlayPage />} />
-            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/:game/:mode/:type/:gameId" element={<PlayPage />} />
 
             {/* Public routes with layout */}
@@ -114,10 +109,8 @@ const App = () => {
             {/* Protected routes with layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/lobby" element={<LobbyPage />} />
-              <Route path="/quickmatch-local" element={<QuickmatchLocalPage />} />
-              <Route path="/quickmatch-remote" element={<QuickmatchRemotePage />} />
-              <Route path="/tournament-local" element={<TournamentLocalPage />} />
-              <Route path="/tournament-remote" element={<TournamentRemotePage />} />
+              <Route path="/quickmatch" element={<QuickMatchPage />} />
+              <Route path="/tournament" element={<TournamentPage />} />
             </Route>
 
             {/* Catch all route */}

@@ -8,8 +8,6 @@ const env = cleanEnv(process.env, {
   JWT_SECRET: str(),
   COOKIE_SECRET: str({ default: 'your-cookie-secret' }),
   FRONTEND_URL: str(),
-  CP_URL: str(),
-  FRONTEND_REMOTE_URL: str(),
   EMAIL_HOST: str(),
   EMAIL_PORT: str(),
   EMAIL_SECURE: str(),
