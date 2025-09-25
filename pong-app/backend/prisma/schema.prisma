@@ -7,84 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum FriendshipStatus {
-  NotFriend
-  Pending
-  Friend
-}  
-
-enum Gender {
-  male
-  female
-  other
-}
-
-enum FavAvatar {
-  None
-  AstroAce
-  PixelPirate
-  RoboRacer
-  ShadowNinja
-  CyberKitty
-  MysticMage
-  CaptainQuasar
-  NeonSamurai
-  RocketRaccoon
-  JungleJaguar
-  AquaSpirit
-  DesertPhantom
-}
-
-enum OnlineStatus {
-  offline
-  online
-}
-  
-enum AuthProvider {
-  email
-  google
-}
-
-enum GameName {
-  pingpong
-  keyclash
-}
-
 model User {
-  id            Int       @id @default(autoincrement())
-  username      String    @unique
-  password      String?
-  email         String    @unique
-  isVerified           Boolean  @default(false)
-  twoFactorSecret      String?
-  twoFactorURL         String?
-  twoFactorRegistered  Boolean  @default(false)
-  googleId             String?
-  firstName     String?
-  lastName      String?
-  dateOfBirth   String?
-  gender        Gender    @default(other)
-  favAvatar     FavAvatar @default(None)
-  wins          Int       @default(0)
-  losses        Int       @default(0)
-  profilePic    String?
-  online_status OnlineStatus @default(offline)
-  last_activity Int          @default(0)
-  lastLogin     DateTime?
-  auth_provider AuthProvider @default(email)
-  createdAt     DateTime @default(now())
-  
-  verificationCodes    VerificationCode[]
-  passwordResetToken   PasswordResetToken?
-  // Relations
-  sentFriendships     Friendship[] @relation("SentFriendships")
-  receivedFriendships Friendship[] @relation("ReceivedFriendships")
+  id        String  @id @default(cuid())
+  email     String  @unique
+  password  String
+  name      String  @unique
+  avatarUrl String?
+  isVerified Boolean @default(false)
+  twoFactorSecret String?
+  twoFactorURL String?
+  twoFactorRegistered Boolean @default(false)
+  googleId String?
+
+  // Many-to-many self relation for friends (implicit join table)
+  friends  User[] @relation("UserFriends")
+  friendOf User[] @relation("UserFriends")
+
+  // Matches where this user is player1
+  player1Matches Match[] @relation("Player1Matches")
+
+  // Matches where this user is player2
+  player2Matches Match[] @relation("Player2Matches")
+
+  // Matches where this user is winner
+  winnerMatches Match[] @relation("WinnerMatches")
+
+  verificationCodes VerificationCode[]
+
+  passwordResetToken PasswordResetToken?
+
+  createdAt DateTime @default(now())
 }
 
 model VerificationCode {
   id        String   @id @default(cuid())
   code      String
-  userId    Int      // Changed from String to Int
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   usedAt    DateTime? 
@@ -94,28 +52,21 @@ model VerificationCode {
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
-  userId    Int      @unique  // Changed from String to Int
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
-  
-model Friendship {
-  sender_id          Int
-  receiver_id        Int
-  sender_username    String
-  receiver_username  String
-  status             FriendshipStatus   @default(NotFriend)
-  // Relations
-  sender   User   @relation("SentFriendships", fields: [sender_id], references: [id], onDelete: Cascade)
-  receiver User   @relation("ReceivedFriendships", fields: [receiver_id], references: [id], onDelete: Cascade)
-  @@id([sender_id, receiver_id]) // composite primary key
+
+model Match {
+  id        String   @id @default(cuid())
+  player1Id String
+  player2Id String
+  winnerId  String
+  date      DateTime @default(now())
+
+  player1 User @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2 User @relation("Player2Matches", fields: [player2Id], references: [id])
+  winner  User @relation("WinnerMatches", fields: [winnerId], references: [id])
 }
 
-model Game {
-  id_game     Int       @id @default(autoincrement())
-  id_user     Int       // Changed from String to Int
-  date        DateTime  @default(now())
-  rounds_json String
-  game_name   GameName
-}

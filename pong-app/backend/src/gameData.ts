@@ -1,4 +1,3 @@
-// pong-app/backend/src/gameData.ts
 import { Player, LobbyState } from "./types/lobby";
 import PingPongGame from "./PingPongGame";
 import { state as KeyClashState } from "./KeyClashGame"

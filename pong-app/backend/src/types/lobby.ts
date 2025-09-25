@@ -1,8 +1,8 @@
 // src/types/lobby.ts
 export interface Player {
     playerId: string | null;
-    socketId: string;
-    name: string;
+    socketId: string | null;
+    name: string | null;
 }
   
 export interface pongGame {
@@ -23,5 +23,3 @@ export interface LobbyState {
     keyClashGames: keyClashGame[];
 }
   
-
-
