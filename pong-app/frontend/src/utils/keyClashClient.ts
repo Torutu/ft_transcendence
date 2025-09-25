@@ -4,7 +4,7 @@ import validator from 'validator';
 
 export default function KeyClashClient(container: HTMLElement, gameId: string, 
                                         mode: "local" | "remote", type: "1v1" | "tournament",
-                                        navigate: NavigateFunction, name: string | null):() => void {
+                                        navigate: NavigateFunction, name: string | null, playerId: number | null):() => void {
   const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   const wasdKeys = ['w', 'a', 's', 'd'];
 
@@ -47,7 +47,7 @@ export default function KeyClashClient(container: HTMLElement, gameId: string,
   window.addEventListener("keydown", onKeyDown);
 
   socket.on('connect', () => {
-    socket.emit('join_game_room', gameId, mode, type, (callback: { error: string }) => {
+    socket.emit('join_game_room', gameId, mode, type, playerId, (callback: { error: string }) => {
       if (callback.error) {
         alert(callback.error);
         if (type === "1v1")

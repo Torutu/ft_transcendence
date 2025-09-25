@@ -62,8 +62,11 @@ export default class PingPongClient {
 				player3: string | null,
 				player4: string | null
 			}
+  private playerId: number | null;
 
-  constructor(containerId: string | HTMLElement, gameId: string, mode: "local" | "remote", type: "1v1" | "tournament", navigate: NavigateFunction, name: string | null) {
+  constructor(containerId: string | HTMLElement, gameId: string, 
+              mode: "local" | "remote", type: "1v1" | "tournament", 
+              navigate: NavigateFunction, name: string | null, playerId: number | null) {
     if (typeof containerId === 'string') {
       const el = document.getElementById(containerId);
       if (!el) throw new Error(`Container with id "${containerId}" not found`);
@@ -74,11 +77,12 @@ export default class PingPongClient {
       throw new Error('Invalid container argument');
     }
 
-	this.players = { player1: null, player2: null, player3: null, player4: null};
+	  this.players = { player1: null, player2: null, player3: null, player4: null};
     this.gameId = gameId;
     this.mode = mode;
-	this.type = type;
+	  this.type = type;
     this.updated = false;
+    this.playerId = playerId;
 
     this.navigate = navigate;
 
@@ -231,7 +235,7 @@ export default class PingPongClient {
         console.log('Connected to server:', this.socket?.id);
 
 		  if (this.type === "1v1") {
-			  this.socket?.emit('join_game_room', this.gameId, (callback: { error: string }) => {
+			  this.socket?.emit('join_game_room', this.gameId, this.playerId, (callback: { error: string }) => {
 				  if (callback.error) {
 					  alert(callback.error);       
 					  this.navigate("/quickmatch");
@@ -240,13 +244,13 @@ export default class PingPongClient {
 		  }
 		  else if (this.type === "tournament")
 		  {
-			  this.socket?.emit('join_tournament_room', this.gameId, (callback: { error: string }) => {
+			  this.socket?.emit('join_tournament_room', this.gameId, this.playerId, (callback: { error: string }) => {
 				  if (callback.error) {
 					  alert(callback.error);
 					  this.navigate("/tournament");
 				  }
 			  });
-		  }    
+		  }
     });
 
     this.socket.on('get_names', () => {
@@ -268,7 +272,7 @@ export default class PingPongClient {
         this.playerSide = side;
     });
     this.socket.on('refreshPlayerSides', (players) => {
-      const player = players.find(p => p.id === this.socket?.id);
+      const player = players.find(p => p.socketId === this.socket?.id);
       this.playerSide = player.side;
     })
 
@@ -341,9 +345,9 @@ export default class PingPongClient {
 
   private handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape")
-      this.socket.emit("pause");
+      this.socket?.emit("pause");
     else if (e.code === "Space")
-      this.socket.emit("setReady");
+      this.socket?.emit("setReady");
     else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
   }
 

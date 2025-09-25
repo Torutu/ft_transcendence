@@ -10,9 +10,11 @@ export default function VerifyTwoFactorPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { userId: stateUserId, totp_url: stateTotpUrl } = location.state || {};
+  // const { userId: stateUserId, totp_url: stateTotpUrl } = location.state || {};
+  const { userId: stateUserId, username: stateUsername } = location.state || {};
   
-  const [token, setToken] = useState('');
+  // const [token, setToken] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 

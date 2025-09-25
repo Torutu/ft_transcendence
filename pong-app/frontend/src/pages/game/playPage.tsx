@@ -15,10 +15,13 @@ const PlayPage: React.FC = () => {
 
   useEffect(() => {
     let name: string | null = null;
+    let playerId: number | null = null;
     if (location.state?.name)
       name = location.state.name;
+    if (location.state?.playerId)
+      playerId = location.state.playerId;
     if (containerRef.current && gameId && mode && type && game === "pong") {
-      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name);
+      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name, playerId);
       return () => {
         if (pongInstance.current) {
           pongInstance.current.dispose?.(); // fix the game dup
@@ -27,7 +30,7 @@ const PlayPage: React.FC = () => {
       }
     }
     else if (containerRef.current && gameId && mode && type && game === "keyclash") {
-      const cleanup = KeyClashClient(containerRef.current, gameId, mode, type, navigate, name);
+      const cleanup = KeyClashClient(containerRef.current, gameId, mode, type, navigate, name, playerId);
       return cleanup;
     }
     else {

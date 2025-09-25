@@ -10,7 +10,7 @@ interface Player {
 interface GameRoom {
   id: string;
   status: "waiting" | "in-progress" | "finished";  
-  players: { id: string, name: string }[];
+  players: Player[];
 }
 
 export default function QuickmatchPage() {
@@ -21,7 +21,7 @@ export default function QuickmatchPage() {
   const [keyClashGames, setKeyClashGames] = useState<GameRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
-  let playerId: string | null = null;
+  let playerId: number | null = null;
 
   useEffect(() => {
     socketRef.current = io("/quickmatch", {
@@ -32,7 +32,7 @@ export default function QuickmatchPage() {
 
     socketRef.current.on("connect", () => {
       if (user) {
-        name = user.name;
+        name = user.username;
         playerId = user.id;
       }
       socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
@@ -56,8 +56,8 @@ export default function QuickmatchPage() {
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	  const type = "1v1";
-      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name } });
+	    const type = "1v1";
+      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name, playerId: playerId } });
     });
 
     return () => {
@@ -110,7 +110,7 @@ export default function QuickmatchPage() {
           >
             <strong>Room-{game.id}</strong> — {game.players.length}/2 players  — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}
@@ -139,7 +139,7 @@ export default function QuickmatchPage() {
           >
             <strong>Room-{game.id}</strong> — {game.players.length}/2 players — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}      

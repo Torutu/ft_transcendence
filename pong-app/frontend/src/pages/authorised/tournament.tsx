@@ -4,13 +4,13 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface Player {
-  id: string;
+  socketId: string;
   name: string;
 }
 interface GameRoom {
   id: string;
   status: "waiting" | "in-progress" | "finished";  
-  players: { id: string, name: string }[];
+  players: Player[];
 }
 
 export default function TournamentPage() {
@@ -21,7 +21,7 @@ export default function TournamentPage() {
   const [keyClashTournaments, setKeyClashTournaments] = useState<GameRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
-  let playerId: string | null = null;
+  let playerId: number | null = null;
 
   useEffect(() => {
     socketRef.current = io("/tournament", {
@@ -32,7 +32,7 @@ export default function TournamentPage() {
 
     socketRef.current.on("connect", () => {
       if (user) {
-        name = user.name;
+        name = user.username;
         playerId = user.id;
       }
       socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
@@ -57,7 +57,7 @@ export default function TournamentPage() {
       socketRef.current?.disconnect();
       socketRef.current = null;
 	    const type = "tournament";
-      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name } });
+      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name, playerId: playerId } });
     });
 
     return () => {
@@ -90,7 +90,7 @@ export default function TournamentPage() {
     <div style={{ padding: "1rem" }}>
       <h2>Players in Tournament Lobby ({players.length})</h2>
       <ul>
-        {players.map(p => <li key={p.id}>{p.name}</li>)}
+        {players.map(p => <li key={p.socketId}>{p.name}</li>)}
       </ul>
 
       <h2>Pong Tournaments</h2>
@@ -110,7 +110,7 @@ export default function TournamentPage() {
           >
             <strong>Tournament-{game.id}</strong> — {game.players.length}/4 players  — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}
@@ -139,7 +139,7 @@ export default function TournamentPage() {
           >
             <strong>Tournament-{game.id}</strong> — {game.players.length}/4 players — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}      

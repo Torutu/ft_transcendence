@@ -3,9 +3,9 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useRe
 import api from '../utils/api';
 
 interface User {
-  id: string;
+  id: number;
   email: string;
-  name: string;
+  username: string;
   isVerified: boolean;
 }
 

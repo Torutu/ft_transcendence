@@ -9,7 +9,7 @@ export function setupLobby(io: Server) {
     lobbyNamespace.on("connection", (socket: Socket) => {
       console.log(`Player connected: ${socket.id}`);
 
-      socket.on("name", (name: string | null, playerId: string | null, callback: Function) => {
+      socket.on("name", (name: string | null, playerId: number | null, callback: Function) => {
         if (playerId && playersOnline.some(p => p.playerId === playerId))
           return callback({ error: "You're already in the lobby" });
         if (name)
@@ -17,7 +17,7 @@ export function setupLobby(io: Server) {
         else
           socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
 
-        playersOnline.push({ playerId: playerId, socketId: socket.id, name: socket.data.name });
+        playersOnline.push({ playerId: playerId, socketId: socket.id, name: socket.data.name, side: null });
 
         lobbyNamespace.emit("lobby_update", getLobbyState());        
       })
@@ -39,8 +39,8 @@ export function setupLobby(io: Server) {
             interval: null,
             player1ready: false,
             player2ready: false,
-            p1: undefined,
-            p2: undefined,
+            p1: null,
+            p2: null,
             status: "waiting",
             mode: mode,
 			      type: "1v1",
