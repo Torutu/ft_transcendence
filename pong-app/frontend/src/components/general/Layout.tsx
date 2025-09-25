@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
-import Navbar from './Navbar';
+import { Navbar } from './Navbar';
 
-const Layout = () => {
+export const Layout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-900 text-white">
       <Navbar />
@@ -15,4 +15,3 @@ const Layout = () => {
   );
 };
 
-export default Layout;

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Menu: React.FC = () => {
+const Home = () => {
   const navigate = useNavigate();
   
   const handleStart = () => {

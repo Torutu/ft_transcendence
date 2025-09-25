@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-export default function LoginPage() {
+const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
