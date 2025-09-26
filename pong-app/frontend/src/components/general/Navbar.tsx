@@ -28,7 +28,7 @@ export const Navbar = () => {
     <nav className="bg-gray-800 p-4">
       <div className="container mx-auto flex flex-wrap justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="mb-2 sm:mb-0">
+        <Link to="/lobby" className="mb-2 sm:mb-0">
           <span className="text-2xl font-bold text-[#c82fb3]">
             H5 Asteroids
           </span>

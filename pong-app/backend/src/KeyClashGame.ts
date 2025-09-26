@@ -121,6 +121,10 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                         state.players.push({ socketId: "p4", name: names.player4, side: null, playerId: null });
                     }
                 }
+				else {
+					if (!state.p1) state.p1 = "player 1";
+					if (!state.p2) state.p2 = "player 2";
+				}
             
                 socket.join(roomId);
 
