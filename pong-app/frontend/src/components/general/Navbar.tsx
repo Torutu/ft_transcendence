@@ -65,7 +65,7 @@ export const Navbar = () => {
             </>
           ) : (
             <Link
-              to="/lobby"
+              to="/quickmatch"
               className="text-white hover:text-blue-300 text-sm sm:text-base"
             >
               Play as Guest
