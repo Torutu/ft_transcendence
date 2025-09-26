@@ -43,7 +43,7 @@ const PlayPage: React.FC = () => {
     return <div ref={containerRef} className="flex-grow relative w-full h-full bg-black" />;
   else if (game === "keyclash")
     return (
-      <div ref={containerRef} className="game-container">
+      <div ref={containerRef} className="flex-grow relative w-full h-full bg-black">
         <div className="players-row">
           <div className="player" id="p1">
             <div id="prompt1">-</div>

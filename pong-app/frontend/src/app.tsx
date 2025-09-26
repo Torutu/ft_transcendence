@@ -101,9 +101,6 @@ const App = () => {
               <Route path="/change-password" element={
                 <PublicRoute><ChangePasswordPage /></PublicRoute>
               } />
-              <Route path="/quickmatch" element={
-                <PublicRoute><QuickMatchPage /></PublicRoute>
-              } />
               
               {/* Dynamic game routes */}
               {/* <Route path="/:game/:mode/:gameId" element={<PlayPage />} /> */}
@@ -114,7 +111,11 @@ const App = () => {
               <Route path="/lobby" element={<LobbyPage />} />
               <Route path="/tournament" element={<TournamentPage />} />
             </Route>
-
+            
+            <Route element={<Layout />}>
+              <Route path="/quickmatch" element={<QuickMatchPage />} />
+            </Route>
+            
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
