@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import validator from 'validator';
 import api from '../../utils/api';
-import Alert from '../../components/general/Alert';
+import { Alert } from '../../components/general';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');

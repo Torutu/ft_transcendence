@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import validator from 'validator';
 import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
-import Alert from '../../components/general/Alert';
+import { Alert } from '../../components/general';
 
 declare global {
   interface Window {
@@ -265,3 +265,5 @@ const LoginPage = () => {
     </div>
   );
 }
+
+export default LoginPage;
