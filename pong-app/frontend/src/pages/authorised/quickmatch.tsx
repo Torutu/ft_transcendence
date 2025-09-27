@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
+import QuickmatchPlayerForm from "../../components/quickmatch-lobby/QuickmatchPlayerForm";
+import { GameType } from "../../shared/types";
 
 interface Player {
   socketId: string;
@@ -10,7 +12,7 @@ interface Player {
 interface GameRoom {
   id: string;
   status: "waiting" | "in-progress" | "finished";  
-  players: { id: string, name: string }[];
+  players: Player[];
 }
 
 export default function QuickmatchPage() {
@@ -21,7 +23,7 @@ export default function QuickmatchPage() {
   const [keyClashGames, setKeyClashGames] = useState<GameRoom[]>([]);
   const { user } = useAuth();
   let name: string | null = null;
-  let playerId: string | null = null;
+  let playerId: number | null = null;
 
   useEffect(() => {
     socketRef.current = io("/quickmatch", {
@@ -32,7 +34,7 @@ export default function QuickmatchPage() {
 
     socketRef.current.on("connect", () => {
       if (user) {
-        name = user.name;
+        name = user.username;
         playerId = user.id;
       }
       socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
@@ -50,14 +52,48 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current.on("created_game", (gameId, game, mode) => {
-      joinGame(gameId, game, mode);
+      try {
+				// Get guest name from localStorage
+				const storedGuest = localStorage.getItem('quickmatch_guestName');
+				console.log("📦 Retrieved stored guest:", storedGuest);
+
+				const playerNames = {
+					player1: name,
+					player2: storedGuest
+        };
+        if (socketRef.current) {
+          console.log("🔌 Disconnecting socket...");
+          socketRef.current.disconnect();
+          socketRef.current = null;
+        }
+			
+        const type = "1v1";
+        const routePath = `/${game}/${mode}/${type}/${gameId}`;
+        console.log("🎯 Navigating to:", routePath);
+			
+        navigate(routePath, { 
+          state: { 
+            name: playerNames,
+            playerId: playerId,
+            gameType: game,
+            mode: mode,
+            type: type,
+            gameId: gameId,
+          } 
+        });
+        console.log("✅ Navigation completed");
+        
+      } catch (error) {
+          console.error("❌ Error in created_game handler:", error);
+        	alert("Navigation failed: " + error.message);
+      	}
     })
 
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	  const type = "1v1";
-      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name } });
+	    const type = "1v1";
+      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name, playerId: playerId } });
     });
 
     return () => {
@@ -66,18 +102,15 @@ export default function QuickmatchPage() {
     };
   }, [user]);
 
-  const createLocalPong = () => {
-    socketRef.current?.emit("create_game", "pong", "local");
-  };
   const createRemotePong = () => {
     socketRef.current?.emit("create_game", "pong", "remote");
-  };
-  const createLocalKeyClash = () => {
-    socketRef.current?.emit("create_game", "keyclash", "local");
   };
   const createRemoteKeyClash = () => {
     socketRef.current?.emit("create_game", "keyclash", "remote");
   };
+  const createLocalGame = (type: GameType) => {
+    socketRef.current?.emit("create_game", type, "local");
+  }
 
 
   const joinGame = (gameId: string, game: "pong" | "keyclash", mode: "local" | "remote") => {
@@ -86,12 +119,42 @@ export default function QuickmatchPage() {
     });
   };
 
+
+	const popup = () => {
+		document.getElementById(
+                "overlay"
+            ).style.display = "block";
+            document.getElementById(
+                "popupDialog"
+            ).style.display = "block";
+  };
+	const popdown = () => {
+            document.getElementById(
+                "overlay"
+            ).style.display = "none";
+            document.getElementById(
+                "popupDialog"
+            ).style.display = "none";
+        };
+
   return (
     <div style={{ padding: "1rem" }}>
       <h2>Players in Lobby ({players.length})</h2>
       <ul>
         {players.map(p => <li key={p.socketId}>{p.name}</li>)}
       </ul>
+
+			<div>
+				<button onClick={popup}>Create A Local Quickmatch</button>
+				<div id="overlay"></div>
+    			<div id="popupDialog">
+					<QuickmatchPlayerForm onCreate={createLocalGame} />
+          <div style={{position:"relative", left: 250, top: -830}}>
+              <button onClick={popdown}>close</button>
+          </div>
+
+				</div>
+			</div>
 
       <h2>Pong Games</h2>
       <ul>
@@ -110,13 +173,10 @@ export default function QuickmatchPage() {
           >
             <strong>Room-{game.id}</strong> — {game.players.length}/2 players  — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}
-        <ul>
-          <button onClick={createLocalPong}>Create New Local Pong Game</button>
-        </ul>
         <ul>
           <button onClick={createRemotePong}>Create New Remote Pong Game</button> 
         </ul>
@@ -139,13 +199,10 @@ export default function QuickmatchPage() {
           >
             <strong>Room-{game.id}</strong> — {game.players.length}/2 players — {game.status}
             <ul>
-              {game.players.map(p => <li key={p.id}>{p.name}</li>)}
+              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
             </ul>
           </li>
         ))}      
-        <ul>
-        <button onClick={createLocalKeyClash}>Create New Local Key Clash Game</button>
-        </ul>
         <ul>
           <button onClick={createRemoteKeyClash}>Create New Remote Key Clash Game</button> 
         </ul>                     

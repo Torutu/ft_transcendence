@@ -3,6 +3,7 @@
 import fastify, { FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import fastifyJwt from '@fastify/jwt';
 import fs from 'fs';
 import path from 'path';
 import { Server } from 'socket.io';
@@ -13,6 +14,8 @@ import { setupKeyClash } from './KeyClashGame';
 import { fileURLToPath } from 'url';
 import env from './env';
 import authRoutes from './routes/auth';
+import lobbyRoutes from './routes/lobbyRoutes';
+import gameRoutes from './routes/gameRoutes';
 import { PrismaClient } from '@prisma/client';
 
 // Get __dirname equivalent in ES modules
@@ -75,8 +78,16 @@ async function buildServer() {
       }
     };
   
-
   const server: FastifyInstance = fastify(serverOptions);
+
+  // Register JWT plugin
+  await server.register(fastifyJwt, {
+    secret: env.JWT_SECRET,
+    cookie: {
+      cookieName: 'authToken',
+      signed: false
+    }
+  });
 
   // Register cookie plugin
   await server.register(fastifyCookie, {
@@ -86,7 +97,7 @@ async function buildServer() {
 
   // Register CORS with credentials
   await server.register(fastifyCors, {
-    origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+    origin: [ env.FRONTEND_REMOTE_URL,
               env.FRONTEND_URL ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -95,6 +106,8 @@ async function buildServer() {
 
   // Register routes
   server.register(authRoutes, { prisma });
+  server.register(lobbyRoutes, { prisma, prefix: '/lobby' });
+  server.register(gameRoutes, { prisma, prefix: '/games' });
 
   // Health check endpoint
   server.get('/health', async () => {
@@ -104,7 +117,7 @@ async function buildServer() {
   // wrap socket.io server around the fastify server
   const io = new Server(server.server, {
     cors: {
-        origin: [ "https://brave-widely-chigger.ngrok-free.app", // domain from ngrok
+        origin: [ env.FRONTEND_REMOTE_URL,
                   env.FRONTEND_URL ],
         methods: ['GET', 'POST'],
         credentials: true,
@@ -113,8 +126,8 @@ async function buildServer() {
 
   setupLobby(io);
   setupTournamentLobby(io);
-  setupPongNamespace(io);
-  setupKeyClash(io);
+  setupPongNamespace(io, prisma);
+  setupKeyClash(io, prisma);
 
   return server;
 }
@@ -134,6 +147,7 @@ async function startServer() {
 
     console.log(`🚀 Server listening securely at ${address}`);
     console.log(`🩺 Health check available at ${address}/health`);
+    console.log(`🎮 Lobby API available at ${address}/lobby/*`);
   } catch (err) {
     console.error('❌ Error starting server:', err);
     process.exit(1);

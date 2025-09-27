@@ -9,7 +9,7 @@ export function setupTournamentLobby(io: Server) {
     tournamentLobbyNamespace.on("connection", (socket: Socket) => {
       console.log(`Player connected: ${socket.id}`);
 
-      socket.on("name", (name: string | null, playerId: string | null, callback: Function) => {
+      socket.on("name", (name: string | null, playerId: number | null, callback: Function) => {
         if (playerId && playersOnlineTournament.some(p => p.playerId === playerId))
           return callback({ error: "You're already in the lobby" });
         if (name)
@@ -17,7 +17,7 @@ export function setupTournamentLobby(io: Server) {
         else
           socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
 
-        playersOnlineTournament.push({ playerId: playerId, socketId: socket.id, name: socket.data.name });
+        playersOnlineTournament.push({ playerId: playerId, socketId: socket.id, name: socket.data.name, side: null });
 
         tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());        
       })
@@ -39,8 +39,8 @@ export function setupTournamentLobby(io: Server) {
             interval: null,
             player1ready: false,
             player2ready: false,
-            p1: undefined,
-            p2: undefined,
+            p1: null,
+            p2: null,
             status: "waiting",
             mode: mode,
 			      type: "tournament",

@@ -1,9 +1,11 @@
 import { Server } from "socket.io";
-import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState } from "./gameData.js";
+import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState,
+        saveGameResult, createGameResult } from "./gameData.js";
 import { validatePlayerNames } from "./KeyClashGame";
 import PingPongGame from "./PingPongGame.js";
+import { PrismaClient } from '@prisma/client';
 
-export function setupPongNamespace(io: Server) {
+export function setupPongNamespace(io: Server, prisma: PrismaClient) {
     const pongNamespace = io.of("/pong");
     const lobbyNamespace = io.of("/quickmatch");
 	const tournamentLobbyNamespace = io.of("/tournament");
@@ -11,7 +13,7 @@ export function setupPongNamespace(io: Server) {
     pongNamespace.on("connection", (socket) => {
         console.log("Client joined game:", socket.id);
 
-        socket.on("join_game_room", (roomId, callback) => {
+        socket.on("join_game_room", (roomId, playerId, callback) => {
 			const gameRoom = pongRooms.find(g => g.getId() === roomId)
 			if (!gameRoom){
 				return callback({error: "Can't find the game room!" });
@@ -33,10 +35,10 @@ export function setupPongNamespace(io: Server) {
                 if (gameRoom.state.players.length === 1 && gameRoom.state.players[0].side === "left")
                     playerSide = "right"                  
 
-                gameRoom.setPlayer(playerSide, names.player1, socket.id);
+                gameRoom.setPlayer(playerSide, names.player1, socket.id, playerId);
 
                 if (gameRoom.state.mode === "local"){
-                    gameRoom.setPlayer("right", names.player2, "p2");
+                    gameRoom.setPlayer("right", names.player2, "p2", null);
                     playerSide = null;
                     gameRoom.state.timerDisplay = "Press SPACE to Start"
                 }
@@ -99,7 +101,7 @@ export function setupPongNamespace(io: Server) {
 					const p1 = gameRoom.state.players.find(p => p.side === "left");
                     const p2 = gameRoom.state.players.find(p => p.side === "right");
                     if (!p1 || !p2) return; // add some error msg?
-                    gameRoom.state.matches.push( {player1: p1, player2: p2, winner: null });
+                    gameRoom.state.matches.push( {player1: p1, player2: p2, p1score: 0, p2score: 0, winner: null, duration: 0 });
 					gameRoom.state.round++;
                     // Broadcast game state at 60fps
                     gameRoom.resetGame();
@@ -110,7 +112,9 @@ export function setupPongNamespace(io: Server) {
                         gameRoom.update();
                         pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
                         if (gameRoom.state.status === "finished") {
-                            // winner is gameRoom.state.matches[gameRoom.state.round - 1].winner <-- store to database (in case of tie, what do?)
+                            const result = createGameResult(gameRoom.getId(), "pong", gameRoom.state.mode, 
+                                            gameRoom.state.matches[gameRoom.state.round - 1], []);
+                            saveGameResult(result, prisma);
                             clearInterval(gameRoom.state.loop);
                             gameRoom.state.loop = undefined;
 							lobbyNamespace.emit("lobby_update", getLobbyState());
@@ -120,7 +124,7 @@ export function setupPongNamespace(io: Server) {
             };
         });
 
-        socket.on("join_tournament_room", (roomId, callback) => {
+        socket.on("join_tournament_room", (roomId, playerId, callback) => {
 			const gameRoom = pongTournaments.find(g => g.getId() === roomId)
 			if (!gameRoom){
 				return callback({error: "Can't find the tournament!" });
@@ -141,11 +145,11 @@ export function setupPongNamespace(io: Server) {
                     return callback({ error: `The name "${names.player1}" is already taken`});
                 if (gameRoom.state.players.length === 3 && gameRoom.state.players[2].name === names.player1)
                     return callback({ error: `The name "${names.player1}" is already taken`});
-                gameRoom.setPlayer(null, names.player1, socket.id);
+                gameRoom.setPlayer(null, names.player1, socket.id, playerId);
                 if (gameRoom.state.mode === "local"){
-                    gameRoom.setPlayer(null, names.player2, "p2");
-                    gameRoom.setPlayer(null, names.player3, "p3");
-                    gameRoom.setPlayer(null, names.player4, "p4");
+                    gameRoom.setPlayer(null, names.player2, "p2", null);
+                    gameRoom.setPlayer(null, names.player3, "p3", null);
+                    gameRoom.setPlayer(null, names.player4, "p4", null);
                     gameRoom.state.timerDisplay = "Press SPACE to start the tournament!"
                 }
                 console.log('players: ', gameRoom.state.players);
@@ -154,7 +158,7 @@ export function setupPongNamespace(io: Server) {
                     gameRoom.state.scoreDisplay = `Waiting for opponents... (${gameRoom.state.players.length}/4)`;
                 pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);
                 tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
-                const player = gameRoom.state.players.find(p => p.id === socket.id);
+                const player = gameRoom.state.players.find(p => p.socketId === socket.id);
     
                 if (gameRoom.state.players.length === 4) {
                     gameRoom.state.status = "starting";
@@ -206,6 +210,9 @@ export function setupPongNamespace(io: Server) {
                         if (gameRoom.state.status === "finished") {
                             clearInterval(gameRoom.state.loop);
                             gameRoom.state.loop = undefined;
+                            const result = createGameResult(gameRoom.getId(), "pong", gameRoom.state.mode, 
+                                                            gameRoom.state.matches[gameRoom.state.round - 1], []);
+                            saveGameResult(result, prisma);
 							gameRoom.state.round++;
                             gameRoom.matchmake();
                             pongNamespace.to(roomId).emit('refreshPlayerSides', gameRoom.state.players);
@@ -213,8 +220,6 @@ export function setupPongNamespace(io: Server) {
                                 gameRoom.state.status = "starting";
                                 pongNamespace.to(gameRoom.getId()).emit("stateUpdate", gameRoom.state);
                             }
-                            // else
-                                // winner is gameRoom.state.matches[2].winner <-- for now tournament has 3 matches  
 							tournamentLobbyNamespace.emit("lobby_update", getTournamentLobbyState());
                         }
                     }, 1000 / 60);
@@ -273,7 +278,7 @@ export function setupPongNamespace(io: Server) {
 				game = pongTournaments.find(g => g.getId() === socket.data.roomId);
 			if (!game) return;
             
-            const playerindex = game.state.players.findIndex(p => p.id === socket.id);
+            const playerindex = game.state.players.findIndex(p => p.socketId === socket.id);
             if (playerindex !== -1)
                 game.state.players.splice(playerindex, 1);
 
