@@ -37,7 +37,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
       setIsStarting(true);
       // Include the authenticated user as player 1, then the 3 entered names
       const allPlayerNames = [
-        user?.name || user?.username || "You",
+        user?.username || "You",
         ...players
       ];
       const uniquePlayers = makeUniquePlayers(allPlayerNames);
@@ -61,7 +61,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
           Player 1 (You)
         </label>
         <div className="h-11 w-full rounded-lg bg-gray-600/50 px-4 font-medium text-gray-300 border border-gray-500 flex items-center">
-          {user?.name || user?.username || "You"}
+          {user?.username || "You"}
         </div>
       </div>
       

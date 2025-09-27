@@ -128,7 +128,7 @@ export default function TournamentPage() {
 
 			// Ensure the authenticated user is always Player 1
 			const playerNamesObject = {
-				player1: user?.name || user?.username || "You",
+				player1: user?.username || "You",
 				player2: playerNames[1] || "Guest2",
 				player3: playerNames[2] || "Guest3",
 				player4: playerNames[3] || "Guest4"
