@@ -51,6 +51,14 @@ export default function KeyClashClient(
 	const startPrompt = container.querySelector('#start-prompt') as HTMLDivElement;
 	timerEl.style.whiteSpace = "pre-line";
 
+  // Back Button
+  const backButton = document.createElement('button');
+  backButton.textContent = '🔙 Back to Lobby'
+  backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+  backButton.style.display= 'block';
+  document.body.appendChild(backButton);
+  backButton.addEventListener('click', () => navigate('/lobby')); 
+
 	const socket = io("/keyclash", {
 		path: '/socket.io',
 		transports: ['websocket'],
@@ -111,6 +119,7 @@ export default function KeyClashClient(
 	});
 
 	socket.on("gameStart", (state) => {
+    backButton.style.display = "none";
 		score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
 		score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
 		if (state.type === "1v1")
@@ -125,6 +134,10 @@ export default function KeyClashClient(
 	socket.on("gameState", (state) => {
 		score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
 		score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
+    if (state.status === "in-progress")
+      backButton.style.display = "none";
+    else
+      backButton.style.display = "block";
 		if (state.status === "in-progress" || state.status === "starting") {
 			if (state.type === "1v1")
 				timerEl.textContent = `Time Left: ${state.timeLeft}s`;
@@ -160,6 +173,7 @@ export default function KeyClashClient(
 		if (state.type === "1v1") {
 			timerEl.textContent = `Time's Up! Final Score ${p1.name}: ${p1.score} | ${p2.name}: ${p2.score}`;
 			startPrompt.textContent = "Press SPACE to Restart";
+      backButton.style.display = "block";
 		}
 		else if (state.type === "tournament") {
 			const i = state.round - 2;
@@ -178,6 +192,7 @@ export default function KeyClashClient(
 			else {
 				timerEl.textContent = `Tournament finished! The winner is: ${state.matches[i].winner.name}!`;
 				startPrompt.textContent = "Congratulations!";
+        backButton.style.display = "block";
 			}
 		}
 	});
@@ -199,6 +214,7 @@ export default function KeyClashClient(
 
 	// Return cleanup function
 	return () => {
+    if (backButton.parentNode) backButton.parentNode.removeChild(backButton);
 		window.removeEventListener("keydown", onKeyDown);
 		if (socket) {
 			socket.off();

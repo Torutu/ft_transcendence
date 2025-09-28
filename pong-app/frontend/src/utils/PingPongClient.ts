@@ -48,6 +48,7 @@ export default class PingPongClient {
 	private restartButton: HTMLButtonElement;
 	private timerDisplay: HTMLDivElement;
 	private matchInfoDisplay: HTMLDivElement;
+  	private backButton: HTMLButtonElement;
 
 	private socket: Socket | null = null;
 	private gameId: string;
@@ -202,6 +203,14 @@ export default class PingPongClient {
 		document.body.appendChild(this.restartButton);
 		this.restartButton.addEventListener('click', () => this.socket?.emit("restart"));
 
+    // Back Button
+      this.backButton = document.createElement('button');
+      this.backButton.textContent = '🔙 Back to Lobby'
+      this.backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+      this.backButton.style.display= 'block';
+      document.body.appendChild(this.backButton);
+      this.backButton.addEventListener('click', () => navigate('/lobby'));
+
 		// Timer Display
 		this.timerDisplay = document.createElement('div');
 		Object.assign(this.timerDisplay.style, {
@@ -318,6 +327,10 @@ export default class PingPongClient {
 				this.matchInfoDisplay.textContent = state.matchInfo;
 			}
 			this.status = state.status;
+      if (this.status === 'in-progress')
+        this.backButton.style.display = "none";
+      else 
+        this.backButton.style.display = "block";
 			if (this.type === "1v1" && (state.status === "finished")) {
 				this.restartButton.style.display = "block";
 			}
@@ -349,6 +362,7 @@ export default class PingPongClient {
 			}
 			this.restartButton.style.display = "none";
 			this.matchInfoDisplay.style.display = "none";
+			this.scoreDisplay.style.display = "none";
 			this.status = "waiting";
 		});
 
@@ -386,8 +400,8 @@ export default class PingPongClient {
 			this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
 		}
 
-		// Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display from DOM
-		[this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay].forEach(el => {
+		// Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
+		[this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
 			if (el.parentNode) el.parentNode.removeChild(el);
 		});
 
