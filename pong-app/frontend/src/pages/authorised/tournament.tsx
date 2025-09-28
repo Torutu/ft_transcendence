@@ -15,16 +15,33 @@ interface GameRoom {
 }
 
 export default function TournamentPage() {
-  const socketRef = useRef<Socket | null>(null);
-  const navigate = useNavigate();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [pongTournaments, setPongTournaments] = useState<GameRoom[]>([]);
-  const [keyClashTournaments, setKeyClashTournaments] = useState<GameRoom[]>(
-    []
-  );
-  const { user } = useAuth();
-  let name: string | null = null;
-  let playerId: number | null = null;
+	const socketRef = useRef<Socket | null>(null);
+	const navigate = useNavigate();
+	const [players, setPlayers] = useState<Player[]>([]);
+	const [pongTournaments, setPongTournaments] = useState<GameRoom[]>([]);
+	const [keyClashTournaments, setKeyClashTournaments] = useState<GameRoom[]>([]);
+	const { user } = useAuth();
+	let name: string | null = null;
+	let playerId: number | null = null;
+	const [showPopup, setShowPopup] = useState(false);
+
+	useEffect(() => {
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setShowPopup(false);
+		};
+
+		if (showPopup) {
+			document.addEventListener("keydown", onKeyDown);
+			// prevent body scroll while modal is open
+			document.body.style.overflow = "hidden";
+		}
+
+		return () => {
+			document.removeEventListener("keydown", onKeyDown);
+			document.body.style.overflow = "";
+		};
+	}, [showPopup]);
+
 
   useEffect(() => {
     socketRef.current = io("/tournament", {
@@ -168,23 +185,15 @@ export default function TournamentPage() {
       );
       console.log("Stored tournament players:", playerNamesObject);
 
-      // Create the game - event handler manages navigation
-      socketRef.current.emit("create_game", gameType, "local");
-      console.log("Emitted create_game event");
-    } catch (error) {
-      console.error("Error starting tournament:", error);
-      alert("Failed to start tournament: " + error.message);
-    }
-  };
+			// Create the game - event handler manages navigation
+			socketRef.current.emit("create_game", gameType, "local");
+			console.log("Emitted create_game event");
 
-  const popup = () => {
-    document.getElementById("overlay").style.display = "block";
-    document.getElementById("popupDialog").style.display = "block";
-  };
-  const popdown = () => {
-    document.getElementById("overlay").style.display = "none";
-    document.getElementById("popupDialog").style.display = "none";
-  };
+		} catch (error) {
+			console.error("Error starting tournament:", error);
+			alert("Failed to start tournament: " + error.message);
+		}
+	};
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -195,14 +204,43 @@ export default function TournamentPage() {
         ))}
       </ul>
 
-      <div>
-        <button onClick={popup}>Create A Local Tournament</button>
-        <div id="overlay"></div>
-        <div id="popupDialog">
-          <TournamentPlayerForm onStart={handleStartTournament} />
-          <button onClick={popdown}>Close</button>
-        </div>
-      </div>
+			<div>
+			<button
+				onClick={() => setShowPopup(true)}
+				className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold shadow">
+				Create A Local Tournament
+			</button>
+
+			{showPopup && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+				onClick={() => setShowPopup(false)} // click outside to close
+				>
+				<div className="w-full max-w-md mx-4"
+					onClick={(e) => e.stopPropagation()} // prevent outside click
+				>
+					<div className="relative bg-neutral-900/95 text-white rounded-2xl p-6 shadow-2xl border border-white/10 max-h-[90vh] overflow-auto">
+					{/* header */}
+					<div className="flex items-start justify-between">
+						<h3 className="text-lg font-semibold">Create Local Tournament</h3>
+						<button
+						onClick={() => setShowPopup(false)}
+						aria-label="Close"
+						className="ml-3 rounded-md p-1 hover:bg-white/5"
+						>
+						✕
+						</button>
+					</div>
+
+					{/* content */}
+					<div className="mt-4">
+						<TournamentPlayerForm onStart={handleStartTournament} />
+					</div>
+					</div>
+				</div>
+				</div>
+			)}
+			</div>
+
 
       <h2>Pong Tournaments</h2>
       <ul>
