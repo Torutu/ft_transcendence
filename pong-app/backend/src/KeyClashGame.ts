@@ -1,6 +1,9 @@
 import { Server } from "socket.io";
-import  { Player, shufflePlayers } from "./PingPongGame"
-import { keyClashRooms, getLobbyState, keyClashTournaments, getTournamentLobbyState } from "./gameData.js";
+import  { shufflePlayers } from "./PingPongGame"
+import { Player } from "./types/lobby";
+import { keyClashRooms, getLobbyState, keyClashTournaments, 
+    getTournamentLobbyState, saveGameResult, createGameResult } from "./gameData.js";
+import { PrismaClient } from '@prisma/client';
 
 export interface state {
     id: string,
@@ -9,12 +12,12 @@ export interface state {
     prompts: [string, string],
     timeLeft: number,
     players: Player[],
-    matches: { player1: Player, player2: Player, winner: Player | null }[],
+    matches: { player1: Player, player2: Player, p1score: number, p2score: number, winner: Player | null, duration: number }[];
     interval: NodeJS.Timeout | null,
     player1ready: boolean,
     player2ready: boolean,
-    p1: string | undefined,
-    p2: string | undefined,
+    p1: string | null,
+    p2: string | null,
     status: "waiting" | "starting" | "in-progress" | "finished",
     mode: "local" | "remote",
 	type: "1v1" | "tournament",
@@ -52,7 +55,7 @@ function getRandomKey(keys: string[]) {
 const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 const wasdKeys = ['w', 's', 'a', 'd'];
 
-export function setupKeyClash(io: Server) {
+export function setupKeyClash(io: Server, prisma: PrismaClient) {
 
     const keyClash = io.of("/keyclash");
     const lobby = io.of("/quickmatch");
@@ -61,7 +64,7 @@ export function setupKeyClash(io: Server) {
     keyClash.on("connection", (socket) => {
         console.log(`Player connected on key clash: ${socket.id}`);
 
-        socket.on("join_game_room", (roomId, mode, type, callback) => {
+        socket.on("join_game_room", (roomId, mode, type, playerId, callback) => {
 			let roomState: state | undefined;
 			if (type === "1v1") {
 				roomState = keyClashRooms.find(r => r.id === roomId);
@@ -85,7 +88,7 @@ export function setupKeyClash(io: Server) {
                 const p_num = validatePlayerNames(names, type, mode);
                 if (p_num > 0)
                     return callback({ error: `Invalid name for player${p_num}`});
-                const player: Player = { id: socket.id, name: names.player1, side: null }; 
+                const player: Player = { socketId: socket.id, name: names.player1, side: null, playerId: playerId };
 
                 if (state.players.length >= 1 && state.players[0].name === player.name)
                     return callback({ error: `The name "${player.name}" is already taken`});
@@ -110,14 +113,18 @@ export function setupKeyClash(io: Server) {
                     state.players.push(player); 
 
                 if (mode === "local") {
-                    state.players.push({ id: "p2", name: names.player2, side: "right"});
+                    state.players.push({ socketId: "p2", name: names.player2, side: "right", playerId: null });
                     if (state.type === "1v1")
                         state.p2 = names.player2;
                     if (type === "tournament") {
-                        state.players.push({ id: "p3", name: names.player3, side: null });
-                        state.players.push({ id: "p4", name: names.player4, side: null });
+                        state.players.push({ socketId: "p3", name: names.player3, side: null, playerId: null });
+                        state.players.push({ socketId: "p4", name: names.player4, side: null, playerId: null });
                     }
                 }
+				else {
+					if (!state.p1) state.p1 = "player 1";
+					if (!state.p2) state.p2 = "player 2";
+				}
             
                 socket.join(roomId);
 
@@ -222,7 +229,8 @@ export function setupKeyClash(io: Server) {
                 state.status = "in-progress";
 				if (type === "1v1") {
 					state.round++;
-					state.matches.push( { player1: state.players[0], player2: state.players[1], winner: null });
+					state.matches.push( { player1: state.players[0], player2: state.players[1], 
+                                        p1score: 0, p2score: 0, winner: null, duration: 0 });
 					lobby.emit("lobby_update", getLobbyState());
 				}
 				else
@@ -245,6 +253,12 @@ export function setupKeyClash(io: Server) {
                             state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
                         else
                             state.matches[state.round - 1].winner = state.matches[state.round - 1].player2; // for now if tie, player2 advances
+                        state.matches[state.round - 1].p1score = state.score1;
+                        state.matches[state.round - 1].p2score = state.score2;
+                        state.matches[state.round - 1].duration = 20;
+                        const result = createGameResult(state.id, "keyclash", state.mode, 
+                                            state.matches[state.round - 1], []);
+                        saveGameResult(result, prisma);                        
                         if (state.type === "tournament") {
                             state.round++;
                             matchmake();
@@ -253,13 +267,7 @@ export function setupKeyClash(io: Server) {
 						else if (type === "1v1") {
 							lobby.emit("lobby_update", getLobbyState());
                         }
-                        keyClash.to(roomId).emit("gameOver", getPublicState(state)); 
-                        // if (state.status === "finished") {
-                        //  if (state.type === "1v1")
-                        //      winner is state.matches[state.round - 1].winner <-- store to database
-                        //  else
-                        //      winner is state.matches[2].winner <-- for now tournament has 3 matches   
-                        //}                  
+                        keyClash.to(roomId).emit("gameOver", getPublicState(state));               
                     }
                     else { keyClash.to(roomId).emit("gameState", getPublicState(state)); }
                 }, 1000);
@@ -268,8 +276,10 @@ export function setupKeyClash(io: Server) {
             function matchmake() {
                 if (state.round === 1) {
                     shufflePlayers(state.players);
-                    state.matches.push( { player1: state.players[0], player2: state.players[1], winner: null });
-                    state.matches.push( { player1: state.players[2], player2: state.players[3], winner: null });
+                    state.matches.push( { player1: state.players[0], player2: state.players[1], 
+                                        p1score: 0, p2score: 0, winner: null, duration: 0 });
+                    state.matches.push( { player1: state.players[2], player2: state.players[3], 
+                                        p1score: 0, p2score: 0, winner: null, duration: 0 });
                     state.p1 = state.matches[0].player1.name;
                     state.p2 = state.matches[0].player2.name;
                     state.players.forEach(player => {
@@ -289,7 +299,8 @@ export function setupKeyClash(io: Server) {
                 }
                 else if (state.round === 3) {
                     if (state.matches[0].winner && state.matches[1].winner) {
-                        state.matches.push( { player1: state.matches[0].winner,  player2: state.matches[1].winner, winner: null });
+                        state.matches.push( { player1: state.matches[0].winner,  player2: state.matches[1].winner, 
+                                            p1score: 0, p2score: 0, winner: null, duration: 0 });
                         state.p1 = state.matches[2].player1.name;
                         state.p2 = state.matches[2].player2.name;
                         state.players.forEach(player => {
@@ -313,12 +324,12 @@ export function setupKeyClash(io: Server) {
 				game = keyClashTournaments.find(g => g.id === socket.data.roomId);
             if (!game) return;
 			
-            const playerindex = game.players.findIndex(p => p.id === socket.id);
+            const playerindex = game.players.findIndex(p => p.socketId === socket.id);
             if (playerindex !== -1) {
                 if (game.players[playerindex].side === "left")
-                    game.p1 = undefined;
+                    game.p1 = null;
                 else if (game.players[playerindex].side === "right")
-                    game.p2 = undefined;
+                    game.p2 = null;
                 game.players.splice(playerindex, 1);
             }
 

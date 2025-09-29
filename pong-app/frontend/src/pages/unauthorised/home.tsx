@@ -47,4 +47,4 @@ const Home = () => {
   );
 };
 
-export default Menu;
+export default Home;

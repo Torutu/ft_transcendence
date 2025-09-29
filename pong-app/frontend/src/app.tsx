@@ -17,6 +17,7 @@ const PlayPage = lazy(() => import('./pages/game/playPage'));
 const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
 const QuickMatchPage = lazy(() => import('./pages/authorised/quickmatch'));
 const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
+const AvatarPage = lazy(() => import('./shared/avatar'));
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -79,6 +80,7 @@ const App = () => {
             {/* Public routes without layout */}
             <Route path="/" element={<Home />} />
             <Route path="/play" element={<PlayPage />} />
+            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/:game/:mode/:type/:gameId" element={<PlayPage />} />
 
             {/* Public routes with layout */}
@@ -109,8 +111,11 @@ const App = () => {
             {/* Protected routes with layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/lobby" element={<LobbyPage />} />
-              <Route path="/quickmatch" element={<QuickMatchPage />} />
               <Route path="/tournament" element={<TournamentPage />} />
+            </Route>
+            
+            <Route element={<Layout />}>
+              <Route path="/quickmatch" element={<QuickMatchPage />} />
             </Route>
 
             {/* Catch all route */}

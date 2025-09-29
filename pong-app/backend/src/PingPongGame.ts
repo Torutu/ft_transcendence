@@ -1,6 +1,4 @@
-export interface Player {
-    id: string | null, name: string | undefined, side: "left" | "right" | null   
-};
+import { Player } from "./types/lobby";
 
 export function shufflePlayers(array: Player[]) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -19,7 +17,7 @@ export interface GameState {
     scoreDisplay: string;
     matchInfo: string;
     players: Player[];
-    matches: { player1: Player, player2: Player, winner: Player | null }[];
+    matches: { player1: Player, player2: Player, p1score: number, p2score: number, winner: Player | null, duration: number }[];
     mode: "local" | "remote";
 	type: "1v1" | "tournament";
 	round: number;
@@ -31,8 +29,8 @@ export interface GameState {
 
 export default class PingPongGame {
     public state: GameState;
-    private leftPlayer: string | undefined = "Player1";
-    private rightPlayer: string | undefined = "Player2";
+    private leftPlayer: string | null = "Player1";
+    private rightPlayer: string | null = "Player2";
     private hitter: number = 0;
     private leftScore: number = 0;
     private rightScore: number = 0;
@@ -69,8 +67,8 @@ export default class PingPongGame {
     public matchmake() {
         if (this.state.round === 1) {
             shufflePlayers(this.state.players);
-            this.state.matches.push( { player1: this.state.players[0], player2: this.state.players[1], winner: null });
-            this.state.matches.push( { player1: this.state.players[2], player2: this.state.players[3], winner: null });
+            this.state.matches.push( { player1: this.state.players[0], player2: this.state.players[1], p1score: 0, p2score: 0, winner: null, duration: 0 });
+            this.state.matches.push( { player1: this.state.players[2], player2: this.state.players[3], p1score: 0, p2score: 0, winner: null, duration: 0 });
             this.leftPlayer = this.state.matches[0].player1.name;
             this.rightPlayer = this.state.matches[0].player2.name;
             this.resetPlayerSides();
@@ -86,7 +84,7 @@ export default class PingPongGame {
         }
         else if (this.state.round === 3) {
             if (this.state.matches[0].winner && this.state.matches[1].winner) {
-                this.state.matches.push( { player1: this.state.matches[0].winner,  player2: this.state.matches[1].winner, winner: null });
+                this.state.matches.push( { player1: this.state.matches[0].winner, player2: this.state.matches[1].winner, p1score: 0, p2score: 0, winner: null, duration: 0 });
                 this.leftPlayer = this.state.matches[2].player1.name;
                 this.rightPlayer = this.state.matches[2].player2.name;
                 this.resetPlayerSides();
@@ -98,12 +96,12 @@ export default class PingPongGame {
             this.state.matchInfo += `Next up, Round ${this.state.round}/3:\n${this.leftPlayer} vs ${this.rightPlayer}!`;
     };
     public getId() { return (this.id); };
-    public setPlayer(side: "left" | "right" | null, name: string | undefined, id: string | null){
+    public setPlayer(side: "left" | "right" | null, name: string | null, socketId: string | null, playerId: number | null){
         if (side === "left")
             this.leftPlayer = name;
         else if (side === "right")
             this.rightPlayer = name;
-        this.state.players.push({ id: id, name: name, side: side });
+        this.state.players.push({ socketId: socketId, name: name, side: side, playerId: playerId });
     };
 	public updatePlayers() {
 		for (let i = 0; i < this.state.players.length ; i++) {
@@ -153,6 +151,9 @@ export default class PingPongGame {
         if (now >= this.state.gameEndTime) {
             this.state.status = "finished";
             let i = this.state.round - 1;
+            this.state.matches[i].p1score = this.leftScore;
+            this.state.matches[i].p2score = this.rightScore;
+            this.state.matches[i].duration = 120;
             if (this.leftScore > this.rightScore)
                 this.state.matches[i].winner = this.state.matches[i].player1;
             else if (this.rightScore > this.leftScore)
@@ -177,6 +178,9 @@ export default class PingPongGame {
     
         if (this.leftScore >= this.maxScore || this.rightScore >= this.maxScore) {
             let i = this.state.round - 1;
+            this.state.matches[i].p1score = this.leftScore;
+            this.state.matches[i].p2score = this.rightScore;
+            this.state.matches[i].duration = 120 - totalSecondsLeft;
             if (this.leftScore > this.rightScore)
                 this.state.matches[i].winner = this.state.matches[i].player1;
             else
