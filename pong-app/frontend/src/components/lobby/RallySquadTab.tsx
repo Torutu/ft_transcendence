@@ -1,98 +1,131 @@
 // frontend/src/components/lobby/RallySquadTab.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  getRallySquadData, 
-  searchUsers, 
-  sendFriendRequest, 
-  respondToFriendRequest, 
-  removeFriend,
-  type RallySquadData,
-  type User,
-  type FriendRequest,
-  type Friend
-} from '../../utils/lobbyApi';
+import api from '../../utils/api';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  online_status: string;
+  createdAt: string;
+  profilePic?: string;
+  friendshipStatus?: string;
+}
+
+interface Friend {
+  friendshipId: string;
+  status: string;
+  friend: User;
+}
+
+interface FriendRequest {
+  requestId: string;
+  type: string;
+  user: User;
+}
 
 export const RallySquadTab = () => {
-  // State management
-  const [searchQuery, setSearchQuery] = useState('');
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string>("");
-  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [totalUsers, setTotalUsers] = useState(0);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Load initial data on component mount
-  useEffect(() => {
-    loadInitialData();
-    
-    // Refresh data every 30 seconds to get updated online status
-    const interval = setInterval(loadInitialData, 30000);
-    return () => {
-      clearInterval(interval);
-      if (searchTimeout) clearTimeout(searchTimeout);
-    };
-  }, []);
-
-  // Handle search with proper debouncing
-  useEffect(() => {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    
-    if (searchQuery.trim() === '') {
-      // If search is empty, show all users (filtered by online status if enabled)
-      filterAndSetUsers(allUsers);
-      return;
+  // Helper functions
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'online': return { color: 'bg-green-500', text: 'Online' };
+      case 'in-game': return { color: 'bg-yellow-500', text: 'In Game' };
+      case 'away': return { color: 'bg-orange-500', text: 'Away' };
+      default: return { color: 'bg-gray-500', text: 'Offline' };
     }
+  };
 
-    // Set loading state for search
-    setIsSearching(true);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'online': return 'bg-green-500 text-white';
+      case 'in-game': return 'bg-yellow-500 text-black';
+      case 'away': return 'bg-orange-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  // RELATIONSHIP STATUS: Only "Friend" or "Not Friend" for the relationship column
+  const getRelationshipStatus = (user: User) => {
+    const friend = friends.find(f => f.friend.id === user.id);
+    if (friend) {
+      return { status: 'Friend', bgColor: 'bg-green-600' };
+    }
+    return { status: 'Not Friend', bgColor: 'bg-gray-600' };
+  };
+
+  // ACTION STATUS: Handle "Add Friend", "Pending", "Accept/Decline", "Remove" for action column
+  const getActionStatus = (user: User) => {
+    // Check if user is already a friend
+    const friend = friends.find(f => f.friend.id === user.id);
+    if (friend) {
+      return { type: 'friend', friendshipId: friend.friendshipId };
+    }
     
-    const timeout = setTimeout(async () => {
-      try {
-        const results = await searchUsers(searchQuery);
-        filterAndSetUsers(results);
-      } catch (error) {
-        console.error('Search failed:', error);
-        // If search fails, fall back to filtering existing users
-        filterAndSetUsers(allUsers.filter(user => 
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase())
-        ));
-      } finally {
-        setIsSearching(false);
-      }
-    }, 500); // 500ms debounce
+    // Check for received request (show Accept/Decline)
+    const receivedRequest = friendRequests.find(r => r.user.id === user.id && r.type === 'received');
+    if (receivedRequest) {
+      return { type: 'received', requestId: receivedRequest.requestId };
+    }
+    
+    // Check for sent request (show Pending)
+    const sentRequest = friendRequests.find(r => r.user.id === user.id && r.type === 'sent');
+    if (sentRequest) {
+      return { type: 'pending' };
+    }
+    
+    // Default: show Add Friend
+    return { type: 'none' };
+  };
 
-    setSearchTimeout(timeout);
-  }, [searchQuery, showOnlineOnly, allUsers]);
-
-  // Load initial data (friends, requests, and all users)
-  const loadInitialData = async () => {
+  // Data fetching
+  const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const [rallySquadData, users] = await Promise.all([
-        getRallySquadData(),
-        searchUsers('') // Empty query to get all users
+      const [usersResponse, friendsResponse, requestsResponse] = await Promise.all([
+        api.get('/friend/users/search'),
+        api.get('/friend/friends'),
+        api.get('/friend/requests')
       ]);
+
+      setAllUsers(usersResponse.data);
+      setFriends(friendsResponse.data);
+      setFriendRequests(requestsResponse.data);
+      setTotalUsers(usersResponse.data.length);
       
-      setAllUsers(users);
-      setDisplayedUsers(users); // Start with all users displayed
-      setFriends(rallySquadData.friends);
-      setFriendRequests(rallySquadData.friendRequests);
-      setSentRequests(rallySquadData.sentRequests);
+      // Set online users
+      const online = usersResponse.data.filter((user: User) => user.online_status === 'online');
+      setOnlineUsers(online);
+      
+      // Set displayed users based on current filters
+      filterAndSetUsers(usersResponse.data);
+      
       setError(null);
     } catch (error) {
-      console.error('Failed to load data:', error);
-      setError('Failed to load data. Please try refreshing.');
-      setTimeout(() => setError(null), 3000);
+      console.error('Failed to fetch data:', error);
+      setError('Failed to load user data');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // FIXED: Clean search function
+  const searchUsers = async (query: string) => {
+    const response = await api.get(`/friend/users/search?q=${encodeURIComponent(query)}`);
+    return response.data;
   };
 
   // Filter users based on search and online status
@@ -112,201 +145,172 @@ export const RallySquadTab = () => {
     setDisplayedUsers(uniqueUsers);
   };
 
-  const handleSendFriendRequest = async (userId: string) => {
-    try {
-      console.log('Sending friend request to user ID:', userId);
-      await sendFriendRequest(userId);
-      setSuccessMessage("Friend request sent!");
-      setTimeout(() => setSuccessMessage(""), 3000);
-      // Refresh data to get updated state
-      await loadInitialData();
-    } catch (err: any) {
-      console.error('Send friend request error:', err);
-      setError(err.response?.data?.error || "Failed to send friend request");
-      setTimeout(() => setError(null), 3000);
-    }
+  // Event handlers
+  const handleRefresh = () => {
+    fetchAllData();
   };
 
-  const handleRespondToRequest = async (requestId: string, action: 'accept' | 'decline') => {
-    try {
-      await respondToFriendRequest(requestId, action);
-      setSuccessMessage(`Friend request ${action}ed!`);
-      setTimeout(() => setSuccessMessage(""), 3000);
-      await loadInitialData(); // Refresh data
-    } catch (err: any) {
-      setError(err.response?.data?.error || `Failed to ${action} friend request`);
-      setTimeout(() => setError(null), 3000);
-    }
-  };
-
-  const handleRemoveFriend = async (friendshipId: string, friendName: string) => {
-    if (!confirm(`Are you sure you want to remove ${friendName} as a friend?`)) return;
-    
-    try {
-      await removeFriend(friendshipId);
-      setSuccessMessage(`Removed ${friendName} from friends`);
-      setTimeout(() => setSuccessMessage(""), 3000);
-      await loadInitialData(); // Refresh data
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to remove friend");
-      setTimeout(() => setError(null), 3000);
-    }
-  };
-
-  // Refresh all data
-  const handleRefresh = async () => {
-    await loadInitialData();
-    setSuccessMessage('Data refreshed successfully!');
-    setTimeout(() => setSuccessMessage(""), 3000);
-  };
-
-  // Clear search and reset to initial view
   const handleClearSearch = () => {
     setSearchQuery('');
-    setShowOnlineOnly(false);
+    setError(null);
+    filterAndSetUsers(allUsers);
   };
 
-  // Determine user's friend status
-  const getUserFriendStatus = (user: User) => {
-    // Check if user is already a friend
-    const friend = friends.find(f => f.id.toString() === user.id.toString());
-    if (friend) {
-      return {
-        status: 'Friend',
-        type: 'friend',
-        friendshipId: friend.friendshipId || friend.id.toString(),
-        bgColor: 'bg-green-500'
-      };
+  // Friend actions
+  const sendFriendRequest = async (userId: number) => {
+    try {
+      const response = await api.post(`/friend/request/${userId}`);
+      setSuccessMessage(response.data.message);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Refresh data to update UI
+      await fetchAllData();
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to send friend request');
+      setTimeout(() => setError(null), 3000);
     }
-
-    // Check if there's an INCOMING friend request from this user (they sent to me)
-    const incomingRequest = friendRequests.find(r => r.sender_username === user.name);
-    if (incomingRequest) {
-      return {
-        status: 'Incoming Request',
-        type: 'incoming',
-        requestId: incomingRequest.id,
-        senderName: user.name,
-        bgColor: 'bg-blue-500'
-      };
-    }
-
-    // Check if I sent a request TO this user (outgoing)
-    const outgoingRequest = sentRequests.find(r => r.receiver_username === user.name);
-    if (outgoingRequest) {
-      return {
-        status: 'Request Sent',
-        type: 'pending',
-        bgColor: 'bg-yellow-500'
-      };
-    }
-
-    // Default: no relationship
-    return {
-      status: 'Not a Friend',
-      type: 'none',
-      bgColor: 'bg-purple-500'
-    };
   };
 
-  // Render action buttons based on user status
+  const acceptFriendRequest = async (requestId: string) => {
+    try {
+      const response = await api.post(`/friend/accept/${requestId}`);
+      setSuccessMessage(response.data.message);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Refresh data to update UI
+      await fetchAllData();
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to accept friend request');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const declineFriendRequest = async (requestId: string) => {
+    try {
+      const response = await api.delete(`/friend/decline/${requestId}`);
+      setSuccessMessage(response.data.message);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Refresh data to update UI
+      await fetchAllData();
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to decline friend request');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const removeFriend = async (friendshipId: string) => {
+    if (!confirm('Are you sure you want to remove this friend?')) return;
+    
+    try {
+      const response = await api.delete(`/friend/remove/${friendshipId}`);
+      setSuccessMessage(response.data.message);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Refresh data to update UI
+      await fetchAllData();
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to remove friend');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   const renderActionButton = (user: User) => {
-    const friendStatus = getUserFriendStatus(user);
-
-    switch (friendStatus.type) {
+    const actionStatus = getActionStatus(user);
+    
+    switch (actionStatus.type) {
       case 'friend':
         return (
-          <button 
-            onClick={() => handleRemoveFriend(friendStatus.friendshipId!, user.name)}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded text-sm transition-colors"
+          <button
+            onClick={() => removeFriend(actionStatus.friendshipId!)}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
           >
-            Remove Friend
+            Remove
           </button>
         );
-      case 'incoming':
+        
+      case 'received':
         return (
           <div className="flex gap-1">
-            <button 
-              onClick={() => handleRespondToRequest(friendStatus.requestId!, 'accept')}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors"
+            <button
+              onClick={() => acceptFriendRequest(actionStatus.requestId!)}
+              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors"
             >
               Accept
             </button>
-            <button 
-              onClick={() => handleRespondToRequest(friendStatus.requestId!, 'decline')}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+            <button
+              onClick={() => declineFriendRequest(actionStatus.requestId!)}
+              className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors"
             >
               Decline
             </button>
           </div>
         );
+        
       case 'pending':
         return (
-          <span className="bg-yellow-500 text-white px-3 py-1 rounded text-sm">
-            Request Sent
-          </span>
+          <span className="text-yellow-400 text-sm font-medium">Pending</span>
         );
+        
       case 'none':
+      default:
         return (
-          <button 
-            onClick={() => handleSendFriendRequest(user.id.toString())}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1 rounded text-sm transition-colors"
+          <button
+            onClick={() => sendFriendRequest(user.id)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition-colors"
           >
             Add Friend
           </button>
         );
-      default:
-        return null;
     }
   };
 
-  // Get status info for display
-  const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'online':
-        return { color: 'bg-green-500', text: 'Online', textColor: 'text-green-400' };
-      case 'in-game':
-        return { color: 'bg-yellow-500', text: 'In Game', textColor: 'text-yellow-400' };
-      default:
-        return { color: 'bg-gray-500', text: 'Offline', textColor: 'text-gray-400' };
+  // Effects
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Handle search with proper debouncing
+  useEffect(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    
+    if (searchQuery.trim() === '') {
+      // If search is empty, show all users (filtered by online status if enabled)
+      filterAndSetUsers(allUsers);
+      setError(null);
+      return;
     }
-  };
 
-  // Get status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'bg-green-500 text-white';
-      case 'in-game':
-        return 'bg-yellow-500 text-black';
-      default:
-        return 'bg-gray-500 text-white';
+    // Set loading state for search
+    setIsSearching(true);
+    
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchUsers(searchQuery);
+        filterAndSetUsers(results);
+        setError(null);
+      } catch (error) {
+        console.error('Search failed, using local fallback:', error);
+        // If search fails, fall back to filtering existing users
+        filterAndSetUsers(allUsers.filter(user => 
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
+        // Don't show error toast since search info handles all cases
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms debounce
+
+    setSearchTimeout(timeout);
+  }, [searchQuery, showOnlineOnly, allUsers]);
+
+  // FIXED: Don't interfere with search results
+  useEffect(() => {
+    if (!searchQuery.trim()) { // Only update when NOT searching
+      filterAndSetUsers(allUsers);
     }
-  };
-
-  // Stats calculations
-  const onlineUsers = allUsers.filter(user => user.online_status === 'online' || user.online_status === 'in-game');
-  const totalUsers = allUsers.length;
-
-  if (error && allUsers.length === 0) {
-    return (
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-red-900 border border-red-700 text-red-100 p-4 rounded-lg">
-          <h3 className="font-bold mb-2">Error Loading Rally Squad</h3>
-          <p>{error}</p>
-          <button 
-            onClick={() => {
-              setError(null);
-              loadInitialData();
-            }} 
-            className="mt-2 bg-red-700 hover:bg-red-600 px-4 py-2 rounded transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  }, [showOnlineOnly, allUsers]); // Removed searchQuery dependency
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -429,7 +433,7 @@ export const RallySquadTab = () => {
                 </tr>
               ) : displayedUsers.length > 0 ? (
                 displayedUsers.map((user, index) => {
-                  const friendStatus = getUserFriendStatus(user);
+                  const relationshipStatus = getRelationshipStatus(user);
                   const statusInfo = getStatusInfo(user.online_status || 'offline');
                   return (
                     <tr key={user.id} className={index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-650 hover:bg-gray-600 transition-colors'}>
@@ -458,8 +462,8 @@ export const RallySquadTab = () => {
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${friendStatus.bgColor}`}>
-                          {friendStatus.status}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${relationshipStatus.bgColor}`}>
+                          {relationshipStatus.status}
                         </span>
                       </td>
                       <td className="p-4 text-right">

@@ -1,104 +1,93 @@
 // frontend/src/components/lobby/MatchHistoryTab.tsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { 
-  getLobbyProfile, 
-  getEnhancedStats, 
-  getEnhancedRecentMatches,
-  getEnhancedLeaderboard,
-  type LeaderboardPlayer,
-  type EnhancedLeaderboardPlayer
-} from "../../utils/lobbyApi";
-
-interface UserProfile {
-  username: string;
-  email: string;
-  profilePic?: string;
-  wins: number;
-  losses: number;
-  firstName?: string;
-  online_status: string;
-  lastName?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  favAvatar?: string;
-  isVerified: boolean;
-  twoFactorRegistered: boolean;
-  createdAt: string;
-  name?: string;
-}
+import api from "../../utils/api";
 
 interface Match {
   id: string;
+  date: string;
   gameType: string;
   opponent: string;
   result: string;
   score: string;
   duration: string;
-  date: string;
   mode: string;
   rounds?: any[];
 }
 
-interface PlayerStats {
-  username: string;
+interface Stats {
   wins: number;
   losses: number;
   totalMatches: number;
   winRate: number;
-  currentStreak: number;
-  memberSince: string;
+}
+
+interface Profile {
+  name: string;
+  email: string;
+  profilePic?: string;
+  online_status: string;
+  createdAt: string;
+}
+
+interface LeaderboardPlayer {
+  rank: number;
+  username: string;
+  wins: number;
+  losses: number;
+  points: number;
+  online_status: string;
+  profilePic?: string;
+  isCurrentUser: boolean;
 }
 
 export const MatchHistoryTab: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  
   const [matches, setMatches] = useState<Match[]>([]);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [leaderboard, setLeaderboard] = useState<EnhancedLeaderboardPlayer[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardPlayer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
-
+        
         // Fetch all data in parallel
-        const [profileData, statsData, matchesData, leaderboardData] = await Promise.all([
-          getLobbyProfile(),
-          getEnhancedStats(),
-          getEnhancedRecentMatches(30),
-          getEnhancedLeaderboard(user?.username)
+        const [matchHistoryResponse, statsResponse, profileResponse, leaderboardResponse] = await Promise.all([
+          api.get('/game/history'),
+          api.get('/game/stats'),
+          api.get('/user/profile'),
+          api.get('/game/leaderboard')
         ]);
 
-        setProfile(profileData);
-        setStats({
-          username: profileData.name || user?.username || '',
-          wins: statsData.wins || 0,
-          losses: statsData.losses || 0,
-          totalMatches: statsData.totalMatches || 0,
-          winRate: statsData.winRate || 0,
-          currentStreak: statsData.currentStreak || 0,
-          memberSince: profileData.createdAt || new Date().toISOString()
+        setMatches(matchHistoryResponse.data);
+        setStats(statsResponse.data);
+        setProfile({
+          name: profileResponse.data.username,
+          email: profileResponse.data.email,
+          profilePic: profileResponse.data.profilePic,
+          online_status: profileResponse.data.online_status,
+          createdAt: profileResponse.data.createdAt
         });
-        setMatches(matchesData);
-        setLeaderboard(leaderboardData);
+        setLeaderboard(leaderboardResponse.data);
 
-      } catch (err: any) {
-        console.error("Error during data fetching:", err);
-        setError("Failed to load game statistics. Please try again.");
+      } catch (error) {
+        console.error('Failed to fetch match history data:', error);
+        setError('Failed to load game statistics. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    if (user) {
+      fetchAllData();
+    }
   }, [user]);
 
   const toggleGameDetails = (gameId: string) => {
@@ -246,10 +235,14 @@ export const MatchHistoryTab: React.FC = () => {
                 src={profile?.profilePic || "/profile-pics/default-profile.jpg"}
                 alt="Profile"
                 className="w-32 h-32 rounded-full border-4 border-blue-500 object-cover mx-auto"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%236B7280'/%3E%3Ctext x='64' y='76' font-family='Arial' font-size='48' fill='white' text-anchor='middle'%3E👤%3C/text%3E%3C/svg%3E";
+                }}
               />
               <div className="mt-4">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${getStatusIndicator(profile.online_status)}`}></div>
-                <span className="text-sm text-gray-400 capitalize">{profile.online_status || 'offline'}</span>
+                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${getStatusIndicator(profile?.online_status || 'offline')}`}></div>
+                <span className="text-sm text-gray-400 capitalize">{profile?.online_status || 'offline'}</span>
               </div>
             </div>
             
@@ -293,7 +286,7 @@ export const MatchHistoryTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Leaderboard Section - Exactly like your friend's */}
+        {/* Leaderboard Section */}
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
           <h2 className="text-2xl font-bold mb-6 text-center text-yellow-300">🏅 Game Leaderboard</h2>
           
@@ -329,6 +322,10 @@ export const MatchHistoryTab: React.FC = () => {
                               src={player.profilePic} 
                               alt={player.username}
                               className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
                             />
                           ) : (
                             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
@@ -344,7 +341,7 @@ export const MatchHistoryTab: React.FC = () => {
                       </td>
                       <td className="p-3 text-green-400 font-semibold">{player.wins}</td>
                       <td className="p-3 text-red-400 font-semibold">{player.losses}</td>
-                      <td className="p-3 font-bold text-yellow-400">{player.points.toFixed(1)}</td>
+                      <td className="p-3 font-bold text-yellow-400">{player.points}</td>
                     </tr>
                   ))}
                 </tbody>

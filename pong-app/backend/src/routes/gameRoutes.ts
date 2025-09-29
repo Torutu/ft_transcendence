@@ -2,239 +2,562 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
-interface AuthenticatedUser {
-  userId: number;
-  username: string;
+interface GameRoutesOptions {
+  prisma: PrismaClient;
 }
 
-export default function gameRoutes(fastify: FastifyInstance, options: { prisma: PrismaClient }) {
+interface SaveGameInput {
+  opponent: string;
+  gameType: string;
+  mode: string;
+  result: 'win' | 'loss' | 'draw';
+  score: string;
+  duration: string;
+  rounds?: any[];
+}
+
+export default function gameRoutes(app: FastifyInstance, options: GameRoutesOptions) {
   const { prisma } = options;
 
-  // Helper function to get authenticated user
-  const getAuthenticatedUser = (request: FastifyRequest): AuthenticatedUser => {
-    return (request as any).user as AuthenticatedUser;
-  };
-
-  // Authentication middleware
-  const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
+  // Helper function to verify authentication
+  const verifyAuth = (request: FastifyRequest) => {
     const token = request.cookies.authToken;
-    
     if (!token) {
-      return reply.status(401).send({ message: 'Authentication required' });
+      throw new Error('AUTHENTICATION_REQUIRED');
     }
-
-    try {
-      const decoded = fastify.jwt.verify(token) as { userId: number; username: string };
-      const user = await prisma.user.findUnique({ 
-        where: { id: decoded.userId },
-        select: { id: true, username: true }
-      });
-      
-      if (!user) {
-        return reply.status(401).send({ message: 'User not found' });
-      }
-      
-      (request as any).user = { userId: user.id, username: user.username };
-    } catch (err) {
-      return reply.status(401).send({ message: 'Invalid token' });
-    }
+    return app.jwt.verify(token) as { userId: number; username: string };
   };
 
-  fastify.addHook('preHandler', authenticate);
 
-  // Get player statistics
-  fastify.get('/stats/:username?', async (request, reply) => {
-    try {
-      const user = getAuthenticatedUser(request);
-      const { username } = request.params as { username?: string };
-      
-      const targetUser = username || user.username;
+// Enhanced helper function to parse game data from either player perspective
+const parseGameData = (game: any, currentUser: { userId: number; username: string }) => {
+  let parsedRounds = [];
+  let opponent = 'Unknown';
+  let result: 'win' | 'loss' | 'draw' = 'draw';
+  let score = '0-0';
+  let duration = 'N/A';
+  let mode = 'unknown';
 
-      const userStats = await prisma.user.findUnique({
-        where: { username: targetUser },
-        select: {
-          username: true,
-          wins: true,
-          losses: true,
-          createdAt: true
+  try {
+    if (game.rounds_json) {
+      const gameData = JSON.parse(game.rounds_json);
+      parsedRounds = gameData.rounds || [];
+      mode = gameData.mode || 'unknown';
+
+      const userIsPlayer1 = (game.id_player1 === currentUser.userId);
+      const userIsPlayer2 = (game.id_player2 === currentUser.userId);
+
+      console.log(`Parsing game ${game.id_game}: user ${currentUser.username} (ID: ${currentUser.userId}), userIsPlayer1: ${userIsPlayer1}, userIsPlayer2: ${userIsPlayer2}`);
+
+      if (gameData.opponent) {
+        opponent = gameData.opponent;
+      } else if (gameData.player1 && gameData.player2) {
+        if (userIsPlayer1) {
+          opponent = gameData.player2.username || 'Unknown';
+        } else if (userIsPlayer2) {
+          opponent = gameData.player1.username || 'Unknown';
         }
-      });
-
-      if (!userStats) {
-        return reply.status(404).send({ error: 'User not found' });
       }
 
-      // Get recent games for additional stats
-      const recentGames = await prisma.game.findMany({
+      if (gameData.result) {
+        result = gameData.result;
+      } else if (gameData.winner) {
+        const winnerUsername = typeof gameData.winner === 'string' 
+          ? gameData.winner 
+          : (gameData.winner.username || gameData.winner.name);
+        
+        if (winnerUsername === currentUser.username) {
+          result = 'win';
+        } else if (winnerUsername) {
+          result = 'loss';
+        }
+      } else if (gameData.player1 && gameData.player2) {
+        if (userIsPlayer1) {
+          result = gameData.player1.isWinner === true ? 'win' : 'loss';
+        } else if (userIsPlayer2) {
+          result = gameData.player2.isWinner === true ? 'win' : 'loss';
+        }
+      }
+
+      // SCORE - Get from user's perspective
+      if (gameData.score) {
+        score = gameData.score;
+      } else if (gameData.finalScore) {
+        const scoreParts = gameData.finalScore.split(/\s*[-–—]\s*/);
+        if (scoreParts.length === 2) {
+          const [p1Score, p2Score] = scoreParts.map((s: string) => s.trim());
+          score = userIsPlayer1 ? `${p1Score}-${p2Score}` : `${p2Score}-${p1Score}`;
+        } else {
+          score = gameData.finalScore;
+        }
+      } else if (gameData.player1?.score !== undefined && gameData.player2?.score !== undefined) {
+        const p1Score = gameData.player1.score;
+        const p2Score = gameData.player2.score;
+        score = userIsPlayer1 ? `${p1Score}-${p2Score}` : `${p2Score}-${p1Score}`;
+      }
+
+      // DURATION
+      if (gameData.duration !== undefined) {
+        duration = typeof gameData.duration === 'number'
+          ? `${Math.floor(gameData.duration / 60)}:${String(gameData.duration % 60).padStart(2, '0')}`
+          : gameData.duration.toString();
+      }
+
+      console.log(`Parsed game ${game.id_game}: opponent=${opponent}, result=${result}, score=${score}`);
+    }
+  } catch (error) {
+    console.error('Error parsing game data for game', game.id_game, ':', error);
+  }
+
+  return {
+    id: game.id_game.toString(),
+    date: game.date,
+    gameType: game.game_name,
+    opponent,
+    result,
+    score,
+    duration,
+    mode,
+    rounds: parsedRounds
+  };
+};
+
+
+
+  /* **********************************************************************
+   * GET /games/history - User's game history (for MatchHistoryTab)
+   ************************************************************************ */
+  app.get('/game/history', async (request, reply) => {
+    try {
+      const decoded = verifyAuth(request);
+      const { limit, offset } = request.query as { limit?: string; offset?: string };
+      
+      console.log(`Fetching game history for user ${decoded.userId} (${decoded.username})`);
+      
+      // Query for games where user was EITHER player1 OR player2
+      const games = await prisma.game.findMany({
         where: {
-            OR: [
-                { id_player1: user.userId },
-                { id_player2: user.userId },
-            ],
+          OR: [
+            { id_player1: decoded.userId },
+            { id_player2: decoded.userId }
+          ]
         },
         orderBy: { date: 'desc' },
-        take: 50
+        take: limit ? parseInt(limit) : 50,
+        skip: offset ? parseInt(offset) : 0
       });
 
-      // Calculate additional statistics
-      const totalMatches = userStats.wins + userStats.losses;
-      const winRate = totalMatches > 0 ? (userStats.wins / totalMatches) * 100 : 0;
-
-      // Calculate current win streak
-      let currentStreak = 0;
-      for (const game of recentGames) {
-        try {
-          const gameData = JSON.parse(game.rounds_json);
-          if (gameData.winner.playerId === user.userId) {
-            currentStreak++;
-          } else {
-            break;
-          }
-        } catch (e) {
-          break;
-        }
+      console.log(`Found ${games.length} games for user ${decoded.userId} (including as player1 and player2)`);
+      
+      if (games.length === 0) {
+        console.log(`No games found for user ${decoded.userId}. Checking database state...`);
+        
+        const allGames = await prisma.game.findMany({ take: 5 });
+        console.log(`Sample games in database:`, allGames.map(g => ({ 
+          id: g.id_game, 
+          player1: g.id_player1,
+          player2: g.id_player2,
+          date: g.date
+        })));
       }
 
-      return reply.send({
-        username: userStats.username,
-        wins: userStats.wins,
-        losses: userStats.losses,
-        totalMatches,
-        winRate: Math.round(winRate * 10) / 10,
-        currentStreak,
-        memberSince: userStats.createdAt
-      });
+      const parsedGames = games.map(game => parseGameData(game, decoded));
 
+      return reply.send(parsedGames);
     } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ error: 'Failed to fetch player stats' });
+      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+        return reply.status(401).send({ error: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' });
+      }
+      console.error('Get game history error:', error);
+      return reply.status(500).send({ error: 'HISTORY_FETCH_FAILED', message: 'Failed to fetch game history' });
     }
   });
 
-  // Get recent matches
-  // Replace the recent-matches endpoint in gameRoutes.ts with this:
-
-// Get recent matches
-fastify.get('/recent-matches', async (request, reply) => {
-  try {
-    const user = getAuthenticatedUser(request);
-    const { limit = 20 } = request.query as { limit?: number };
-
-    const games = await prisma.game.findMany({
-        where: {
-            OR: [
-                { id_player1: user.userId },
-                { id_player2: user.userId },
-            ],
-        },
-      orderBy: { date: 'desc' },
-      take: Number(limit)
-    });
-
-    const matches = games.map(game => {
-      try {
-        const gameData = JSON.parse(game.rounds_json);
-        
-        const userIsPlayer1 = gameData.player1.playerId === user.userId;
-        const userPlayer = userIsPlayer1 ? gameData.player1 : gameData.player2;
-        const opponentPlayer = userIsPlayer1 ? gameData.player2 : gameData.player1;
-        let result = "tie";
-        if (gameData.winner)
-            result = gameData.winner.playerId === user.userId ? 'win' : 'loss';
-
-        // Extract actual scores
-        // let userScore = userPlayer.score;
-        // let opponentScore = opponentPlayer.score;
-        // let displayScore = gameData.finalScore;
-
-        // if (gameData.finalScore) {
-        //   displayScore = gameData.finalScore;
-        //   const scores = gameData.finalScore.split('-');
-        //   if (scores.length === 2) {
-        //     userScore = parseInt(scores[0]) || 0;
-        //     opponentScore = parseInt(scores[1]) || 0;
-        //   }
-        // } 
-        // if (userPlayer?.score !== undefined && opponentPlayer?.score !== undefined) {
-        //   userScore = userPlayer.score || 0;
-        //   opponentScore = opponentPlayer.score || 0;
-        //   displayScore = `${userScore}-${opponentScore}`;
-        // } 
-        // else {
-        //   // Fallback to win/loss based scoring
-        //   userScore = gameData.userWon ? 3 : 0;
-        //   opponentScore = gameData.userWon ? 0 : 3;
-        //   displayScore = `${userScore}-${opponentScore}`;
-        // }
-
-        return {
-          id: game.id_game.toString(),
-          gameType: game.game_name,
-          opponent: opponentPlayer?.username || 'Unknown',
-          result: result,
-          score: gameData.finalScore,
-          userScore: userPlayer.score,
-          opponentScore: opponentPlayer.score,
-          duration: `${Math.floor(gameData.duration / 60)}:${String(gameData.duration % 60).padStart(2, '0')}`,
-          date: game.date.toISOString(),
-          mode: gameData.mode || 'unknown'
-        };
-      } catch (e) {
-        return {
-          id: game.id_game.toString(),
-          gameType: game.game_name,
-          opponent: 'Unknown',
-          result: 'unknown',
-          score: '0-0',
-          userScore: 0,
-          opponentScore: 0,
-          duration: '0:00',
-          date: game.date.toISOString(),
-          mode: 'unknown'
-        };
-      }
-    });
-
-    return reply.send(matches);
-
-  } catch (error) {
-    fastify.log.error(error);
-    return reply.status(500).send({ error: 'Failed to fetch recent matches' });
-  }
-});
-
-  // Get detailed match information
-  fastify.get('/matches/:matchId', async (request, reply) => {
+  /* **********************************************************************
+   * GET /games/stats - User's game statistics (for OverviewTab and MatchHistoryTab)
+   ************************************************************************ */
+  app.get('/game/stats', async (request, reply) => {
     try {
-      const user = getAuthenticatedUser(request);
-      const { matchId } = request.params as { matchId: string };
+      const decoded = verifyAuth(request);
+      
+      console.log(`Fetching game stats for user ${decoded.userId} (${decoded.username})`);
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { wins: true, losses: true, username: true }
+      });
 
-      const game = await prisma.game.findFirst({
-        where: { 
-          id_game: parseInt(matchId),
-            OR: [
-                { id_player1: user.userId },
-                { id_player2: user.userId },
-            ],
+      if (!user) {
+        return reply.status(404).send({ error: 'USER_NOT_FOUND', message: 'User not found' });
+      }
+
+      // USE USER TABLE AS SINGLE SOURCE OF TRUTH
+      const totalMatches = user.wins + user.losses;
+      const winRate = totalMatches > 0 ? (user.wins / totalMatches) * 100 : 0;
+
+      console.log(`User table stats: wins=${user.wins}, losses=${user.losses}, total=${totalMatches}`);
+
+      // Get all games for additional calculated stats (streaks, monthly)
+      const games = await prisma.game.findMany({
+        where: {
+          OR: [
+            { id_player1: decoded.userId },
+            { id_player2: decoded.userId }
+          ]
+        },
+        orderBy: { date: 'desc' },
+        take: 100
+      });
+
+      console.log(`Found ${games.length} games for streak/monthly calculations`);
+
+      // Calculate ONLY streaks and monthly data from games
+      let currentWinStreak = 0;
+      let longestWinStreak = 0;
+      let tempStreak = 0;
+      let currentStreakActive = true;
+
+      // Calculate streaks from recent games
+      for (const game of games) {
+        try {
+          if (game.rounds_json) {
+            const gameData = JSON.parse(game.rounds_json);
+            let isWin = false;
+            
+            // Determine if this was a win from user's perspective
+            if (gameData.winner) {
+              let winnerName = '';
+              if (typeof gameData.winner === 'string') {
+                winnerName = gameData.winner;
+              } else if (gameData.winner.name) {
+                winnerName = gameData.winner.name;
+              }
+              isWin = winnerName === decoded.username;
+            } else if (gameData.player1 && gameData.player2) {
+              const userIsPlayer1 = (game.id_player1 === decoded.userId) || 
+                                   (gameData.player1.username === decoded.username);
+              
+              if (userIsPlayer1) {
+                isWin = gameData.player1.isWinner === true;
+              } else {
+                isWin = gameData.player2.isWinner === true;
+              }
+            }
+            
+            if (isWin) {
+              tempStreak++;
+              if (currentStreakActive) {
+                currentWinStreak = tempStreak;
+              }
+            } else {
+              if (tempStreak > longestWinStreak) {
+                longestWinStreak = tempStreak;
+              }
+              tempStreak = 0;
+              currentStreakActive = false;
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing game for streak calculation:', error);
+        }
+      }
+
+      if (tempStreak > longestWinStreak) {
+        longestWinStreak = tempStreak;
+      }
+
+      // Calculate monthly wins from games
+      const currentMonth = new Date();
+      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      
+      const monthlyGames = await prisma.game.findMany({
+        where: {
+          OR: [
+            { id_player1: decoded.userId },
+            { id_player2: decoded.userId }
+          ],
+          date: { gte: startOfMonth }
         }
       });
 
-      if (!game) {
-        return reply.status(404).send({ error: 'Match not found' });
+      let monthlyWins = 0;
+      for (const game of monthlyGames) {
+        try {
+          if (game.rounds_json) {
+            const gameData = JSON.parse(game.rounds_json);
+            let isWin = false;
+            
+            if (gameData.winner) {
+              let winnerName = '';
+              if (typeof gameData.winner === 'string') {
+                winnerName = gameData.winner;
+              } else if (gameData.winner.name) {
+                winnerName = gameData.winner.name;
+              }
+              isWin = winnerName === decoded.username;
+            } else if (gameData.player1 && gameData.player2) {
+              const userIsPlayer1 = (game.id_player1 === decoded.userId) || 
+                                   (gameData.player1.username === decoded.username);
+              
+              if (userIsPlayer1) {
+                isWin = gameData.player1.isWinner === true;
+              } else {
+                isWin = gameData.player2.isWinner === true;
+              }
+            }
+            
+            if (isWin) monthlyWins++;
+          }
+        } catch (error) {
+          console.error('Error parsing monthly game:', error);
+        }
       }
 
-      const gameData = JSON.parse(game.rounds_json);
+      // RETURN STATS USING USER TABLE
+      const stats = {
+        wins: user.wins,           // FROM USER TABLE
+        losses: user.losses,       // FROM USER TABLE  
+        totalMatches,              // CALCULATED FROM USER TABLE
+        winRate: Math.round(winRate * 10) / 10,
+        currentWinStreak,          // CALCULATED FROM GAMES
+        longestWinStreak,          // CALCULATED FROM GAMES
+        monthlyWins,               // CALCULATED FROM GAMES
+        recentGamesCount: games.length,
+        source: 'game_api'
+      };
 
-      return reply.send({
-        id: game.id_game,
-        gameType: game.game_name,
-        date: game.date,
-        ...gameData
+      console.log(`Final stats for ${decoded.username}:`, stats);
+
+      // VERIFICATION LOG - Check if game count matches calculated stats
+      const gameWins = games.filter(game => {
+        try {
+          const gameData = JSON.parse(game.rounds_json);
+          if (gameData.winner) {
+            const winnerName = typeof gameData.winner === 'string' ? 
+              gameData.winner : gameData.winner.username;
+            return winnerName === decoded.username;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      }).length;
+
+      const gameLosses = games.filter(game => {
+        try {
+          const gameData = JSON.parse(game.rounds_json);
+          if (gameData.winner) {
+            const winnerName = typeof gameData.winner === 'string' ? 
+              gameData.winner : gameData.winner.username;
+            return winnerName && winnerName !== decoded.username;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      }).length;
+
+      console.log(`VERIFICATION: User table says ${user.wins}W/${user.losses}L, games suggest ${gameWins}W/${gameLosses}L`);
+      
+      if (user.wins !== gameWins || user.losses !== gameLosses) {
+        console.warn(`⚠️ DATA INCONSISTENCY DETECTED for user ${decoded.username}`);
+        console.warn(`User table: ${user.wins}W/${user.losses}L vs Games calculation: ${gameWins}W/${gameLosses}L`);
+      }
+
+      return reply.send(stats);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+        return reply.status(401).send({ error: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' });
+      }
+      console.error('Get game stats error:', error);
+      return reply.status(500).send({ error: 'STATS_FETCH_FAILED', message: 'Failed to fetch game statistics' });
+    }
+  });
+
+
+  /* **********************************************************************
+   * GET /games/leaderboard - Global leaderboard (for MatchHistoryTab)
+   ************************************************************************ */
+  app.get('/game/leaderboard', async (request, reply) => {
+    try {
+      const decoded = verifyAuth(request);
+      const { limit } = request.query as { limit?: string };
+      
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+          wins: true,
+          losses: true,
+          online_status: true,
+          profilePic: true
+        },
+        where: {
+          OR: [
+            { wins: { gt: 0 } },
+            { losses: { gt: 0 } }
+          ]
+        },
+        orderBy: [
+          { wins: 'desc' },
+          { losses: 'asc' }
+        ],
+        take: limit ? parseInt(limit) : 10
       });
 
+      const leaderboard = users.map((user, index) => {
+        const totalGames = user.wins + user.losses;
+        const winRate = totalGames > 0 ? (user.wins / totalGames) * 100 : 0;
+        const points = (user.wins * 3) - user.losses;
+
+        return {
+          rank: index + 1,
+          username: user.username,
+          wins: user.wins,
+          losses: user.losses,
+          totalGames,
+          winRate: Math.round(winRate * 10) / 10,
+          points: Math.max(0, points),
+          online_status: user.online_status,
+          profilePic: user.profilePic,
+          isCurrentUser: user.id === decoded.userId
+        };
+      });
+
+      return reply.send(leaderboard);
     } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ error: 'Failed to fetch match details' });
+      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+        return reply.status(401).send({ error: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' });
+      }
+      console.error('Get leaderboard error:', error);
+      return reply.status(500).send({ error: 'LEADERBOARD_FETCH_FAILED', message: 'Failed to fetch leaderboard' });
+    }
+  });
+
+
+  /* **********************************************************************
+   * POST /games - Save new game result
+   ************************************************************************ */
+  app.post<{ Body: SaveGameInput }>(
+    '/game',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['opponent', 'gameType', 'result', 'score'],
+          properties: {
+            opponent: { type: 'string' },
+            gameType: { type: 'string', enum: ['pingpong', 'keyclash'] },
+            mode: { type: 'string' },
+            result: { type: 'string', enum: ['win', 'loss', 'draw'] },
+            score: { type: 'string' },
+            duration: { type: 'string' },
+            rounds: { type: 'array' }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        const decoded = verifyAuth(request);
+        const { opponent, gameType, mode, result, score, duration, rounds } = request.body;
+
+        console.log(`Saving game for user ${decoded.userId} (${decoded.username}):`, {
+          opponent, gameType, mode, result, score, duration
+        });
+
+        const gameData = {
+          opponent,
+          mode: mode || 'standard',
+          result,
+          score,
+          duration: duration || 'N/A',
+          rounds: rounds || [],
+          savedBy: decoded.username,
+          savedAt: new Date().toISOString()
+        };
+
+        const savedGame = await prisma.game.create({
+          data: {
+            id_player1: decoded.userId,
+            game_name: gameType as any,
+            rounds_json: JSON.stringify(gameData),
+            date: new Date()
+          }
+        });
+
+        console.log(`Game saved with ID ${savedGame.id_game} for user ${decoded.userId}`);
+
+        if (result === 'win') {
+          await prisma.user.update({
+            where: { id: decoded.userId },
+            data: { wins: { increment: 1 } }
+          });
+        } else if (result === 'loss') {
+          await prisma.user.update({
+            where: { id: decoded.userId },
+            data: { losses: { increment: 1 } }
+          });
+        }
+
+        return reply.status(201).send({
+          success: true,
+          message: 'Game result saved successfully',
+          gameId: savedGame.id_game
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+          return reply.status(401).send({ error: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' });
+        }
+        console.error('Save game error:', error);
+        return reply.status(500).send({ error: 'GAME_SAVE_FAILED', message: 'Failed to save game result' });
+      }
+    }
+  );
+
+  /* **********************************************************************
+   * GET /games/recent - Recent matches for overview (for OverviewTab)
+   ************************************************************************ */
+  app.get('/game/recent', async (request, reply) => {
+    try {
+      const decoded = verifyAuth(request);
+      const { limit } = request.query as { limit?: string };
+      
+      console.log(`Fetching recent games for user ${decoded.userId} (${decoded.username})`);
+      
+      const games = await prisma.game.findMany({
+        where: {
+          OR: [
+            { id_player1: decoded.userId },
+            { id_player2: decoded.userId }
+          ]
+        },
+        orderBy: { date: 'desc' },
+        take: limit ? parseInt(limit) : 5
+      });
+
+      console.log(`Found ${games.length} recent games for user ${decoded.userId}`);
+
+      const recentMatches = games.map(game => {
+        const parsedGame = parseGameData(game, decoded);
+        return {
+          id: parsedGame.id,
+          opponent: parsedGame.opponent,
+          matchType: parsedGame.gameType,
+          mode: parsedGame.mode,
+          result: parsedGame.result,
+          score: parsedGame.score,
+          date: game.date
+        };
+      });
+
+      return reply.send(recentMatches);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'AUTHENTICATION_REQUIRED') {
+        return reply.status(401).send({ error: 'AUTHENTICATION_REQUIRED', message: 'Authentication required' });
+      }
+      console.error('Get recent games error:', error);
+      return reply.status(500).send({ error: 'RECENT_GAMES_FETCH_FAILED', message: 'Failed to fetch recent games' });
     }
   });
 }

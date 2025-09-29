@@ -1,4 +1,4 @@
-// src/components/LoadingSpinner.tsx
+// frontend/src/components/general/LoadingSpinner.tsx
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   color?: string;
