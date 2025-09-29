@@ -2,18 +2,20 @@
 export interface Player {
     socketId: string;
     name: string;
+    playerId: number;
   }
   
   export interface OnlineUser {
     socketId: string;
     name: string;
+    playerId: number;
     status?: string;
   }
   
   export interface GameRoom {
     id: string;
     status: "waiting" | "in-progress" | "finished";  
-    players: { id: string, name: string }[];
+    players: Player[];
   }
   
   export interface Avatar {

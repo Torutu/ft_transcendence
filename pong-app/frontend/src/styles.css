@@ -20,7 +20,7 @@ html, body {
   /* overflow-y: auto; NEED TO FIX THE PONG GAME*/ 
 }
 
-#popupDialog {
+#localForm, #remoteForm, #popupDialog {
 	display: none;
 	position: fixed;
 	top: 50%;

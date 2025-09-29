@@ -18,8 +18,12 @@ const PlayPage: React.FC = () => {
     let playerId: number | null = null;
     if (location.state?.name)
       name = location.state.name;
+    if (location.state.user)
+      name = location.state.user;
     if (location.state?.playerId)
       playerId = location.state.playerId;
+    if (location.state.userId)
+      playerId = location.state.userId;
     if (containerRef.current && gameId && mode && type && game === "pong") {
       pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name, playerId);
       return () => {

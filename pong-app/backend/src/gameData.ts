@@ -1,7 +1,6 @@
 import { Player, LobbyState, GameResult } from "./types/lobby";
 import PingPongGame from "./PingPongGame";
 import { state as KeyClashState } from "./KeyClashGame"
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
 export const playersOnline: Player[] = [];

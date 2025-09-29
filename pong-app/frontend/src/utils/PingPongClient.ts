@@ -327,10 +327,10 @@ export default class PingPongClient {
 				this.matchInfoDisplay.textContent = state.matchInfo;
 			}
 			this.status = state.status;
-      if (this.status === 'in-progress')
-        this.backButton.style.display = "none";
-      else 
-        this.backButton.style.display = "block";
+			if (this.status === 'in-progress')
+				this.backButton.style.display = "none";
+			else 
+				this.backButton.style.display = "block";
 			if (this.type === "1v1" && (state.status === "finished")) {
 				this.restartButton.style.display = "block";
 			}
@@ -362,7 +362,7 @@ export default class PingPongClient {
 			}
 			this.restartButton.style.display = "none";
 			this.matchInfoDisplay.style.display = "none";
-			this.scoreDisplay.style.display = "none";
+			this.timerDisplay.textContent = state.timerDisplay;
 			this.status = "waiting";
 		});
 
