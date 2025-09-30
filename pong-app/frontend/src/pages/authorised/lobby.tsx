@@ -1,7 +1,12 @@
 // frontend/src/pages/authorised/lobby.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { OverviewTab, MyLockerTab, RallySquadTab, MatchHistoryTab } from "../../components/lobby";
+import {
+  OverviewTab,
+  MyLockerTab,
+  RallySquadTab,
+  MatchHistoryTab,
+} from "../../components/lobby";
 
 const TABS = [
   { key: "overview", label: "Overview", icon: "🏠" },
@@ -28,32 +33,39 @@ export default function LobbyPage() {
           {/* Quick Match Card with Local and Remote buttons */}
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-black font-semibold p-6 rounded-2xl shadow-lg w-80">
             <div className="text-center mb-5">
-              
-              <div className="text-xl font-bold mt-1"><span className="text-3xl">⚡</span>Quick Match</div>
-              <div className="text-sm font-normal opacity-90">Fast 1v1 game</div>
+              <div className="text-xl font-bold mt-1">
+                <span className="text-3xl">⚡</span>Quick Match
+              </div>
+              <div className="text-sm font-normal opacity-90">
+                Fast 1v1 game
+              </div>
             </div>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={() => navigate("/quickmatch")}
                 className="bg-white hover:bg-gray-100 text-emerald-700 font-medium py-3 rounded-lg transition-all shadow-md text-lg"
               >
-                 🎯 Join 1v1 lobby
+                🎯 Join 1v1 lobby
               </button>
             </div>
           </div>
-          
+
           {/* Tournament Card with options */}
           <div className="bg-gradient-to-r from-yellow-500 to-orange-600 text-black font-semibold p-6 rounded-2xl shadow-lg w-80">
             <div className="text-center mb-5">
-              <div className="text-xl font-bold mt-1"><span className="text-3xl">🏆</span>Tournament</div>
-              <div className="text-sm font-normal opacity-90">Compete in brackets</div>
+              <div className="text-xl font-bold mt-1">
+                <span className="text-3xl">🏆</span>Tournament
+              </div>
+              <div className="text-sm font-normal opacity-90">
+                Compete in brackets
+              </div>
             </div>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={() => navigate("/tournament")}
                 className="bg-white hover:bg-gray-100 text-orange-700 font-medium py-3 rounded-lg transition-all shadow-md text-lg"
               >
-                 🎯 Join Tournament lobby
+                🎯 Join Tournament lobby
               </button>
             </div>
           </div>
@@ -63,11 +75,15 @@ export default function LobbyPage() {
       {/* Tabs */}
       <div className="flex justify-center mb-8">
         <div className="flex gap-2 bg-[#20124c] rounded-lg p-2">
-          {TABS.map(tab => (
+          {TABS.map((tab) => (
             <button
               key={tab.key}
               className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition
-                ${activeTab === tab.key ? "bg-[#7d2ae8] text-white" : "bg-[#181228] text-gray-300 hover:bg-[#2a1740]"}
+                ${
+                  activeTab === tab.key
+                    ? "bg-[#7d2ae8] text-white"
+                    : "bg-[#181228] text-gray-300 hover:bg-[#2a1740]"
+                }
               `}
               onClick={() => setActiveTab(tab.key)}
             >

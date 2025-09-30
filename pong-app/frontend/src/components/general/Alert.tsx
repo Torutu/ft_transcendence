@@ -23,4 +23,3 @@ export const Alert = ({ type, message }: AlertProps) => {
     </div>
   );
 };
-

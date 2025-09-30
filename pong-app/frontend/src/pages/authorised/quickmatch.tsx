@@ -11,7 +11,7 @@ interface Player {
 }
 interface GameRoom {
   id: string;
-  status: "waiting" | "in-progress" | "finished";  
+  status: "waiting" | "in-progress" | "finished";
   players: Player[];
 }
 
@@ -29,7 +29,7 @@ export default function QuickmatchPage() {
     socketRef.current = io("/quickmatch", {
       path: "/socket.io",
       transports: ["websocket"],
-      secure: true
+      secure: true,
     });
 
     socketRef.current.on("connect", () => {
@@ -37,63 +37,69 @@ export default function QuickmatchPage() {
         name = user.username;
         playerId = user.id;
       }
-      socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
-        if (res.error) {
-          alert(res.error);
-          navigate("/lobby")
+      socketRef.current?.emit(
+        "name",
+        name,
+        playerId,
+        (res: { error: string }) => {
+          if (res.error) {
+            alert(res.error);
+            navigate("/lobby");
+          }
         }
-      });
+      );
     });
 
     socketRef.current.on("lobby_update", (data) => {
       setPlayers(data.players);
       setPongGames(data.pongGames);
-      setKeyClashGames(data.keyClashGames)
+      setKeyClashGames(data.keyClashGames);
     });
 
     socketRef.current.on("created_game", (gameId, game, mode) => {
       try {
-				// Get guest name from localStorage
-				const storedGuest = localStorage.getItem('quickmatch_guestName');
-				console.log("📦 Retrieved stored guest:", storedGuest);
+        // Get guest name from localStorage
+        const storedGuest = localStorage.getItem("quickmatch_guestName");
+        console.log("📦 Retrieved stored guest:", storedGuest);
 
-				const playerNames = {
-					player1: name,
-					player2: storedGuest
+        const playerNames = {
+          player1: name,
+          player2: storedGuest,
         };
         if (socketRef.current) {
           console.log("🔌 Disconnecting socket...");
           socketRef.current.disconnect();
           socketRef.current = null;
         }
-			
+
         const type = "1v1";
         const routePath = `/${game}/${mode}/${type}/${gameId}`;
         console.log("🎯 Navigating to:", routePath);
-			
-        navigate(routePath, { 
-          state: { 
+
+        navigate(routePath, {
+          state: {
             name: playerNames,
             playerId: playerId,
             gameType: game,
             mode: mode,
             type: type,
             gameId: gameId,
-          } 
+          },
         });
         console.log("✅ Navigation completed");
-        
       } catch (error) {
-          console.error("❌ Error in created_game handler:", error);
-        	alert("Navigation failed: " + error.message);
-      	}
-    })
+        console.error("❌ Error in created_game handler:", error);
+        alert("Navigation failed: " + error.message);
+      }
+    });
 
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	    const type = "1v1";
-      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name, playerId: playerId } });
+      const type = "1v1";
+      navigate(`/${game}/${mode}/${type}/${gameId}`, {
+        state: { name: name, playerId: playerId },
+      });
     });
 
     return () => {
@@ -110,102 +116,115 @@ export default function QuickmatchPage() {
   };
   const createLocalGame = (type: GameType) => {
     socketRef.current?.emit("create_game", type, "local");
-  }
-
-
-  const joinGame = (gameId: string, game: "pong" | "keyclash", mode: "local" | "remote") => {
-    socketRef.current?.emit("join_game", gameId, game, mode, (res: { error: string }) => {
-      if (res.error) alert(res.error);
-    });
   };
 
-
-	const popup = () => {
-		document.getElementById(
-                "overlay"
-            ).style.display = "block";
-            document.getElementById(
-                "popupDialog"
-            ).style.display = "block";
+  const joinGame = (
+    gameId: string,
+    game: "pong" | "keyclash",
+    mode: "local" | "remote"
+  ) => {
+    socketRef.current?.emit(
+      "join_game",
+      gameId,
+      game,
+      mode,
+      (res: { error: string }) => {
+        if (res.error) alert(res.error);
+      }
+    );
   };
-	const popdown = () => {
-            document.getElementById(
-                "overlay"
-            ).style.display = "none";
-            document.getElementById(
-                "popupDialog"
-            ).style.display = "none";
-        };
+
+  const popup = () => {
+    document.getElementById("overlay").style.display = "block";
+    document.getElementById("popupDialog").style.display = "block";
+  };
+  const popdown = () => {
+    document.getElementById("overlay").style.display = "none";
+    document.getElementById("popupDialog").style.display = "none";
+  };
 
   return (
     <div style={{ padding: "1rem" }}>
       <h2>Players in Lobby ({players.length})</h2>
       <ul>
-        {players.map(p => <li key={p.socketId}>{p.name}</li>)}
+        {players.map((p) => (
+          <li key={p.socketId}>{p.name}</li>
+        ))}
       </ul>
 
-			<div>
-				<button onClick={popup}>Create A Local Quickmatch</button>
-				<div id="overlay"></div>
-    			<div id="popupDialog">
-					<QuickmatchPlayerForm onCreate={createLocalGame} />
-          <div style={{position:"relative", left: 250, top: -830}}>
-              <button onClick={popdown}>close</button>
+      <div>
+        <button onClick={popup}>Create A Local Quickmatch</button>
+        <div id="overlay"></div>
+        <div id="popupDialog">
+          <QuickmatchPlayerForm onCreate={createLocalGame} />
+          <div style={{ position: "relative", left: 250, top: -830 }}>
+            <button onClick={popdown}>close</button>
           </div>
-
-				</div>
-			</div>
+        </div>
+      </div>
 
       <h2>Pong Games</h2>
       <ul>
-        {pongGames.map(game => (
+        {pongGames.map((game) => (
           <li
             key={game.id}
             style={{
               cursor: game.status === "waiting" ? "pointer" : "default",
               padding: "0.5rem",
               border: "1px solid #ccc",
-              margin: "0.5rem 0"
+              margin: "0.5rem 0",
             }}
             onClick={() => {
-              if (game.status === "waiting") joinGame(game.id, "pong", "remote");
+              if (game.status === "waiting")
+                joinGame(game.id, "pong", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {game.players.length}/2 players  — {game.status}
+            <strong>Room-{game.id}</strong> — {game.players.length}/2 players —{" "}
+            {game.status}
             <ul>
-              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
+              {game.players.map((p) => (
+                <li key={p.socketId}>{p.name}</li>
+              ))}
             </ul>
           </li>
         ))}
         <ul>
-          <button onClick={createRemotePong}>Create New Remote Pong Game</button> 
+          <button onClick={createRemotePong}>
+            Create New Remote Pong Game
+          </button>
         </ul>
       </ul>
 
       <h2>Key Clash Games</h2>
       <ul>
-        {keyClashGames.map(game => (
+        {keyClashGames.map((game) => (
           <li
             key={game.id}
             style={{
               cursor: game.status === "waiting" ? "pointer" : "default",
               padding: "0.5rem",
               border: "1px solid #ccc",
-              margin: "0.5rem 0"
+              margin: "0.5rem 0",
             }}
             onClick={() => {
-              if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
+              if (game.status === "waiting")
+                joinGame(game.id, "keyclash", "remote");
             }}
           >
-            <strong>Room-{game.id}</strong> — {game.players.length}/2 players — {game.status}
+            <strong>Room-{game.id}</strong> — {game.players.length}/2 players —{" "}
+            {game.status}
             <ul>
-              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
+              {game.players.map((p) => (
+                <li key={p.socketId}>{p.name}</li>
+              ))}
             </ul>
           </li>
-        ))}      
+        ))}
         <ul>
-          <button onClick={createRemoteKeyClash}>Create New Remote Key Clash Game</button> 
-        </ul>                     
+          <button onClick={createRemoteKeyClash}>
+            Create New Remote Key Clash Game
+          </button>
+        </ul>
       </ul>
     </div>
   );

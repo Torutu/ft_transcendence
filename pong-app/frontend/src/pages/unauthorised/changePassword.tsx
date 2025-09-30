@@ -1,55 +1,57 @@
 // frontend/src/pages/changePassword.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import api from '../../utils/api';
-import { LoadingSpinner } from '../../components/general';
+import api from "../../utils/api";
+import { LoadingSpinner } from "../../components/general";
 
 const ChangePasswordPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
-    newpassword: '',
-    confirmpassword: '',
+    newpassword: "",
+    confirmpassword: "",
   });
-  
+
   const [errors, setErrors] = useState({
-    newpassword: '',
-    confirmpassword: '',
-    form: '',
+    newpassword: "",
+    confirmpassword: "",
+    form: "",
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.newpassword !== formData.confirmpassword) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        confirmpassword: 'Passwords do not match'
+        confirmpassword: "Passwords do not match",
       }));
       return;
     }
-    
+
     setIsLoading(true);
     try {
-      await api.post('/auth/change-password', {
-        token: searchParams.get('token'),
-        password: formData.newpassword
+      await api.post("/auth/change-password", {
+        token: searchParams.get("token"),
+        password: formData.newpassword,
       });
-      
+
       // navigate("/login");
-      navigate("/login", { 
-        state: { 
-          message: 'Password successfully changed! Please login with your new password.' 
-        } 
+      navigate("/login", {
+        state: {
+          message:
+            "Password successfully changed! Please login with your new password.",
+        },
       });
-      
     } catch (error: any) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        form: error.response?.data?.message || 'Unable to change password. Please try later.'
+        form:
+          error.response?.data?.message ||
+          "Unable to change password. Please try later.",
       }));
     } finally {
       setIsLoading(false);
@@ -58,10 +60,10 @@ const ChangePasswordPage = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: '', form: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "", form: "" }));
     }
   };
 
@@ -105,7 +107,9 @@ const ChangePasswordPage = () => {
                 onChange={handleChange}
               />
               {errors.newpassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.newpassword}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.newpassword}
+                </p>
               )}
             </div>
 
@@ -120,7 +124,9 @@ const ChangePasswordPage = () => {
                 onChange={handleChange}
               />
               {errors.confirmpassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmpassword}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.confirmpassword}
+                </p>
               )}
             </div>
 
@@ -129,7 +135,11 @@ const ChangePasswordPage = () => {
               disabled={isLoading}
               className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 transition-transform text-white py-2 px-4 rounded-lg flex justify-center items-center shadow-md"
             >
-              {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'Submit'}
+              {isLoading ? (
+                <LoadingSpinner size="sm" color="white" />
+              ) : (
+                "Submit"
+              )}
             </button>
           </form>
         </div>
