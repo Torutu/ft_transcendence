@@ -13,19 +13,19 @@ import {
   Invitation, 
   SentInvitation 
 } from "../../shared/types";
-import { game } from "..";
 
 export default function QuickmatchPage() {
   const socketRef = useRef<Socket | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const name: string | null = user?.username || null;
   const playerId: number | null = user?.id || null;
-
+  const [name, setName] = useState<string | null>(user?.username || null);
+  
    // Lobby state
   const [players, setPlayers] = useState<Player[]>([]);
   const [pongGames, setPongGames] = useState<GameRoom[]>([]);
   const [keyClashGames, setKeyClashGames] = useState<GameRoom[]>([]);
+  const otherPlayers = players.filter(p => p.socketId !== socketRef.current?.id);  
   
   // Invitation state
   const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
@@ -38,6 +38,11 @@ export default function QuickmatchPage() {
   const [selectedGameType, setSelectedGameType] = useState<GameType>("pong");
   const [selectedOpponent, setSelectedOpponent] = useState<OnlineUser | null>(null);
   const [pairedGameType, setPairedGameType] = useState<GameType | null>(null); // Track invited game type
+
+  // Game creation forms
+  const overlay = document.getElementById("overlay");
+  const localForm = document.getElementById("localForm");
+  const remoteForm = document.getElementById("remoteForm");
   
   // Format game type for display
   const formatGameType = (gameType: GameType): string => {
@@ -50,8 +55,6 @@ export default function QuickmatchPage() {
         return gameType;
     }
   };
-
-  const otherPlayers = players.filter(p => p.name !== name);
 
   useEffect(() => {
     socketRef.current = io("/quickmatch", {
@@ -68,6 +71,10 @@ export default function QuickmatchPage() {
         }
       });
     });
+
+    socketRef.current.on("guestName", (guestName) => {
+      setName(guestName);
+    })
 
     socketRef.current.on("lobby_update", (data) => {
       setPlayers(data.players);
@@ -363,7 +370,7 @@ export default function QuickmatchPage() {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [user]);
+  }, [user, name]);
 
   const createRemotePong = () => {
     socketRef.current?.emit("create_game", "pong", "remote");
@@ -695,38 +702,24 @@ export default function QuickmatchPage() {
   }, [selectedOpponent, isPaired, pairedGameType]);
 
 	const showLocalForm = () => {
-		document.getElementById(
-                "overlay"
-            ).style.display = "block";
-            document.getElementById(
-                "localForm"
-            ).style.display = "block";
+		if (overlay) overlay.style.display = "block";
+    if (localForm) localForm.style.display = "block";
   };
+
 	const closeLocalForm = () => {
-            document.getElementById(
-                "overlay"
-            ).style.display = "none";
-            document.getElementById(
-                "localForm"
-            ).style.display = "none";
-        };
+    if (overlay) overlay.style.display = "none";
+    if (localForm) localForm.style.display = "none";
+  };
 
   const showRemoteForm = () => {
-          document.getElementById(
-                      "overlay"
-                  ).style.display = "block";
-                  document.getElementById(
-                      "remoteForm"
-                  ).style.display = "block";
-        };
-        const closeRemoteForm = () => {
-                  document.getElementById(
-                      "overlay"
-                  ).style.display = "none";
-                  document.getElementById(
-                      "remoteForm"
-                  ).style.display = "none";
-              };
+    if (overlay) overlay.style.display = "block";
+    if (remoteForm) remoteForm.style.display = "block";
+  };
+
+  const closeRemoteForm = () => {
+    if (overlay) overlay.style.display = "none";
+    if (remoteForm) remoteForm.style.display = "none";
+  };
 
   return (
     
@@ -740,100 +733,133 @@ export default function QuickmatchPage() {
       )}
 
       {/* Pending Invitations Badge */}
-      {receivedInvitations.length > 0 && (
-        <div className="fixed top-160 right-30 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-40">
+      {/* {receivedInvitations.length > 0 && (
+        <div className="fixed top-42 right-42 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-40">
           {receivedInvitations.length}
         </div>
-      )}
+      )} */}
 
-      <h2>Players in Lobby ({players.length})</h2>
+      {/* <h2>Players in Lobby ({players.length})</h2>
       <ul>
         {players.map(p => <li key={p.socketId}>{p.name}</li>)}
-      </ul>
+      </ul> */}
 
-			<div>
-				<button onClick={showLocalForm}>Create A Local Quickmatch</button>
-				<div id="overlay"></div>
-    			<div id="localForm">
-					<QuickmatchPlayerForm onCreate={createLocalGame} closeForm={closeLocalForm} />
-				</div>
-			</div>
-
-			<div>
-				<button onClick={showRemoteForm}>Create A Remote Quickmatch</button>
-				<div id="overlay"></div>
-    			<div id="remoteForm">
-            { socketRef.current ? (
+      { name ? (
+        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
+          <button onClick={showLocalForm}>Create A Local Quickmatch</button>
+          <div id="overlay"></div>
+            <div id="localForm">
+              <QuickmatchPlayerForm onCreate={createLocalGame} 
+                                  closeForm={closeLocalForm}
+                                  username={name} />
+          </div>
+        </div>) : <></>
+      }
+      { socketRef.current ? (      
+        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
+          <button onClick={showRemoteForm}>Create A Remote Quickmatch</button>
+          <div id="overlay"></div>
+            <div id="remoteForm">
               <QuickmatchRemoteForm socket={socketRef.current}
-                                    name={name}
-                                    selectedOpponent={selectedOpponent}
-                                    isPaired={isPaired} 
-                                    pairedGameType={pairedGameType}
-                                    formatGameType={formatGameType}
-                                    startSpecificGame={startSpecificGame}
-                                    getValidationMessage={getValidationMessage}
-                                    otherPlayers={otherPlayers}
-                                    sentInvitations={sentInvitations}
-                                    receivedInvitations={receivedInvitations}
-                                    invitationTimers={invitationTimers}
-                                    setSelectedOpponent={setSelectedOpponent}
-                                    respondToInvitation={respondToInvitation}
-                                    cancelInvitation={cancelInvitation}
-                                    setPairedGameType={setPairedGameType}
-                                    setInvitationMessage={setInvitationMessage}
-                                    setShowInvitationModal={setShowInvitationModal}
-                                    closeForm={closeRemoteForm} />
-               ) : (<p></p>)
-            }
-				</div>
-			</div>      
+                                      name={name}
+                                      selectedOpponent={selectedOpponent}
+                                      isPaired={isPaired} 
+                                      pairedGameType={pairedGameType}
+                                      formatGameType={formatGameType}
+                                      startSpecificGame={startSpecificGame}
+                                      getValidationMessage={getValidationMessage}
+                                      otherPlayers={otherPlayers}
+                                      sentInvitations={sentInvitations}
+                                      receivedInvitations={receivedInvitations}
+                                      invitationTimers={invitationTimers}
+                                      setSelectedOpponent={setSelectedOpponent}
+                                      respondToInvitation={respondToInvitation}
+                                      cancelInvitation={cancelInvitation}
+                                      setPairedGameType={setPairedGameType}
+                                      setInvitationMessage={setInvitationMessage}
+                                      setShowInvitationModal={setShowInvitationModal}
+                                      closeForm={closeRemoteForm} 
+                                      showInvitationModal={showInvitationModal}
+                                      invitationMessage={invitationMessage} />
+            </div>
+        </div>      
+        ) : (<p></p>)
+      }
 
-      <h2>Pong Games</h2>
-      <ul>
-        {pongGames.map(game => (
-          <li
-            key={game.id}
-            style={{
-              cursor: game.status === "waiting" ? "pointer" : "default",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              margin: "0.5rem 0"
-            }}
-            onClick={() => {
-              if (game.status === "waiting") joinGame(game.id, "pong", "remote");
-            }}
-          >
-            <strong>Room-{game.id}</strong> — {game.players.length}/2 players  — {game.status}
-            <ul>
-              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
-            </ul>
-          </li>
-        ))}
-      </ul>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h3 className="text-xl font-semibold mb-4">🏓 Quick Join Pong Games</h3>
+              <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
+              {pongGames.length > 0 ? (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {pongGames.map(game => (
+                    <div
+                      key={game.id}
+                      onClick={() => {
+                        if (game.status === "waiting") joinGame(game.id, "pong", "remote");
+                      }}
+                      className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
+                          ? "bg-green-900 border-green-600 hover:bg-green-800"
+                          : "bg-gray-700 border-gray-600"
+                        }`}
+                    >
+                      <div className="text-sm font-medium">Room-{game.id}</div>
+                      <div className="text-xs text-gray-400">
+                        {game.players.length}/2 players • {game.status}
+                      </div>
+                      {game.players.length > 0 && (
+                        <div className="text-xs mt-1">
+                          {game.players.map(p => p.name).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div> ) : (
+                    <div className="text-center text-gray-400 py-8">
+                      <p className="text-4xl mb-2">👻</p>
+                      <p>No active games</p>
+                      </div> )
+              }
+            </div>
+          
+            <div className="bg-gray-800 rounded-xl p-6">
+              <h3 className="text-xl font-semibold mb-4">⌨️ Quick Join Key Clash Games</h3>
+              <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
+              { keyClashGames.length > 0 ? (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {keyClashGames.map(game => (
+                    <div
+                      key={game.id}
+                      onClick={() => {
+                        if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
+                      }}
+                      className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
+                          ? "bg-purple-900 border-purple-600 hover:bg-purple-800"
+                          : "bg-gray-700 border-gray-600"
+                        }`}
+                    >
+                      <div className="text-sm font-medium">Room-{game.id}</div>
+                      <div className="text-xs text-gray-400">
+                        {game.players.length}/2 players • {game.status}
+                      </div>
+                      {game.players.length > 0 && (
+                        <div className="text-xs mt-1">
+                          {game.players.map(p => p.name).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div> ) : (
+                  <div className="text-center text-gray-400 py-8">
+                  <p className="text-4xl mb-2">👻</p>
+                  <p>No active games</p>
+                  </div> )
+              }
+            </div>
+        </div>
 
-      <h2>Key Clash Games</h2>
-      <ul>
-        {keyClashGames.map(game => (
-          <li
-            key={game.id}
-            style={{
-              cursor: game.status === "waiting" ? "pointer" : "default",
-              padding: "0.5rem",
-              border: "1px solid #ccc",
-              margin: "0.5rem 0"
-            }}
-            onClick={() => {
-              if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
-            }}
-          >
-            <strong>Room-{game.id}</strong> — {game.players.length}/2 players — {game.status}
-            <ul>
-              {game.players.map(p => <li key={p.socketId}>{p.name}</li>)}
-            </ul>
-          </li>
-        ))}                  
-      </ul>
-      {/* Right Column - Users in lobby */}
+
+      {/* Users in lobby */}
       <div className="w-1/3">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg sticky top-6">
             <h2 className="text-2xl font-bold mb-4 text-center">🌐 Players in Lobby</h2>

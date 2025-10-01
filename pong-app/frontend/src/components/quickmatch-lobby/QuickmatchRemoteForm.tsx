@@ -1,9 +1,5 @@
-// frontend/src/pages/authorised/quickmatch-remote.tsx
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+// frontend/src/components/quickmatch-lobby/QuickmatchRemoteForm.tsx
 import { Socket } from "socket.io-client";
-import { useAuth } from "../../contexts/AuthContext";
-import { cleanupGameStorage } from "../../shared/utils";
 import { 
   GameType, 
   Player, 
@@ -31,16 +27,19 @@ interface QuickmatchRemoteFormProps {
   setPairedGameType: React.Dispatch<React.SetStateAction<GameType | null>>;
   setInvitationMessage: React.Dispatch<React.SetStateAction<string>>;
   setShowInvitationModal: React.Dispatch<React.SetStateAction<boolean>>;
+  showInvitationModal: boolean;
+  invitationMessage: string;
   closeForm: () => void;
   socket: Socket | null;
 }
 
 export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, isPaired, pairedGameType, 
-                                                formatGameType, startSpecificGame,
+                                                formatGameType, startSpecificGame, showInvitationModal,
                                                 getValidationMessage, otherPlayers, sentInvitations,
                                                 receivedInvitations, invitationTimers, setSelectedOpponent,
                                                 respondToInvitation, cancelInvitation, setPairedGameType,
-                                                setInvitationMessage, setShowInvitationModal, closeForm 
+                                                setInvitationMessage, setShowInvitationModal, closeForm,
+                                                invitationMessage 
                                               }: QuickmatchRemoteFormProps) 
 {
   return (
@@ -52,6 +51,20 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
       >
         Close
       </button>
+
+      {/* Invitation Notification Modal */}
+      {showInvitationModal && (
+        <div className="fixed top-40 right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
+          <p>{invitationMessage}</p>
+        </div>
+      )}
+
+      {/* Pending Invitations Badge */}
+      {/* {receivedInvitations.length > 0 && (
+        <div className="fixed top-42 right-42 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-40">
+          {receivedInvitations.length}
+        </div>
+      )} */}
 
       <h1 className="text-4xl font-bold text-center mb-6">
         🌐 Remote Quick Match Setup
@@ -159,75 +172,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
               </p>
             </div>
           </div>
-
-          {/* Quick Join Games Section
-          {(pongGames.length > 0 || keyClashGames.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {pongGames.length > 0 && (
-                <div className="bg-gray-800 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold mb-4">🏓 Quick Join Pong Games</h3>
-                  <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {pongGames.map(game => (
-                      <div
-                        key={game.id}
-                        onClick={() => {
-                          if (game.status === "waiting") joinGame(game.id, "pong", "remote");
-                        }}
-                        className={`p-3 rounded border cursor-pointer ${
-                          game.status === "waiting" 
-                            ? "bg-green-900 border-green-600 hover:bg-green-800" 
-                            : "bg-gray-700 border-gray-600"
-                        }`}
-                      >
-                        <div className="text-sm font-medium">Room-{game.id}</div>
-                        <div className="text-xs text-gray-400">
-                          {game.players.length}/2 players • {game.status}
-                        </div>
-                        {game.players.length > 0 && (
-                          <div className="text-xs mt-1">
-                            {game.players.map(p => p.name).join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {keyClashGames.length > 0 && (
-                <div className="bg-gray-800 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold mb-4">⌨️ Quick Join Key Clash Games</h3>
-                  <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {keyClashGames.map(game => (
-                      <div
-                        key={game.id}
-                        onClick={() => {
-                          if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
-                        }}
-                        className={`p-3 rounded border cursor-pointer ${
-                          game.status === "waiting" 
-                            ? "bg-purple-900 border-purple-600 hover:bg-purple-800" 
-                            : "bg-gray-700 border-gray-600"
-                        }`}
-                      >
-                        <div className="text-sm font-medium">Room-{game.id}</div>
-                        <div className="text-xs text-gray-400">
-                          {game.players.length}/2 players • {game.status}
-                        </div>
-                        {game.players.length > 0 && (
-                          <div className="text-xs mt-1">
-                            {game.players.map(p => p.name).join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )} */}
         </div>
 
         {/* Right Column - Users in lobby */}

@@ -1,7 +1,5 @@
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useEffect, useState, useCallback } from "react";
 import { 
   validatePlayerName, 
   cleanupGameStorage 
@@ -9,15 +7,12 @@ import {
 import { GameType } from "../../shared/types";
 
 interface QuickmatchPlayerFormProps {
+  username: string | null;
   onCreate: (type: GameType) => void;
   closeForm: () => void;
 }
 
-export default function QuickmatchPlayerForm({ onCreate, closeForm }: QuickmatchPlayerFormProps) {
-  const location = useLocation();
-  const { user } = useAuth();
-  
-  const loggedInUsername = user?.username || "";
+export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: QuickmatchPlayerFormProps) {
   // Guest player state
   const [guestName, setGuestName] = useState(() => {
     const saved = localStorage.getItem("quickmatch_guestName");
@@ -55,14 +50,14 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
   // Validation
   const canStartGame = useCallback(() => {
     const trimmedGuestName = guestName.trim();
-    const trimmedLoggedInUsername = loggedInUsername.trim();
+    const trimmedUsername = username?.trim();
     
     return (
       trimmedGuestName.length > 0 && 
       validatePlayerName(trimmedGuestName) &&
-      trimmedGuestName.toLowerCase() !== trimmedLoggedInUsername.toLowerCase()
+      trimmedGuestName.toLowerCase() !== trimmedUsername?.toLowerCase()
     );
-  }, [guestName, loggedInUsername]);
+  }, [guestName, username]);
 
   // Start game
   const startSpecificGame = useCallback((gameType: GameType) => {
@@ -81,7 +76,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
         return;
       }
       
-      if (trimmedGuestName.toLowerCase() === loggedInUsername.toLowerCase()) {
+      if (trimmedGuestName.toLowerCase() === username?.toLowerCase()) {
         alert("Player 2 username must be different from your username");
         return;
       }  
@@ -90,7 +85,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
 
     console.log("creating", gameType);
     onCreate(gameType);
-  }, [canStartGame, guestName, loggedInUsername]);
+  }, [canStartGame, guestName, username]);
 
   // Validation message component
   const getValidationMessage = useCallback(() => {
@@ -99,9 +94,9 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
   
     if (!trimmedGuestName) return "Enter a username for Player 2 (Guest)";
     if (!validatePlayerName(trimmedGuestName)) return "Player 2 username must be valid (letters, numbers, spaces, _, - only, max 20 chars)";
-    if (trimmedGuestName.toLowerCase() === loggedInUsername.toLowerCase()) return "Player 2 username must be different from yours";
+    if (trimmedGuestName.toLowerCase() === username?.toLowerCase()) return "Player 2 username must be different from yours";
     return "✅ Ready to start! Choose your game above";
-  }, [guestName, loggedInUsername]);
+  }, [guestName, username]);
 
   return (
     <div className="w-full min-h-screen text-white p-8 flex flex-col items-center">
@@ -127,7 +122,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
             <div className="bg-gray-700 p-6 w-full lg:w-1/2 rounded-xl shadow-lg flex flex-col items-center">
               <h3 className="text-2xl font-bold mb-2">👤 Player 1 (You)</h3>
               <p className="mb-4 text-lg">
-                Username: <strong>{loggedInUsername}</strong>
+                Username: <strong>{username}</strong>
               </p>
             </div>
 
@@ -154,12 +149,12 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm }: Quickmatch
                       ❌ Only letters, numbers, spaces, underscores, and hyphens allowed (max 20 chars)
                     </p>
                   )}
-                  {guestName.trim() && validatePlayerName(guestName.trim()) && guestName.trim().toLowerCase() === loggedInUsername.toLowerCase() && (
+                  {guestName.trim() && validatePlayerName(guestName.trim()) && guestName.trim().toLowerCase() === username?.toLowerCase() && (
                     <p className="text-red-400">
                       ❌ Must be different from your username
                     </p>
                   )}
-                  {guestName.trim() && validatePlayerName(guestName.trim()) && guestName.trim().toLowerCase() !== loggedInUsername.toLowerCase() && (
+                  {guestName.trim() && validatePlayerName(guestName.trim()) && guestName.trim().toLowerCase() !== username?.toLowerCase() && (
                     <p className="text-green-400">
                       ✅ Valid username!
                     </p>

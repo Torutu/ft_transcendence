@@ -36,8 +36,10 @@ export function setupLobby(io: Server) {
           return callback({ error: "You're already in the lobby" });
         if (name)
           socket.data.name = name
-        else
+        else {
           socket.data.name = `Guest-${socket.id.slice(0, 3)}`;
+          socket.emit("guestName", socket.data.name);
+        }
 
         playersOnline.push({ playerId: playerId, socketId: socket.id, name: socket.data.name, side: null });
 

@@ -24,6 +24,10 @@ export default function TournamentPage() {
 	let name: string | null = null;
 	let playerId: number | null = null;
 
+	// Game creation forms
+	const overlay = document.getElementById("overlay");
+	const popupDialog = document.getElementById("popupDialog");
+
 	useEffect(() => {
 		socketRef.current = io("/tournament", {
 			path: "/socket.io",
@@ -148,21 +152,13 @@ export default function TournamentPage() {
 	};
 
 	const popup = () => {
-		document.getElementById(
-                "overlay"
-            ).style.display = "block";
-            document.getElementById(
-                "popupDialog"
-            ).style.display = "block";
-        };
+		if (overlay) overlay.style.display = "block";
+    	if (popupDialog) popupDialog.style.display = "block";
+    };
 	const popdown = () => {
-            document.getElementById(
-                "overlay"
-            ).style.display = "none";
-            document.getElementById(
-                "popupDialog"
-            ).style.display = "none";
-        };
+		if (overlay) overlay.style.display = "none";
+    	if (popupDialog) popupDialog.style.display = "none";
+    };
 
 	return (
 		<div style={{ padding: "1rem" }}>
