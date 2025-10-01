@@ -744,17 +744,18 @@ export default function QuickmatchPage() {
         {players.map(p => <li key={p.socketId}>{p.name}</li>)}
       </ul> */}
 
-      { name ? (
-        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
+
+        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
           <button onClick={showLocalForm}>Create A Local Quickmatch</button>
+        </div>  
           <div id="overlay"></div>
             <div id="localForm">
               <QuickmatchPlayerForm onCreate={createLocalGame} 
                                   closeForm={closeLocalForm}
                                   username={name} />
           </div>
-        </div>) : <></>
-      }
+
+    
       { socketRef.current ? (      
         <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
           <button onClick={showRemoteForm}>Create A Remote Quickmatch</button>

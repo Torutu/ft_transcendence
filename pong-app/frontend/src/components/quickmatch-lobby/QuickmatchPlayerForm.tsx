@@ -1,10 +1,16 @@
 
 import { useEffect, useState, useCallback } from "react";
-import { 
+import {
   validatePlayerName, 
-  cleanupGameStorage 
+  cleanupGameStorage,
+  getStoredAvatarData, 
+  saveAvatarData 
 } from "../../shared/utils";
-import { GameType } from "../../shared/types";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Avatar, AvatarData, GameType } from "../../shared/types";
+import { getAvatars } from "../../utils/lobbyApi";
+import AvatarPage from "../../shared/avatar";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface QuickmatchPlayerFormProps {
   username: string | null;
@@ -13,11 +19,30 @@ interface QuickmatchPlayerFormProps {
 }
 
 export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: QuickmatchPlayerFormProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Avatar selection form
+  const avatarForm = document.getElementById("avatarForm");
+  const [target, setTarget] = useState("user");
+
+  const [isInitialized, setIsInitialized] = useState(false);
   // Guest player state
   const [guestName, setGuestName] = useState(() => {
     const saved = localStorage.getItem("quickmatch_guestName");
     return saved || "";
   });
+
+  // Avatar state
+  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => 
+    getStoredAvatarData("userAvatar")
+  );
+  
+  const [guestAvatar, setGuestAvatar] = useState<AvatarData | null>(() => 
+    getStoredAvatarData("quickmatch_guestAvatar")
+  );
+
+  const [availableAvatars, setAvailableAvatars] = useState<Avatar[]>([]);
 
   // Guest name change handler
   const handleGuestNameChange = useCallback((newName: string) => {
@@ -38,6 +63,10 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
     // Clear guest name
     setGuestName("");
     localStorage.removeItem("quickmatch_guestName");
+
+    // Clear guest avatar
+    setGuestAvatar(null);
+    localStorage.removeItem("quickmatch_guestAvatar");
     
     console.log("✅ Guest player data cleared successfully");
   }, []);
@@ -46,6 +75,31 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
   useEffect(() => {
     cleanupGameStorage();
   }, []);
+
+  // Initialize avatars
+  useEffect(() => {
+    if (isInitialized || !user) return;
+    
+    const loadAvatars = async () => {
+      try {
+        const avatars = await getAvatars();
+        setAvailableAvatars(avatars);
+        
+        if (!userAvatar && avatars.length > 0) {
+          const defaultAvatar = { name: avatars[0].id, image: avatars[0].imageUrl };
+          setUserAvatar(defaultAvatar);
+          saveAvatarData("userAvatar", defaultAvatar);
+        }
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error("Failed to load avatars:", error);
+        setIsInitialized(true);
+      }
+    };
+    
+    loadAvatars();
+  }, [isInitialized, userAvatar]);
 
   // Validation
   const canStartGame = useCallback(() => {
@@ -98,6 +152,16 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
     return "✅ Ready to start! Choose your game above";
   }, [guestName, username]);
 
+
+	const showAvatarForm = (target: "user" | "guest") => {
+    setTarget(target);
+    if (avatarForm) avatarForm.style.display = "block";
+  };
+
+	const closeAvatarForm = () => {
+    if (avatarForm) avatarForm.style.display = "none";
+  };
+  
   return (
     <div className="w-full min-h-screen text-white p-8 flex flex-col items-center">
       {/* Close Button */}
@@ -108,6 +172,16 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
         Close
       </button>
 
+      { user && 
+        <div id="avatarForm">
+          <AvatarPage closeForm={closeAvatarForm}
+                      target={target}
+                      setUserAvatar={setUserAvatar}
+                      setGuestAvatar={setGuestAvatar}
+                      saveAvatarData={saveAvatarData}
+                      />
+        </div>
+      }
       <h1 className="text-4xl font-bold text-center mb-6">
         🏠 Local Quick Match Setup
       </h1>
@@ -124,6 +198,26 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
               <p className="mb-4 text-lg">
                 Username: <strong>{username}</strong>
               </p>
+              {user && userAvatar ? (
+                  <>
+                    <img
+                      src={userAvatar.image}
+                      alt={userAvatar.name}
+                      className="w-32 h-32 rounded-full border-4 border-blue-400 mb-2 object-cover"
+                    />
+                    <p className="capitalize mb-4">{userAvatar.name}</p>
+                  </>
+                ) : ( user &&
+                  <p className="mb-4 italic text-gray-400">No avatar selected</p>
+              )}
+              {user && (
+                <button
+                  onClick={() => showAvatarForm("user")}
+                  className={"px-4 py-2 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700"}
+                >
+                  Choose Avatar
+                </button>
+                )}  
             </div>
 
             {/* VS Separator */}
@@ -160,7 +254,26 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
                     </p>
                   )}
                 </div>
-            </div>
+                  {user && guestAvatar ? (
+                  <>
+                    <img
+                      src={guestAvatar.image}
+                      alt={guestAvatar.name}
+                      className="w-32 h-32 rounded-full border-4 border-pink-400 mb-2 object-cover"
+                    />
+                    <p className="capitalize mb-4">{guestAvatar.name}</p>
+                  </>
+                ) : ( user &&
+                  <p className="mb-4 italic text-gray-400">No avatar selected</p>
+                )}
+                {user &&
+                <button
+                  onClick={() => showAvatarForm("guest")}
+                  className={"px-4 py-2 rounded-lg font-semibold bg-pink-600 hover:bg-pink-700"}
+                >
+                  Choose Avatar
+                </button>
+                }
           </div>
         </div>
 
@@ -206,6 +319,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
                 {getValidationMessage()}
               </p>
             </div>
+          </div>            
         </div>
       </div>
     </div>

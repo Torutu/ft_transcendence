@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAvatars } from "../utils/lobbyApi";
+import { AvatarData } from "./types";
 
 interface Avatar {
   id: string;
@@ -10,24 +11,25 @@ interface Avatar {
   description: string;
 }
 
-export const AvatarPage = () => {
-  const navigate = useNavigate();
+interface AvatarPageProps {
+  closeForm: () => void;
+  target: string;
+  setUserAvatar: React.Dispatch<any>
+  setGuestAvatar: React.Dispatch<any>
+  saveAvatarData: (key: string, avatar: AvatarData | null) => void
+}
+
+export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, saveAvatarData}: AvatarPageProps) => {
   const location = useLocation();
 
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const state = location.state as {
-    target: "user" | "guest";
-    guestIndex?: number;
-    returnTo?: string;
-    fromQuickMatch?: boolean;
-  };
 
-  const target = state?.target || "user";
-  const guestIndex = state?.guestIndex ?? -1;
-  const returnTo = state?.returnTo || "/quickmatch";
+  // const target = state?.target || "user";
+  // const guestIndex = state?.guestIndex ?? -1;
+  // const returnTo = state?.returnTo || "/quickmatch";
 
   // Load avatars from backend
   useEffect(() => {
@@ -57,8 +59,8 @@ export const AvatarPage = () => {
   }
 
   // Check guest avatar (support both quickmatch and regular guest)
-  const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
-  const guestAvatar = JSON.parse(localStorage.getItem(guestAvatarKey) || "null");
+  // const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
+  const guestAvatar = JSON.parse(localStorage.getItem("guestAvatar") || "null");
   if (guestAvatar?.name && !(target === "guest")) {
     selectedAvatars.add(guestAvatar.name);
   }
@@ -70,23 +72,37 @@ export const AvatarPage = () => {
       "[]"
   );
   guests.forEach((g: any, i: number) => {
-    if (g?.avatar?.name && !(target === "guest" && i === guestIndex)) {
+    if (g?.avatar?.name && !(target === "guest")) {
       selectedAvatars.add(g.avatar.name);
     }
   });
 
   const handleSelect = (avatar: Avatar) => {
     const selectedAvatar = { name: avatar.id, image: avatar.imageUrl };
-
-    navigate(returnTo, {
-      state: {
-        selectedAvatar,
-        target,
-        guestIndex,
-        fromAvatar: true,
-        fromQuickMatch: state?.fromQuickMatch,
-      },
-    });
+    if (selectedAvatar && target) {
+      const avatarData = {
+        name: selectedAvatar.name,
+        image: selectedAvatar.image
+      };
+      
+      if (target === "user") {
+        setUserAvatar(avatarData);
+        saveAvatarData("userAvatar", avatarData);
+      } else {
+        setGuestAvatar(avatarData);
+        saveAvatarData("quickmatch_guestAvatar", avatarData);
+      }
+    }
+    closeForm();
+    // navigate(returnTo, {
+    //   state: {
+    //     selectedAvatar,
+    //     target,
+    //     guestIndex,
+    //     fromAvatar: true,
+    //     fromQuickMatch: state?.fromQuickMatch,
+    //   },
+    // });
   };
 
   if (loading) {
@@ -107,7 +123,7 @@ export const AvatarPage = () => {
       >
         <p className="text-red-400 text-xl mb-4">{error}</p>
         <button
-          onClick={() => navigate(returnTo)}
+          onClick={() => closeForm()}
           className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold"
         >
           Go Back
@@ -122,7 +138,7 @@ export const AvatarPage = () => {
      
     >
       <button
-        onClick={() => navigate(returnTo)}
+        onClick={() => closeForm()}
         className="absolute top-6 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
       >
         Back
