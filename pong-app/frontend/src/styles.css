@@ -20,18 +20,20 @@ html, body {
   /* overflow-y: auto; NEED TO FIX THE PONG GAME*/ 
 }
 
-#avatarForm {
+#avatarForm, #remoteAvatarForm {
   display: none;
-  position: inherit;
+  position: absolute;
+  top: 10;
+  left: 10;
   z-index: 1000;
   overflow: auto;
 }
 
 #localForm, #remoteForm, #popupDialog {
 	display: none;
-	position: sticky;
-	/* top: 10%;
-	left: 10%; */
+	position: relative;
+	top: 10;
+	left: 10;
 	padding: 20px;
 	z-index: 1000;
   overflow: auto;

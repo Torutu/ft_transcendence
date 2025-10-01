@@ -4,14 +4,15 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
 import QuickmatchPlayerForm from "../../components/quickmatch-lobby/QuickmatchPlayerForm";
 import QuickmatchRemoteForm from "../../components/quickmatch-lobby/QuickmatchRemoteForm";
-import { cleanupGameStorage } from "../../shared/utils";
+import { cleanupGameStorage, getStoredAvatarData } from "../../shared/utils";
 import { 
   GameType, 
   Player, 
   OnlineUser, 
   GameRoom, 
   Invitation, 
-  SentInvitation 
+  SentInvitation,
+  AvatarData
 } from "../../shared/types";
 
 export default function QuickmatchPage() {
@@ -44,6 +45,14 @@ export default function QuickmatchPage() {
   const localForm = document.getElementById("localForm");
   const remoteForm = document.getElementById("remoteForm");
   
+  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => 
+    getStoredAvatarData("userAvatar")
+  );
+  
+  const [opponentAvatar, setOpponentAvatar] = useState<AvatarData | null>(() => 
+    getStoredAvatarData("opponentAvatar")
+  );
+
   // Format game type for display
   const formatGameType = (gameType: GameType): string => {
     switch (gameType) {
@@ -251,6 +260,8 @@ export default function QuickmatchPage() {
           userId: gameData.senderData.playerId,
           guest: gameData.receiverData.name,
           guestId: gameData.receiverData.playerId,
+          userAvatar: userAvatar || { name: "default", image: "/avatars/av1.jpeg" },
+          guestAvatar: { name: "default", image: "/avatars/av2.jpeg" }, // Default avatar for opponent
           gameType: gameData.gameType,
           mode: gameData.mode,
           type: gameData.type,
@@ -265,6 +276,8 @@ export default function QuickmatchPage() {
           userId: gameData.receiverData.playerId,
           guest: gameData.senderData.name,
           guestId: gameData.senderData.playerId,
+          userAvatar: userAvatar || { name: "default", image: "/avatars/av1.jpeg" },
+          guestAvatar: { name: "default", image: "/avatars/av1.jpeg" }, // Default avatar for opponent
           gameType: gameData.gameType,
           mode: gameData.mode,
           type: gameData.type,
@@ -370,7 +383,7 @@ export default function QuickmatchPage() {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [user, name]);
+  }, [user, name, userAvatar]);
 
   const createRemotePong = () => {
     socketRef.current?.emit("create_game", "pong", "remote");
@@ -747,13 +760,14 @@ export default function QuickmatchPage() {
 
         <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
           <button onClick={showLocalForm}>Create A Local Quickmatch</button>
-        </div>  
+ 
           <div id="overlay"></div>
             <div id="localForm">
               <QuickmatchPlayerForm onCreate={createLocalGame} 
                                   closeForm={closeLocalForm}
                                   username={name} />
           </div>
+        </div>
 
     
       { socketRef.current ? (      

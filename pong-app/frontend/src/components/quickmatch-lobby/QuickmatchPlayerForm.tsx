@@ -6,7 +6,6 @@ import {
   getStoredAvatarData, 
   saveAvatarData 
 } from "../../shared/utils";
-import { useNavigate, useLocation } from "react-router-dom";
 import { Avatar, AvatarData, GameType } from "../../shared/types";
 import { getAvatars } from "../../utils/lobbyApi";
 import AvatarPage from "../../shared/avatar";
@@ -20,8 +19,6 @@ interface QuickmatchPlayerFormProps {
 
 export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: QuickmatchPlayerFormProps) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   // Avatar selection form
   const avatarForm = document.getElementById("avatarForm");
   const [target, setTarget] = useState("user");
