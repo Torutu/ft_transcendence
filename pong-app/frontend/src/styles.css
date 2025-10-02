@@ -12,12 +12,11 @@ body {
   padding: 0;
   height: 100vh;
   width: 100vw;
-  /* overflow: hidden; */
 }
 
 html, body {
   height: 100%;
-  /* overflow-y: auto; NEED TO FIX THE PONG GAME*/ 
+  overflow-y: auto;
 }
 
 #avatarForm, #remoteAvatarForm {
@@ -132,12 +131,12 @@ body {
   text-align: center;
 }
 
-.prompt {
-  font-size: 48px;
+#prompt1, #prompt2 {
+  font-size: 50px;
   margin: 20px 0;
   color: #ffffff;
   transform: scale(0.9);
-  opacity: 0;
+  opacity: 1;
   transition: all 0.2s ease-out;
 }
 
@@ -146,7 +145,7 @@ body {
   opacity: 1;
 }
 
-.score {
+.score1, .score2 {
   font-size: 20px;
   color: #cccccc;
 }

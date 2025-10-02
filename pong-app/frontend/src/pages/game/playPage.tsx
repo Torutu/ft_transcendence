@@ -44,7 +44,7 @@ const PlayPage: React.FC = () => {
   }, [gameId, mode, game, type, location]);
 
   if (game === "pong")
-    return <div ref={containerRef} className="flex-grow relative w-full h-full bg-black" />;
+    return <div ref={containerRef} className="flex-grow relative w-full h-100vh overflow-hidden bg-black" />;
   else if (game === "keyclash")
     return (
       <div ref={containerRef} className="flex-grow relative w-full h-full bg-black">
