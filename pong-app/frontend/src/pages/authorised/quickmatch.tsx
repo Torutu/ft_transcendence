@@ -4,7 +4,6 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
 import QuickmatchPlayerForm from "../../components/quickmatch-lobby/QuickmatchPlayerForm";
 import QuickmatchRemoteForm from "../../components/quickmatch-lobby/QuickmatchRemoteForm";
-import { cleanupGameStorage, getStoredAvatarData } from "../../shared/utils";
 import { 
   GameType, 
   Player, 
@@ -45,13 +44,30 @@ export default function QuickmatchPage() {
   const localForm = document.getElementById("localForm");
   const remoteForm = document.getElementById("remoteForm");
   
-  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => 
-    getStoredAvatarData("userAvatar")
-  );
+  // Avatar state
+  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => {
+    const saved = localStorage.getItem("userAvatar");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   
-  const [opponentAvatar, setOpponentAvatar] = useState<AvatarData | null>(() => 
-    getStoredAvatarData("opponentAvatar")
-  );
+  const [opponentAvatar, setOpponentAvatar] = useState<AvatarData | null>(() => {
+    const saved = localStorage.getItem("quickmatch_opponentAvatar");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
 
   // Format game type for display
   const formatGameType = (gameType: GameType): string => {
@@ -524,10 +540,8 @@ export default function QuickmatchPage() {
   // }, [invitationTimers]);
 
 
-  // Cleanup on mount and unmount
+  // Cleanup  any stale pairing data on mount
   useEffect(() => {
-    cleanupGameStorage();
-    // Also cleanup any stale pairing data on mount
     const pairingData = localStorage.getItem("pairingData");
     if (pairingData) {
       try {
@@ -737,8 +751,6 @@ export default function QuickmatchPage() {
   return (
     
     <div style={{ padding: "1rem" }}>
-
-      {/* Invitation Notification Modal */}
       {showInvitationModal && (
         <div className="fixed top-40 right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
           <p>{invitationMessage}</p>
@@ -752,24 +764,17 @@ export default function QuickmatchPage() {
         </div>
       )} */}
 
-      {/* <h2>Players in Lobby ({players.length})</h2>
-      <ul>
-        {players.map(p => <li key={p.socketId}>{p.name}</li>)}
-      </ul> */}
-
-
-        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
-          <button onClick={showLocalForm}>Create A Local Quickmatch</button>
- 
-          <div id="overlay"></div>
-            <div id="localForm">
-              <QuickmatchPlayerForm onCreate={createLocalGame} 
+      <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
+        <button onClick={showLocalForm}>Create A Local Quickmatch</button>
+          
+        <div id="overlay"></div>
+          <div id="localForm">
+            <QuickmatchPlayerForm onCreate={createLocalGame} 
                                   closeForm={closeLocalForm}
                                   username={name} />
           </div>
         </div>
 
-    
       { socketRef.current ? (      
         <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
           <button onClick={showRemoteForm}>Create A Remote Quickmatch</button>
@@ -801,93 +806,88 @@ export default function QuickmatchPage() {
         ) : (<p></p>)
       }
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-gray-800 rounded-xl p-6">
-              <h3 className="text-xl font-semibold mb-4">🏓 Quick Join Pong Games</h3>
-              <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
-              {pongGames.length > 0 ? (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {pongGames.map(game => (
-                    <div
-                      key={game.id}
-                      onClick={() => {
-                        if (game.status === "waiting") joinGame(game.id, "pong", "remote");
-                      }}
-                      className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
-                          ? "bg-green-900 border-green-600 hover:bg-green-800"
-                          : "bg-gray-700 border-gray-600"
-                        }`}
-                    >
-                      <div className="text-sm font-medium">Room-{game.id}</div>
-                      <div className="text-xs text-gray-400">
-                        {game.players.length}/2 players • {game.status}
-                      </div>
-                      {game.players.length > 0 && (
-                        <div className="text-xs mt-1">
-                          {game.players.map(p => p.name).join(", ")}
-                        </div>
-                      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h3 className="text-xl font-semibold mb-4">🏓 Quick Join Pong Games</h3>
+          <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
+          {pongGames.length > 0 ? (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {pongGames.map(game => (
+                <div
+                  key={game.id}
+                  onClick={() => { if (game.status === "waiting") joinGame(game.id, "pong", "remote");}}
+                  className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
+                    ? "bg-green-900 border-green-600 hover:bg-green-800"
+                    : "bg-gray-700 border-gray-600"
+                  }`}
+                  >
+                  <div className="text-sm font-medium">Room-{game.id}</div>
+                  <div className="text-xs text-gray-400">
+                    {game.players.length}/2 players • {game.status}
+                  </div>
+                  {game.players.length > 0 && (
+                    <div className="text-xs mt-1">
+                      {game.players.map(p => p.name).join(", ")}
                     </div>
-                  ))}
-                </div> ) : (
-                    <div className="text-center text-gray-400 py-8">
-                      <p className="text-4xl mb-2">👻</p>
-                      <p>No active games</p>
-                      </div> )
-              }
-            </div>
-          
-            <div className="bg-gray-800 rounded-xl p-6">
-              <h3 className="text-xl font-semibold mb-4">⌨️ Quick Join Key Clash Games</h3>
-              <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
-              { keyClashGames.length > 0 ? (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {keyClashGames.map(game => (
-                    <div
-                      key={game.id}
-                      onClick={() => {
-                        if (game.status === "waiting") joinGame(game.id, "keyclash", "remote");
-                      }}
-                      className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
-                          ? "bg-purple-900 border-purple-600 hover:bg-purple-800"
-                          : "bg-gray-700 border-gray-600"
-                        }`}
-                    >
-                      <div className="text-sm font-medium">Room-{game.id}</div>
-                      <div className="text-xs text-gray-400">
-                        {game.players.length}/2 players • {game.status}
-                      </div>
-                      {game.players.length > 0 && (
-                        <div className="text-xs mt-1">
-                          {game.players.map(p => p.name).join(", ")}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div> ) : (
-                  <div className="text-center text-gray-400 py-8">
-                  <p className="text-4xl mb-2">👻</p>
-                  <p>No active games</p>
-                  </div> )
-              }
-            </div>
+                  )}
+                </div>
+              ))}
+            </div> 
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                <p className="text-4xl mb-2">👻</p>
+                <p>No active games</p>
+              </div> )
+          }
         </div>
+          
+        <div className="bg-gray-800 rounded-xl p-6">
+          <h3 className="text-xl font-semibold mb-4">⌨️ Quick Join Key Clash Games</h3>
+          <p className="text-sm text-gray-400 mb-3">Join games without invitations</p>
+          { keyClashGames.length > 0 ? (
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {keyClashGames.map(game => (
+                <div
+                  key={game.id}
+                  onClick={() => { if (game.status === "waiting") joinGame(game.id, "keyclash", "remote"); }}
+                  className={`p-3 rounded border cursor-pointer ${game.status === "waiting"
+                    ? "bg-purple-900 border-purple-600 hover:bg-purple-800"
+                    : "bg-gray-700 border-gray-600"
+                  }`}
+                  >
+                  <div className="text-sm font-medium">Room-{game.id}</div>
+                  <div className="text-xs text-gray-400">
+                    {game.players.length}/2 players • {game.status}
+                  </div>
+                  {game.players.length > 0 && (
+                    <div className="text-xs mt-1">
+                      {game.players.map(p => p.name).join(", ")}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div> 
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                <p className="text-4xl mb-2">👻</p>
+                <p>No active games</p>
+              </div> )
+          }
+        </div>
+      </div>
 
-
-      {/* Users in lobby */}
       <div className="w-1/3">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg sticky top-6">
             <h2 className="text-2xl font-bold mb-4 text-center">🌐 Players in Lobby</h2>
         
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {otherPlayers.length > 0 ? (
-                otherPlayers.map(player => {
+              {players.length > 0 ? (
+                players.map(player => {
                   const sentInvitation = sentInvitations.find(inv => inv.to.socketId === player.socketId);
                   const receivedInvitation = receivedInvitations.find(inv => inv.from.socketId === player.socketId);
-                  
-                  // Check if this player is the one we're paired with
                   const isPairedWithThisPlayer = selectedOpponent && isPaired() && 
                                                  selectedOpponent.socketId === player.socketId;
+                  const isYou = player.socketId === socketRef.current?.id;
 
                   // console.log(`=== PLAYER ${player.name} RENDER DEBUG ===`);
                   // console.log("Player socketId:", player.socketId);
@@ -904,7 +904,7 @@ export default function QuickmatchPage() {
                           {player.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-semibold">{player.name}</p>
+                          <p className="font-semibold">{player.name} {isYou && (<i className="font-medium text-xs display-inline">(you)</i>)}</p>
                           <p className="text-xs text-green-400">• Online</p>
                           {receivedInvitation && (
                             <p className="text-xs text-blue-400">• Wants to play {formatGameType(receivedInvitation.gameType)}!</p>
@@ -1010,7 +1010,7 @@ export default function QuickmatchPage() {
               ) : (
                 <div className="text-center text-gray-400 py-8">
                   <p className="text-4xl mb-2">👻</p>
-                  <p>No other players here</p>
+                  <p>No players here?</p>
                   <p className="text-sm mt-1">Share the game with friends!</p>
                 </div>
               )}

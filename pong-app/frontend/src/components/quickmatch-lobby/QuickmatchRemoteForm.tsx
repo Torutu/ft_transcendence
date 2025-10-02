@@ -3,18 +3,16 @@ import { Socket } from "socket.io-client";
 import { 
   GameType, 
   Player, 
-  OnlineUser, 
-  GameRoom, 
+  OnlineUser,
   Invitation, 
   SentInvitation,
   Avatar,
   AvatarData
 } from "../../shared/types";
-import AvatarPage from "../../shared/avatar";
-import { getStoredAvatarData, saveAvatarData  } from "../../shared/utils";
+import AvatarPage from "../../pages/general/avatar";
 import { useState, useCallback, useEffect } from "react";
-import { getAvatars } from "../../utils/lobbyApi";
 import { useAuth } from "../../contexts/AuthContext";
+import api from "../../utils/api";
 
 interface QuickmatchRemoteFormProps {
   name: string | null;
@@ -49,56 +47,59 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                                                 invitationMessage 
                                               }: QuickmatchRemoteFormProps) 
 {
-  const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useAuth();
   // Avatar selection form
   const avatarForm = document.getElementById("remoteAvatarForm");
 
   // Avatar state
-  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => 
-    getStoredAvatarData("userAvatar")
-  );
-    
-  const [opponentAvatar, setOpponentAvatar] = useState<AvatarData | null>(() => 
-    getStoredAvatarData("opponentAvatar")
-  );
+  const [userAvatar, setUserAvatar] = useState<AvatarData | null>(() => {
+    const saved = localStorage.getItem("userAvatar");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
   
-  const [availableAvatars, setAvailableAvatars] = useState<Avatar[]>([]);
+  const [opponentAvatar, setOpponentAvatar] = useState<AvatarData | null>(() => {
+    const saved = localStorage.getItem("quickmatch_opponentAvatar");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
 
-  // Avatar change handlers
-  const handleUserAvatarChange = useCallback((newAvatar: AvatarData | null) => {
-    setUserAvatar(newAvatar);
-    saveAvatarData("userAvatar", newAvatar);
-  }, []);
+  // Track which avatars are already selected
+  const selectedAvatars = new Set<string>();
 
-  const handleOpponentAvatarChange = useCallback((newAvatar: AvatarData | null) => {
-    setOpponentAvatar(newAvatar);
-    saveAvatarData("opponentAvatar", newAvatar);
-  }, []);
-
-  // Initialize avatars and component
+  // Load avatars from API
   useEffect(() => {
-    if (isInitialized || !user) return;
-    
     const loadAvatars = async () => {
       try {
-        const avatars = await getAvatars();
-        setAvailableAvatars(avatars);
+        const response = await api.get('/user/avatars');
         
-        if (!userAvatar && avatars.length > 0) {
-          const defaultAvatar = { name: avatars[0].id, image: avatars[0].imageUrl };
-          handleUserAvatarChange(defaultAvatar);
+        if (!userAvatar && response.data.length > 0) {
+          const defaultAvatar = { 
+            name: response.data[0].id, 
+            image: response.data[0].imageUrl 
+          };
+          setUserAvatar(defaultAvatar);
+          localStorage.setItem("userAvatar", JSON.stringify(defaultAvatar));
         }
-
-        setIsInitialized(true);
       } catch (error) {
         console.error("Failed to load avatars:", error);
-        setIsInitialized(true);
       }
     };
     
     loadAvatars();
-  }, [isInitialized, userAvatar, handleUserAvatarChange]);
+  }, [userAvatar]);
 
 	const showAvatarForm = () => {
     if (avatarForm) avatarForm.style.display = "block";
@@ -110,7 +111,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
 
   return (
     <div className="w-full min-h-screen text-white p-8 flex flex-col items-center">
-      {/* Close Button */}
       <button
         onClick={() => closeForm()}
         className="absolute top-30 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
@@ -118,14 +118,12 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
         Close
       </button>
 
-      {/* Invitation Notification Modal */}
       {showInvitationModal && (
         <div className="fixed top-40 right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
           <p>{invitationMessage}</p>
         </div>
       )}
 
-      {/* Pending Invitations Badge */}
       {/* {receivedInvitations.length > 0 && (
         <div className="fixed top-42 right-42 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-40">
           {receivedInvitations.length}
@@ -138,7 +136,7 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                       target={"user"}
                       setUserAvatar={setUserAvatar}
                       setGuestAvatar={setUserAvatar}
-                      saveAvatarData={saveAvatarData}
+                      selectedAvatars={selectedAvatars}
                       />
         </div> )
       }
@@ -148,20 +146,16 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
       </h1>
 
       <div className="w-full max-w-7xl flex gap-6">
-        {/* Left Column - Main Content */}
         <div className="w-2/3 space-y-6">
-          {/* Player Setup Section */}
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Opponent</h2>
             
             <div className="flex flex-col lg:flex-row gap-8 items-center">
-              {/* Player 1 */}
               <div className="bg-gray-700 p-6 w-full lg:w-1/2 rounded-xl shadow-lg flex flex-col items-center">
                 <h3 className="text-2xl font-bold mb-2">👤 Player 1 (You)</h3>
                 <p className="mb-4 text-lg">
                   Username: <strong>{name}</strong>
                 </p>
-                {/* UPDATED Avatar Display */}
                 {user && userAvatar ? (
                   <>
                     <img
@@ -184,10 +178,8 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                 }
               </div>
 
-              {/* VS Separator */}
               <div className="text-4xl font-bold text-yellow-400">VS</div>
 
-              {/* Player 2 - Selected Opponent */}
               <div className="bg-gray-700 p-6 w-full lg:w-1/2 rounded-xl shadow-lg flex flex-col items-center">
                 <h3 className="text-2xl font-bold mb-2">🎯 Player 2 (Opponent)</h3>
                 
@@ -197,13 +189,11 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                       <strong>{selectedOpponent.name}</strong>
                     </p>
 
-                    {/* Display opponent's avatar (not changeable by player 1) */}
                     <div className="w-32 h-32 rounded-full border-4 border-green-400 mb-4 flex items-center justify-center bg-gradient-to-r from-purple-400 to-pink-400 text-white text-4xl font-bold">
                       {selectedOpponent.name.charAt(0).toUpperCase()}
                     </div>
                     <p className="text-sm text-gray-400 mb-4">Their avatar will be set by them</p>
 
-                    {/* Pure status display - no action buttons */}
                     {isPaired() ? (
                       <div className="bg-green-800 p-3 rounded-lg text-sm text-center mt-4">
                         <div className="text-green-200 font-medium">🎯 Successfully Paired!</div>
@@ -234,7 +224,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
             </div>
           </div>
 
-          {/* Game Selection Buttons */}
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Game</h2>
             
@@ -279,7 +268,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
           </div>
         </div>
 
-        {/* Right Column - Users in lobby */}
         <div className="w-1/3">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg sticky top-6">
             <h2 className="text-2xl font-bold mb-4 text-center">🌐 Players available</h2>
@@ -293,7 +281,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                   const sentInvitation = sentInvitations.find(inv => inv.to.socketId === player.socketId);
                   const receivedInvitation = receivedInvitations.find(inv => inv.from.socketId === player.socketId);
                   
-                  // Check if this player is the one we're paired with
                   const isPairedWithThisPlayer = selectedOpponent && isPaired() && 
                                                  selectedOpponent.socketId === player.socketId;
 
@@ -422,7 +409,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                         </button>
                         : <button
                         onClick={() => {
-                          // Auto-replace current selection (user chooses game type later)
                            setSelectedOpponent(player);
                         }}
                         className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-medium w-full"
