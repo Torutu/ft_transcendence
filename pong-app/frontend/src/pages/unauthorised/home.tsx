@@ -1,4 +1,4 @@
-// frontend/src/pages/menu.tsx
+// frontend/src/pages/home.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 

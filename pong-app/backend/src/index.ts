@@ -13,9 +13,7 @@ import { setupPongNamespace } from './PongServer';
 import { setupKeyClash } from './KeyClashGame';
 import { fileURLToPath } from 'url';
 import env from './env';
-import authRoutes from './routes/auth';
-import lobbyRoutes from './routes/lobbyRoutes';
-import gameRoutes from './routes/gameRoutes';
+import registerRoutes from './routes/index';
 import { PrismaClient } from '@prisma/client';
 
 // Get __dirname equivalent in ES modules
@@ -58,7 +56,7 @@ async function buildServer() {
     console.error('Checked directories:', possibleSSLDirs);
     console.error('Please provide SSL certificates in one of these locations:');
     possibleSSLDirs.forEach(dir => console.error(`- ${dir}`));
-    process.exit(1); // exit instead of falling back to HTTP
+    process.exit(1);
   }
 
   console.log('🔐 Configuring server for HTTPS...');
@@ -105,16 +103,14 @@ async function buildServer() {
   });
 
   // Register routes
-  server.register(authRoutes, { prisma });
-  server.register(lobbyRoutes, { prisma, prefix: '/lobby' });
-  server.register(gameRoutes, { prisma, prefix: '/games' });
+  await registerRoutes(server, { prisma });
 
   // Health check endpoint
   server.get('/health', async () => {
     return { status: 'OK', timestamp: new Date().toISOString() };
   });
 
-  // wrap socket.io server around the fastify server
+  // socket.io server around the fastify server
   const io = new Server(server.server, {
     cors: {
         origin: [ env.FRONTEND_REMOTE_URL,

@@ -1,4 +1,4 @@
-// backend/src/utils/email.ts
+// backend/src/service/emailService.ts
 import nodemailer from 'nodemailer';
 import env from '../env';
 
@@ -10,45 +10,48 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-  try {
-    await transporter.sendMail({
-      from: `${env.TEAM_NAME} <${env.EMAIL_FROM}>`,
-      to,
-      subject: 'Verify Your Email Address',
-      text: `Your verification code is: ${code}\n\nThis code will expire in 24 hours.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Email Verification</h2>
-          <p>Your verification code is:</p>
-          <div style="font-size: 24px; font-weight: bold; margin: 20px 0; color: #2563eb;">
-            ${code}
-          </div>
-          <p>This code will expire in 24 hours.</p>
-          <p>If you didn't request this, please ignore this email.</p>
-        </div>
-      `
-    });
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw new Error('Failed to send verification email');
+// Configuration for different verification email types
+const VERIFICATION_EMAIL_CONFIG = {
+  'email-verification': {
+    subject: 'Your Email Verification Code',
+    title: 'E-mail Verification',
+    description: 'Your E-mail verification code is:',
+    color: '#168814ff',
+    textMessage: (username: string, code: string) => 
+      `Hello ${username},\n\nYour Email verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't try to log in, please ignore this email.`
+  },
+  'login-2fa': {
+    subject: 'Your Login Verification Code', 
+    title: 'Login Verification',
+    description: 'Your login verification code is:',
+    color: '#2563eb',
+    textMessage: (username: string, code: string) =>
+      `Hello ${username},\n\nYour login verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't try to log in, please ignore this email.`
   }
-}
+} as const;
 
-export async function sendTwoFactorCode(to: string, code: string, username: string): Promise<void> {
+// UNIFIED function that replaces both sendVerificationEmail and sendTwoFactorCode
+export async function sendVerificationCode(
+  to: string, 
+  code: string, 
+  username: string, 
+  type: 'email-verification' | 'login-2fa'
+): Promise<void> {
+  const config = VERIFICATION_EMAIL_CONFIG[type];
+  
   try {
     await transporter.sendMail({
       from: `${env.TEAM_NAME} <${env.EMAIL_FROM}>`,
       to,
-      subject: 'Your Login Verification Code',
-      text: `Hello ${username},\n\nYour login verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't try to log in, please ignore this email.`,
+      subject: config.subject,
+      text: config.textMessage(username, code),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">Login Verification</h2>
+          <h2 style="color: ${config.color};">${config.title}</h2>
           <p>Hello <strong>${username}</strong>,</p>
-          <p>Your login verification code is:</p>
+          <p>${config.description}</p>
           <div style="background-color: #f3f4f6; border: 2px solid #2563eb; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-            <div style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #2563eb;">
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: ${config.color};">
               ${code.toUpperCase()}
             </div>
           </div>
@@ -62,9 +65,18 @@ export async function sendTwoFactorCode(to: string, code: string, username: stri
       `
     });
   } catch (error) {
-    console.error('Error sending 2FA code:', error);
-    throw new Error('Failed to send 2FA code');
+    console.error(`Error sending ${type} code:`, error);
+    throw new Error(`Failed to send ${type} code`);
   }
+}
+
+// BACKWARD COMPATIBILITY - function names as wrappers
+export async function sendVerificationEmail(to: string, code: string, username: string): Promise<void> {
+  return sendVerificationCode(to, code, username, 'email-verification');
+}
+
+export async function sendTwoFactorCode(to: string, code: string, username: string): Promise<void> {
+  return sendVerificationCode(to, code, username, 'login-2fa');
 }
 
 export async function sendPasswordResetEmail(to: string, resetLink: string): Promise<void> {
@@ -93,7 +105,7 @@ export async function sendPasswordResetEmail(to: string, resetLink: string): Pro
   }
 }
 
-export async function sendRegisterSuccessEmail(to: string, username: string): Promise<void> {
+export async function sendRegisterSuccessEmail(to: string, username: string, baseUrl: string): Promise<void> {
   try {
     await transporter.sendMail({
       from: `${env.TEAM_NAME} <${env.EMAIL_FROM}>`,
@@ -106,7 +118,7 @@ export async function sendRegisterSuccessEmail(to: string, username: string): Pr
           <p>Your account has been successfully created! 🎉</p>
           <p>You can now log in and start playing our amazing games.</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${env.FRONTEND_URL}/login" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Start Playing</a>
+            <a href="${baseUrl}/login" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Start Playing</a>
           </div>
           <p>Thank you for joining us!</p>
           <hr style="border: none; height: 1px; background-color: #e5e7eb; margin: 20px 0;">

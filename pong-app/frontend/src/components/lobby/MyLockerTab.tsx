@@ -1,7 +1,7 @@
 // frontend/src/components/lobby/MyLockerTab.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { updateLobbyProfile, getAvatars, getLobbyProfile } from "../../utils/lobbyApi";
 import { useAuth } from "../../contexts/AuthContext";
+import api from "../../utils/api";
 
 interface Avatar {
   id: string;
@@ -52,7 +52,10 @@ export const MyLockerTab: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const profileData = await getLobbyProfile();
+        
+        const response = await api.get('/user/profile');
+        const profileData = response.data;
+        
         setProfile(profileData);
 
         const newForm = {
@@ -81,7 +84,9 @@ export const MyLockerTab: React.FC = () => {
   useEffect(() => {
     const loadAvatars = async () => {
       try {
-        const avatarsData = await getAvatars();
+        const response = await api.get('/user/avatars');
+        const avatarsData = response.data;
+        
         setAvatars(avatarsData);
 
         if (form.favAvatar) {
@@ -132,7 +137,7 @@ export const MyLockerTab: React.FC = () => {
     }
     
     setMessage("Changes cancelled");
-    setTimeout(() => setMessage(""), 2000); // Clear message after 2 seconds
+    setTimeout(() => setMessage(""), 2000);
   };
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
@@ -150,7 +155,6 @@ export const MyLockerTab: React.FC = () => {
     const allowedExtensions = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedExtensions.includes(file.type)) {
       setMessage("Invalid file type. Please upload JPEG, PNG, GIF, or WebP image.");
-      // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -158,10 +162,9 @@ export const MyLockerTab: React.FC = () => {
     }
 
     // Validate file size (1MB limit)
-    const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB in bytes
+    const MAX_FILE_SIZE = 1 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
       setMessage("File size exceeds the limit of 1 MB.");
-      // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -214,21 +217,34 @@ export const MyLockerTab: React.FC = () => {
         }
       }
 
-      await updateLobbyProfile({
-        ...form,
+      const response = await api.put('/user/profile', {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
         favAvatar: favoriteAvatar?.id || "",
+        profilePic: form.profilePic
       });
+      
+      // Update profile with response data
+      if (response.data.user) {
+        setProfile(response.data.user);
+      }
       
       // Update original form to reflect saved state
       setOriginalForm(form);
       setMessage("Profile updated successfully!");
       
     } catch (err: any) {
+      console.error("Profile update error:", err);
+      
       // Check if it's a 413 Payload Too Large error
       if (err?.response?.status === 413) {
         setMessage("Image file is too large after processing. Please choose a smaller image.");
+      } else if (err?.response?.data?.message) {
+        setMessage(err.response.data.message);
       } else {
-        setMessage("Update failed! May be wrong info given");
+        setMessage("Update failed! Please try again.");
       }
     }
   }

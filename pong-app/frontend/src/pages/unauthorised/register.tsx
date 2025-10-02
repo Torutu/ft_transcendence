@@ -7,7 +7,7 @@ import { Alert } from '../../components/general';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    username: '', // Changed from 'name' to 'username'
+    username: '',
     email: '',
     password: '',
   });
@@ -20,7 +20,6 @@ export default function RegisterPage() {
   });
   
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
     
   const validateForm = () => {
@@ -31,7 +30,7 @@ export default function RegisterPage() {
       newErrors.username = 'Username is required';
       isValid = false;
     } else if (!validator.isAlphanumeric(formData.username)) {
-      newErrors.username = 'Username must contain only letters and numbers';
+      newErrors.username = 'Only letters and numbers allowed';
       isValid = false;
     } else if (!validator.isLength(formData.username, { min: 3, max: 16 })) {
       newErrors.username = 'Must be 3-16 characters';
@@ -65,23 +64,21 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await api.post('/auth/register', {
-        username: formData.username, // Changed from 'name' to 'username'
+        username: formData.username,
         email: formData.email,
         password: formData.password,
       });
-
-      if (response.data.success) {
-        setSuccessMessage('Account created successfully! You can now log in.');
-        // Clear form
-        setFormData({ username: '', email: '', password: '' });
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          navigate('/login', { 
-            state: { 
-              message: 'Account created successfully! Please log in to continue.' 
-            } 
-          });
-        }, 2000);
+      console.log(response.data);
+      if (response.data.requiresVerification) {
+        sessionStorage.setItem('pendingUserId', response.data.userId);
+        sessionStorage.setItem('pendingEmail', formData.email);
+        
+        navigate('/verify-email', { 
+          state: { 
+            email: formData.email,
+            userId: response.data.userId 
+          } 
+        });
       } else {
         setErrors(prev => ({
           ...prev,
@@ -89,12 +86,7 @@ export default function RegisterPage() {
         }));
       }
     } catch (error: any) {
-      if (error.response?.data?.error === 'USERNAME_EXISTS') {
-        setErrors(prev => ({
-          ...prev,
-          username: error.response.data.message
-        }));
-      } else if (error.response?.data?.error === 'EMAIL_EXISTS') {
+      if (error.response?.data?.error === 'USER_EXISTS') {
         setErrors(prev => ({
           ...prev,
           email: error.response.data.message
@@ -117,7 +109,6 @@ export default function RegisterPage() {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '', form: '' }));
     }
-    setSuccessMessage('');
   };
 
   return (
@@ -150,7 +141,6 @@ export default function RegisterPage() {
           </h1>
           <p className="text-gray-300 text-center mb-6">Join us today</p>
 
-          <Alert type="success" message={successMessage} />
           <Alert type="error" message={errors.form} />
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -12,14 +12,14 @@ declare global {
   }
 }
 
-const LoginPage = () => {
+export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
-    username: '', // Changed from 'name' to 'username'
+    username: '', 
     password: '',
   });
 
@@ -71,12 +71,16 @@ const LoginPage = () => {
         username: formData.username,
         password: formData.password,
       });
-      
+
       if (response.data.requires2FA) {
+        if (response.data.url) {
+          sessionStorage.setItem('url', response.data.url);
+        }
+
         navigate('/verify-2fa', {
           state: {
             userId: response.data.userId,
-            username: formData.username // Pass username instead of userId for the 2FA verification
+            url: response.data.url
           } 
         });
       } else {
@@ -161,7 +165,7 @@ const LoginPage = () => {
         {/* Left Side Image */}
         <div className="hidden md:block md:w-1/2">
           <img
-            src="/background/login2.png"
+            src="/background/login.png"
             alt="Login Visual"
             className="w-full h-full object-contain"
           />
@@ -265,5 +269,3 @@ const LoginPage = () => {
     </div>
   );
 }
-
-export default LoginPage;

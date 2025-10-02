@@ -1,8 +1,7 @@
 // frontend/src/pages/general/avatar.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAvatars } from "../utils/lobbyApi";
-import { AvatarData } from "./types";
+import api from "../../utils/api";
 
 interface Avatar {
   id: string;
@@ -33,21 +32,21 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, sa
 
   // Load avatars from backend
   useEffect(() => {
-    const loadAvatars = async () => {
-      try {
-        setLoading(true);
-        const fetchedAvatars = await getAvatars();
-        setAvatars(fetchedAvatars);
-      } catch (err) {
-        setError("Failed to load avatars");
-        console.error("Avatar loading error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadAvatars = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/user/avatars');
+      setAvatars(response.data);
+    } catch (err) {
+      setError("Failed to load avatars");
+      console.error("Avatar loading error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    loadAvatars();
-  }, []);
+  loadAvatars();
+}, []);
 
   // Track which avatars are already selected
   const selectedAvatars = new Set<string>();

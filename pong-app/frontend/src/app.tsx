@@ -9,15 +9,15 @@ import { Layout, LoadingSpinner, ErrorBoundary } from './components/general';
 const Home = lazy(() => import('./pages/unauthorised/home')); 
 const LoginPage = lazy(() => import('./pages/unauthorised/login'));
 const RegisterPage = lazy(() => import('./pages/unauthorised/register'));
-const VerifyEmailPage = lazy(() => import('./pages/unauthorised/verify-email'));
-const VerifyTwoFactorPage = lazy(() => import('./pages/unauthorised/verify-2fa'));
+const VerifyCodePage = lazy(() => import('./pages/unauthorised/verify-code'));
 const ResetPasswordPage = lazy(() => import('./pages/unauthorised/reset-password'));
 const ChangePasswordPage = lazy(() => import('./pages/unauthorised/changePassword'));
 const PlayPage = lazy(() => import('./pages/game/playPage'));
 const LobbyPage = lazy(() => import('./pages/authorised/lobby'));
 const QuickMatchPage = lazy(() => import('./pages/authorised/quickmatch'));
 const TournamentPage = lazy(() => import('./pages/authorised/tournament'));
-const AvatarPage = lazy(() => import('./shared/avatar'));
+const AvatarPage = lazy(() => import('./pages/general/avatar'));
+
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -92,10 +92,10 @@ const App = () => {
                 <PublicRoute><RegisterPage /></PublicRoute>
               } />
               <Route path="/verify-email" element={
-                <PublicRoute><VerifyEmailPage /></PublicRoute>
+                <PublicRoute><VerifyCodePage /></PublicRoute>
               } />
               <Route path="/verify-2fa" element={
-                <PublicRoute><VerifyTwoFactorPage /></PublicRoute>
+                <PublicRoute><VerifyCodePage /></PublicRoute>
               } />
               <Route path="/reset-password" element={
                 <PublicRoute><ResetPasswordPage /></PublicRoute>

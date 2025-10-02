@@ -5,6 +5,7 @@ import validator from 'validator';
 import api from '../../utils/api';
 import { Alert } from '../../components/general';
 
+
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
