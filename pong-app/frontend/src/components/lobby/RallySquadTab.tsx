@@ -251,7 +251,7 @@ export const RallySquadTab = () => {
         return (
           <button
             onClick={() => removeFriend(actionStatus.friendshipId!)}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+            className="bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors whitespace-nowrap"
           >
             Remove
           </button>
@@ -262,13 +262,13 @@ export const RallySquadTab = () => {
           <div className="flex gap-1">
             <button
               onClick={() => acceptFriendRequest(actionStatus.requestId!)}
-              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors"
+              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors whitespace-nowrap"
             >
               Accept
             </button>
             <button
               onClick={() => declineFriendRequest(actionStatus.requestId!)}
-              className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors"
+              className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors whitespace-nowrap"
             >
               Decline
             </button>
@@ -277,7 +277,9 @@ export const RallySquadTab = () => {
 
       case "pending":
         return (
-          <span className="text-yellow-400 text-sm font-medium">Pending</span>
+          <span className="text-yellow-400 text-xs sm:text-sm font-medium whitespace-nowrap">
+            Pending
+          </span>
         );
 
       case "none":
@@ -285,7 +287,7 @@ export const RallySquadTab = () => {
         return (
           <button
             onClick={() => sendFriendRequest(user.id)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors whitespace-nowrap"
           >
             Add Friend
           </button>
@@ -372,34 +374,34 @@ export const RallySquadTab = () => {
         </div>
       )}
 
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h2 className="text-3xl font-bold mb-6 text-center text-purple-300">
+      <div className="bg-gray-800 rounded-xl p-4 sm:p-6">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center text-purple-300">
           🤝 Rally Squad
         </h2>
 
         {/* Stats Header */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl sm:text-2xl font-bold text-white">
               {onlineUsers.length}
             </div>
-            <div className="text-purple-200 text-sm">Online Now</div>
+            <div className="text-purple-200 text-xs sm:text-sm">Online Now</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl sm:text-2xl font-bold text-white">
               {friends.length}
             </div>
-            <div className="text-purple-200 text-sm">Friends</div>
+            <div className="text-purple-200 text-xs sm:text-sm">Friends</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl sm:text-2xl font-bold text-white">
               {friendRequests.length}
             </div>
-            <div className="text-purple-200 text-sm">Requests</div>
+            <div className="text-purple-200 text-xs sm:text-sm">Requests</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{totalUsers}</div>
-            <div className="text-purple-200 text-sm">Total Players</div>
+            <div className="text-xl sm:text-2xl font-bold text-white">{totalUsers}</div>
+            <div className="text-purple-200 text-xs sm:text-sm">Total Players</div>
           </div>
         </div>
 
@@ -443,7 +445,7 @@ export const RallySquadTab = () => {
             <button
               onClick={handleRefresh}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap text-sm sm:text-base"
             >
               {isLoading ? "Loading..." : "Refresh"}
             </button>
@@ -453,9 +455,9 @@ export const RallySquadTab = () => {
         {/* Search Info */}
         {searchQuery.trim() && (
           <div className="mb-4 p-3 bg-blue-900 border border-blue-700 text-blue-100 rounded-md">
-            <div className="flex justify-between items-center">
-              <span>Searching for: "{searchQuery}"</span>
-              <span className="text-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <span className="text-sm sm:text-base">Searching for: "{searchQuery}"</span>
+              <span className="text-xs sm:text-sm">
                 Found {displayedUsers.length} user
                 {displayedUsers.length !== 1 ? "s" : ""}
               </span>
@@ -464,16 +466,16 @@ export const RallySquadTab = () => {
         )}
 
         {/* Users Table */}
-        <div className="bg-gray-700 rounded-xl overflow-hidden">
-          <table className="w-full">
+        <div className="bg-gray-700 rounded-xl overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead className="bg-gray-600">
               <tr>
-                <th className="text-left p-4 font-semibold w-2/5">User</th>
-                <th className="text-left p-4 font-semibold w-1/5">Status</th>
-                <th className="text-left p-4 font-semibold w-1/5">
+                <th className="text-left p-3 sm:p-4 font-semibold">User</th>
+                <th className="text-left p-3 sm:p-4 font-semibold">Status</th>
+                <th className="text-left p-3 sm:p-4 font-semibold">
                   Relationship
                 </th>
-                <th className="p-4 w-1/5 text-right">Action</th>
+                <th className="p-3 sm:p-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -499,19 +501,19 @@ export const RallySquadTab = () => {
                           : "bg-gray-650 hover:bg-gray-600 transition-colors"
                       }
                     >
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold">
+                          <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
                               {user.name.charAt(0).toUpperCase()}
                             </div>
                             <div
-                              className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-gray-700 ${statusInfo.color}`}
+                              className={`absolute -bottom-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full border-2 border-gray-700 ${statusInfo.color}`}
                             ></div>
                           </div>
-                          <div>
-                            <div className="font-semibold">{user.name}</div>
-                            <div className="text-sm text-gray-400">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold truncate text-sm sm:text-base">{user.name}</div>
+                            <div className="text-xs sm:text-sm text-gray-400 truncate">
                               {user.email}
                             </div>
                             {user.createdAt && (
@@ -523,23 +525,23 @@ export const RallySquadTab = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(
+                          className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium ${getStatusBadge(
                             user.online_status || "offline"
                           )}`}
                         >
                           {statusInfo.text}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium text-white ${relationshipStatus.bgColor}`}
+                          className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium text-white ${relationshipStatus.bgColor}`}
                         >
                           {relationshipStatus.status}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         {renderActionButton(user)}
                       </td>
                     </tr>
