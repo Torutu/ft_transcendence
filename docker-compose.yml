@@ -4,32 +4,32 @@ networks:
 
 services:
   backend:
-    build: ./backend
+    build: ./pong-app/backend
     networks:
       - pong-network
     ports:
       - '3000:3000'
     env_file:
-      - ./backend/.env # Load environment variables from file
+      - ./pong-app/backend/.env  # Load environment variables from file
     volumes:
-      - ./backend:/app
-      - ./tls:/app/tls
+      - ./pong-app/backend:/app
+      - ./pong-app/tls:/app/tls
       - /app/node_modules
     environment:
       - TLS_PATH=/app/tls
       - NODE_TLS_REJECT_UNAUTHORIZED=0 # Allow self-signed certificates for development
 
   frontend:
-    build: ./frontend
+    build: ./pong-app/frontend
     networks:
       - pong-network
     ports:
       - '5173:5173'
     env_file:
-      - ./frontend/.env # Load environment variables from file
+      - ./pong-app/frontend/.env  # Load environment variables from file
     volumes:
-      - ./frontend:/app
-      - ./tls:/app/tls
+      - ./pong-app/frontend:/app
+      - ./pong-app/tls:/app/tls
       - /app/node_modules
     environment:
       - TLS_PATH=/app/tls
@@ -39,7 +39,7 @@ services:
       - backend
 
   ngrok:
-    build: ./ngrok
+    build: ./pong-app/ngrok
     container_name: ngrok
     environment:
       - NGROK_AUTHTOKEN= #31n4ws6BtctGyeqtvgsJqCfNf6U_53Wz1pUyFLNJaHED1HYaL
