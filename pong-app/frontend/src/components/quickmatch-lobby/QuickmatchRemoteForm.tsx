@@ -284,14 +284,6 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                   const isPairedWithThisPlayer = selectedOpponent && isPaired() && 
                                                  selectedOpponent.socketId === player.socketId;
 
-                  // console.log(`=== PLAYER ${player.name} RENDER DEBUG ===`);
-                  // console.log("Player socketId:", player.socketId);
-                  // console.log("My socketId:", socket?.id);
-                  // console.log("sentInvitation found:", !!sentInvitation);
-                  // console.log("receivedInvitation found:", !!receivedInvitation);
-                  // console.log("isPairedWithThisPlayer:", isPairedWithThisPlayer);
-                  // console.log("All receivedInvitations:", receivedInvitations);
-                  
                   return (
                     <div key={player.socketId} className="bg-gray-700 p-4 rounded-lg">
                       <div className="flex items-center gap-3 mb-3">
