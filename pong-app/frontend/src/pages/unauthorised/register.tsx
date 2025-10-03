@@ -1,55 +1,55 @@
 // frontend/src/pages/register.tsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import validator from 'validator';
-import api from '../../utils/api';
-import { Alert } from '../../components/general';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import validator from "validator";
+import api from "../../utils/api";
+import { Alert } from "../../components/general";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
+    username: "",
+    email: "",
+    password: "",
   });
-  
+
   const [errors, setErrors] = useState({
-    username: '',
-    email: '',
-    password: '',
-    form: '',
+    username: "",
+    email: "",
+    password: "",
+    form: "",
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-    
+
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { username: '', email: '', password: '', form: '' };
+    const newErrors = { username: "", email: "", password: "", form: "" };
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = "Username is required";
       isValid = false;
     } else if (!validator.isAlphanumeric(formData.username)) {
-      newErrors.username = 'Only letters and numbers allowed';
+      newErrors.username = "Only letters and numbers allowed";
       isValid = false;
     } else if (!validator.isLength(formData.username, { min: 3, max: 16 })) {
-      newErrors.username = 'Must be 3-16 characters';
+      newErrors.username = "Must be 3-16 characters";
       isValid = false;
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
       isValid = false;
     } else if (!validator.isEmail(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = "Invalid email format";
       isValid = false;
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
       isValid = false;
     } else if (!validator.isLength(formData.password, { min: 6 })) {
-      newErrors.password = 'Must be at least 6 characters';
+      newErrors.password = "Must be at least 6 characters";
       isValid = false;
     }
 
@@ -63,38 +63,40 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/register', {
+      const response = await api.post("/auth/register", {
         username: formData.username,
         email: formData.email,
         password: formData.password,
       });
       console.log(response.data);
       if (response.data.requiresVerification) {
-        sessionStorage.setItem('pendingUserId', response.data.userId);
-        sessionStorage.setItem('pendingEmail', formData.email);
-        
-        navigate('/verify-email', { 
-          state: { 
+        sessionStorage.setItem("pendingUserId", response.data.userId);
+        sessionStorage.setItem("pendingEmail", formData.email);
+
+        navigate("/verify-email", {
+          state: {
             email: formData.email,
-            userId: response.data.userId 
-          } 
+            userId: response.data.userId,
+          },
         });
       } else {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          form: 'Unexpected response from server'
+          form: "Unexpected response from server",
         }));
       }
     } catch (error: any) {
-      if (error.response?.data?.error === 'USER_EXISTS') {
-        setErrors(prev => ({
+      if (error.response?.data?.error === "USER_EXISTS") {
+        setErrors((prev) => ({
           ...prev,
-          email: error.response.data.message
+          email: error.response.data.message,
         }));
       } else {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          form: error.response?.data?.message || 'Registration failed. Please try again.'
+          form:
+            error.response?.data?.message ||
+            "Registration failed. Please try again.",
         }));
       }
     } finally {
@@ -104,10 +106,10 @@ export default function RegisterPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [name]: '', form: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "", form: "" }));
     }
   };
 
@@ -152,14 +154,16 @@ export default function RegisterPage() {
                 placeholder="Username"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
                   errors.username
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-blue-200'
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-200"
                 }`}
                 value={formData.username}
                 onChange={handleChange}
                 autoFocus
               />
-              {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+              )}
             </div>
 
             <div>
@@ -170,13 +174,15 @@ export default function RegisterPage() {
                 placeholder="Email"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
                   errors.email
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-blue-200'
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-200"
                 }`}
                 value={formData.email}
                 onChange={handleChange}
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             <div>
@@ -187,13 +193,15 @@ export default function RegisterPage() {
                 placeholder="Password"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
                   errors.password
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-blue-200'
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-200"
                 }`}
                 value={formData.password}
                 onChange={handleChange}
               />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
 
             <button
@@ -204,7 +212,7 @@ export default function RegisterPage() {
               {isLoading ? (
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                'Create Account'
+                "Create Account"
               )}
             </button>
           </form>
@@ -212,8 +220,11 @@ export default function RegisterPage() {
           {/* Login Link */}
           <div className="mt-6 text-center text-sm">
             <p className="text-center text-sm mt-6 text-gray-400">
-              Already have an account?{' '}
-              <Link to="/login" className="text-base text-blue-400 hover:underline font-medium">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-base text-blue-400 hover:underline font-medium"
+              >
                 Log in
               </Link>
             </p>

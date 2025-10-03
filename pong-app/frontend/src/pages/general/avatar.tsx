@@ -1,6 +1,5 @@
 // frontend/src/pages/general/avatar.tsx
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import api from "../../utils/api";
 
 interface Avatar {
@@ -19,8 +18,6 @@ interface AvatarPageProps {
 }
 
 export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, selectedAvatars}: AvatarPageProps) => {
-  const location = useLocation();
-
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

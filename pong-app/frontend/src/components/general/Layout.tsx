@@ -1,6 +1,6 @@
 // frontend/src/components/general/Layout.tsx
-import { Outlet } from 'react-router-dom';
-import { Navbar } from './Navbar';
+import { Outlet } from "react-router-dom";
+import { Navbar } from "./Navbar";
 
 export const Layout = () => {
   return (
@@ -15,4 +15,3 @@ export const Layout = () => {
     </div>
   );
 };
-

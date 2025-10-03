@@ -1,7 +1,7 @@
 // pong-app/frontend/src/components/Navbar.tsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -14,11 +14,11 @@ export const Navbar = () => {
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate("/login", { replace: true });
       // Force reload to ensure complete cleanup
       window.location.reload();
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     } finally {
       setIsLoggingOut(false);
     }

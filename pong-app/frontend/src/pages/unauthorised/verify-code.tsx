@@ -1,12 +1,12 @@
 // frontend/src/pages/unauthorised/verify-code.tsx
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
-import { Alert } from '../../components/general';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import api from "../../utils/api";
+import { Alert } from "../../components/general";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Types
-type VerificationType = 'email-verification' | 'login-2fa';
+type VerificationType = "email-verification" | "login-2fa";
 
 interface VerificationConfig {
   title: string;
@@ -23,13 +23,13 @@ interface VerificationConfig {
 
 // Utility function to mask email
 const maskEmail = (email: string): string => {
-  if (!email || !email.includes('@')) return email;
-  
-  const [username, domain] = email.split('@');
+  if (!email || !email.includes("@")) return email;
+
+  const [username, domain] = email.split("@");
   if (username.length <= 2) return email;
-  
+
   const firstChar = username[0];
-  const masked = '*'.repeat(Math.max(username.length - 1, 7));
+  const masked = "*".repeat(Math.max(username.length - 1, 7));
   return `${firstChar}${masked}@${domain}`;
 };
 
@@ -37,57 +37,57 @@ export default function VerifyCodePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { login } = useAuth();
-  
-  // Determine verification type based on current route
-  const verificationType: VerificationType = location.pathname === '/verify-email' 
-    ? 'email-verification' 
-    : 'login-2fa';
 
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // Determine verification type based on current route
+  const verificationType: VerificationType =
+    location.pathname === "/verify-email" ? "email-verification" : "login-2fa";
+
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
   // Configuration based on verification type
   const getConfig = (): VerificationConfig => {
-    if (verificationType === 'email-verification') {
+    if (verificationType === "email-verification") {
       return {
-        title: 'Verify Your Email',
-        description: 'We\'ve sent a 6-digit verification code to',
-        endpoint: '/auth/verify-email',
-        resendContext: 'email-verification',
-        sessionKeys: { userId: 'pendingUserId', email: 'pendingEmail' },
-        fallbackRoute: '/register',
+        title: "Verify Your Email",
+        description: "We've sent a 6-digit verification code to",
+        endpoint: "/auth/verify-email",
+        resendContext: "email-verification",
+        sessionKeys: { userId: "pendingUserId", email: "pendingEmail" },
+        fallbackRoute: "/register",
         onSuccess: (response, navigate, login, setError) => {
-          sessionStorage.removeItem('pendingUserId');
-          sessionStorage.removeItem('pendingEmail');
-          navigate('/login', {
+          sessionStorage.removeItem("pendingUserId");
+          sessionStorage.removeItem("pendingEmail");
+          navigate("/login", {
             state: {
-              message: 'Email verified successfully! Please login to continue.',
-              email: email || sessionStorage.getItem('pendingEmail')
-            }
+              message: "Email verified successfully! Please login to continue.",
+              email: email || sessionStorage.getItem("pendingEmail"),
+            },
           });
-        }
+        },
       };
     } else {
       return {
-        title: '2FA Verification',
-        description: 'We\'ve sent a 6-digit verification code to your email address. Please check your inbox and enter the code below.',
-        endpoint: '/auth/verify-2fa',
-        resendContext: 'login-2fa',
-        sessionKeys: { userId: 'userId', email: 'userEmail' },
-        fallbackRoute: '/login',
+        title: "2FA Verification",
+        description:
+          "We've sent a 6-digit verification code to your email address. Please check your inbox and enter the code below.",
+        endpoint: "/auth/verify-2fa",
+        resendContext: "login-2fa",
+        sessionKeys: { userId: "userId", email: "userEmail" },
+        fallbackRoute: "/login",
         onSuccess: (response, navigate, login, setError) => {
-          sessionStorage.removeItem('userId');
-          sessionStorage.removeItem('url');
+          sessionStorage.removeItem("userId");
+          sessionStorage.removeItem("url");
           if (response.data.user) {
             login(response.data.user);
-            navigate('/lobby', { replace: true });
+            navigate("/lobby", { replace: true });
           } else {
-            setError('Authentication failed. Please try again.');
+            setError("Authentication failed. Please try again.");
           }
-        }
+        },
       };
     }
   };
@@ -96,8 +96,10 @@ export default function VerifyCodePage() {
 
   // Get data from navigation state or sessionStorage
   const stateData = location.state || {};
-  const userId = stateData.userId || sessionStorage.getItem(config.sessionKeys.userId);
-  const email = stateData.email || sessionStorage.getItem(config.sessionKeys.email);
+  const userId =
+    stateData.userId || sessionStorage.getItem(config.sessionKeys.userId);
+  const email =
+    stateData.email || sessionStorage.getItem(config.sessionKeys.email);
 
   // Session storage management
   useEffect(() => {
@@ -112,29 +114,31 @@ export default function VerifyCodePage() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
-      setError('Please enter the verification code');
+      setError("Please enter the verification code");
       return;
     }
 
     if (!userId) {
-      setError('Invalid session. Please try again.');
+      setError("Invalid session. Please try again.");
       return;
     }
 
     setIsLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       const response = await api.post(config.endpoint, {
         userId: parseInt(userId),
-        code
+        code,
       });
 
       config.onSuccess(response, navigate, login, setError);
-
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Verification failed. Please try again.');
+      setError(
+        error.response?.data?.message ||
+          "Verification failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -144,34 +148,36 @@ export default function VerifyCodePage() {
     if (!userId) return;
 
     setIsResending(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      await api.post('/auth/resend-verification-code', {
+      await api.post("/auth/resend-verification-code", {
         userId: parseInt(userId),
-        context: config.resendContext
+        context: config.resendContext,
       });
 
-      setSuccess('A new verification code has been sent to your email');
-      setTimeout(() => setSuccess(''), 5000);
-
+      setSuccess("A new verification code has been sent to your email");
+      setTimeout(() => setSuccess(""), 5000);
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to resend code. Please try again.');
+      setError(
+        error.response?.data?.message ||
+          "Failed to resend code. Please try again."
+      );
     } finally {
       setIsResending(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setCode(value);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   // Display masked email
-  const displayEmail = email ? maskEmail(email) : '';
+  const displayEmail = email ? maskEmail(email) : "";
 
   if (!userId) {
     return (
@@ -200,12 +206,11 @@ export default function VerifyCodePage() {
           <h1 className="text-3xl font-extrabold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
             {config.title}
           </h1>
-          
+
           <p className="text-gray-300 text-center mb-6">
-            {verificationType === 'email-verification' 
+            {verificationType === "email-verification"
               ? `${config.description} ${displayEmail}`
-              : config.description
-            }
+              : config.description}
           </p>
 
           <Alert type="error" message={error} />
@@ -228,21 +233,23 @@ export default function VerifyCodePage() {
             >
               {isLoading ? (
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : verificationType === "email-verification" ? (
+                "Verify Email"
               ) : (
-                verificationType === 'email-verification' ? 'Verify Email' : 'Verify & Login'
+                "Verify & Login"
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm space-y-3">
             <p className="text-gray-400">
-              Didn't receive the code?{' '}
+              Didn't receive the code?{" "}
               <button
                 onClick={handleResendCode}
                 disabled={isResending}
                 className="text-blue-400 hover:text-blue-300 underline"
               >
-                {isResending ? 'Sending...' : 'Request new code'}
+                {isResending ? "Sending..." : "Request new code"}
               </button>
             </p>
 
@@ -250,7 +257,9 @@ export default function VerifyCodePage() {
               onClick={() => navigate(config.fallbackRoute)}
               className="text-blue-400 hover:text-blue-300 underline text-sm"
             >
-              {verificationType === 'email-verification' ? 'Back to Register' : 'Back to Login'}
+              {verificationType === "email-verification"
+                ? "Back to Register"
+                : "Back to Login"}
             </button>
           </div>
         </div>
@@ -258,9 +267,10 @@ export default function VerifyCodePage() {
         {/* Right Side Image */}
         <div className="hidden md:block md:w-1/2">
           <img
-            src={verificationType === 'email-verification' 
-              ? "/background/verifyEmail.png"
-              : "/background/verify2FA.png"
+            src={
+              verificationType === "email-verification"
+                ? "/background/verifyEmail.png"
+                : "/background/verify2FA.png"
             }
             alt={`${config.title} Visual`}
             className="w-full h-full object-cover"

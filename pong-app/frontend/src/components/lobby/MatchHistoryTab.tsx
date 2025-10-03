@@ -43,7 +43,7 @@ interface LeaderboardPlayer {
 
 export const MatchHistoryTab: React.FC = () => {
   const { user } = useAuth();
-  
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -57,13 +57,18 @@ export const MatchHistoryTab: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch all data in parallel
-        const [matchHistoryResponse, statsResponse, profileResponse, leaderboardResponse] = await Promise.all([
-          api.get('/game/history'),
-          api.get('/game/stats'),
-          api.get('/user/profile'),
-          api.get('/game/leaderboard')
+        const [
+          matchHistoryResponse,
+          statsResponse,
+          profileResponse,
+          leaderboardResponse,
+        ] = await Promise.all([
+          api.get("/game/history"),
+          api.get("/game/stats"),
+          api.get("/user/profile"),
+          api.get("/game/leaderboard"),
         ]);
 
         setMatches(matchHistoryResponse.data);
@@ -73,13 +78,12 @@ export const MatchHistoryTab: React.FC = () => {
           email: profileResponse.data.email,
           profilePic: profileResponse.data.profilePic,
           online_status: profileResponse.data.online_status,
-          createdAt: profileResponse.data.createdAt
+          createdAt: profileResponse.data.createdAt,
         });
         setLeaderboard(leaderboardResponse.data);
-
       } catch (error) {
-        console.error('Failed to fetch match history data:', error);
-        setError('Failed to load game statistics. Please try again.');
+        console.error("Failed to fetch match history data:", error);
+        setError("Failed to load game statistics. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -101,38 +105,44 @@ export const MatchHistoryTab: React.FC = () => {
         <h3 className="text-xl font-bold mb-3">Match Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <strong className="text-blue-300">Game Type:</strong> 
+            <strong className="text-blue-300">Game Type:</strong>
             <span className="ml-2 capitalize">{match.gameType}</span>
           </div>
           <div>
-            <strong className="text-blue-300">Result:</strong> 
-            <span className={`ml-2 px-2 py-1 rounded text-sm ${
-              match.result === 'win' ? 'bg-green-500' : 
-              match.result === 'loss' ? 'bg-red-500' : 
-              'bg-yellow-500'
-            }`}>
+            <strong className="text-blue-300">Result:</strong>
+            <span
+              className={`ml-2 px-2 py-1 rounded text-sm ${
+                match.result === "win"
+                  ? "bg-green-500"
+                  : match.result === "loss"
+                  ? "bg-red-500"
+                  : "bg-yellow-500"
+              }`}
+            >
               {match.result.toUpperCase()}
             </span>
           </div>
           <div>
-            <strong className="text-blue-300">Final Score:</strong> 
+            <strong className="text-blue-300">Final Score:</strong>
             <span className="ml-2 font-mono">{match.score}</span>
           </div>
           <div>
-            <strong className="text-blue-300">Duration:</strong> 
+            <strong className="text-blue-300">Duration:</strong>
             <span className="ml-2">{match.duration}</span>
           </div>
           <div>
-            <strong className="text-blue-300">Mode:</strong> 
+            <strong className="text-blue-300">Mode:</strong>
             <span className="ml-2 capitalize">{match.mode}</span>
           </div>
           <div>
-            <strong className="text-blue-300">Opponent:</strong> 
+            <strong className="text-blue-300">Opponent:</strong>
             <span className="ml-2">{match.opponent}</span>
           </div>
         </div>
-        
-        {match.rounds && Array.isArray(match.rounds) && match.rounds.length > 0 ? (
+
+        {match.rounds &&
+        Array.isArray(match.rounds) &&
+        match.rounds.length > 0 ? (
           <div>
             <h4 className="font-bold mb-2 text-lg">Round Details:</h4>
             <div className="space-y-3">
@@ -170,29 +180,36 @@ export const MatchHistoryTab: React.FC = () => {
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getRankBadgeColor = (rank: number) => {
     switch (rank) {
-      case 1: return 'bg-yellow-500 text-black';
-      case 2: return 'bg-gray-400 text-black';
-      case 3: return 'bg-orange-700 text-white';
-      default: return 'bg-gray-600 text-white';
+      case 1:
+        return "bg-yellow-500 text-black";
+      case 2:
+        return "bg-gray-400 text-black";
+      case 3:
+        return "bg-orange-700 text-white";
+      default:
+        return "bg-gray-600 text-white";
     }
   };
 
   const getStatusIndicator = (status: string) => {
     switch (status) {
-      case 'online': return 'bg-green-500';
-      case 'in-game': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+      case "online":
+        return "bg-green-500";
+      case "in-game":
+        return "bg-yellow-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
@@ -217,8 +234,8 @@ export const MatchHistoryTab: React.FC = () => {
         {error && (
           <div className="bg-red-500 text-white p-4 rounded-lg mb-6 text-center max-w-2xl mx-auto">
             {error}
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="ml-4 bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
             >
               Retry
@@ -228,7 +245,9 @@ export const MatchHistoryTab: React.FC = () => {
 
         {/* Player Profile Section */}
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
-          <h2 className="text-2xl font-bold mb-6 text-center text-blue-300">Player Profile</h2>
+          <h2 className="text-2xl font-bold mb-6 text-center text-blue-300">
+            Player Profile
+          </h2>
           <div className="flex flex-col lg:flex-row gap-8 items-center">
             <div className="text-center flex-shrink-0">
               <img
@@ -237,19 +256,28 @@ export const MatchHistoryTab: React.FC = () => {
                 className="w-32 h-32 rounded-full border-4 border-blue-500 object-cover mx-auto"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%236B7280'/%3E%3Ctext x='64' y='76' font-family='Arial' font-size='48' fill='white' text-anchor='middle'%3E👤%3C/text%3E%3C/svg%3E";
+                  target.src =
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%236B7280'/%3E%3Ctext x='64' y='76' font-family='Arial' font-size='48' fill='white' text-anchor='middle'%3E👤%3C/text%3E%3C/svg%3E";
                 }}
               />
               <div className="mt-4">
-                <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${getStatusIndicator(profile?.online_status || 'offline')}`}></div>
-                <span className="text-sm text-gray-400 capitalize">{profile?.online_status || 'offline'}</span>
+                <div
+                  className={`w-3 h-3 rounded-full mx-auto mb-1 ${getStatusIndicator(
+                    profile?.online_status || "offline"
+                  )}`}
+                ></div>
+                <span className="text-sm text-gray-400 capitalize">
+                  {profile?.online_status || "offline"}
+                </span>
               </div>
             </div>
-            
+
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="text-blue-300 font-semibold">Username:</label>
+                  <label className="text-blue-300 font-semibold">
+                    Username:
+                  </label>
                   <p className="text-lg">{profile?.name || user?.username}</p>
                 </div>
                 <div>
@@ -257,27 +285,41 @@ export const MatchHistoryTab: React.FC = () => {
                   <p className="text-lg">{profile?.email}</p>
                 </div>
                 <div>
-                  <label className="text-blue-300 font-semibold">Member Since:</label>
-                  <p className="text-lg">{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}</p>
+                  <label className="text-blue-300 font-semibold">
+                    Member Since:
+                  </label>
+                  <p className="text-lg">
+                    {profile?.createdAt
+                      ? new Date(profile.createdAt).toLocaleDateString()
+                      : "N/A"}
+                  </p>
                 </div>
               </div>
-              
+
               {stats && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-green-400">{stats.wins}</div>
+                    <div className="text-2xl font-bold text-green-400">
+                      {stats.wins}
+                    </div>
                     <div className="text-sm text-gray-300">Wins</div>
                   </div>
                   <div className="bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-red-400">{stats.losses}</div>
+                    <div className="text-2xl font-bold text-red-400">
+                      {stats.losses}
+                    </div>
                     <div className="text-sm text-gray-300">Losses</div>
                   </div>
                   <div className="bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-blue-400">{stats.totalMatches}</div>
+                    <div className="text-2xl font-bold text-blue-400">
+                      {stats.totalMatches}
+                    </div>
                     <div className="text-sm text-gray-300">Total Games</div>
                   </div>
                   <div className="bg-gray-700 p-3 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-yellow-400">{stats.winRate}%</div>
+                    <div className="text-2xl font-bold text-yellow-400">
+                      {stats.winRate}%
+                    </div>
                     <div className="text-sm text-gray-300">Win Rate</div>
                   </div>
                 </div>
@@ -288,8 +330,10 @@ export const MatchHistoryTab: React.FC = () => {
 
         {/* Leaderboard Section */}
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg mb-8">
-          <h2 className="text-2xl font-bold mb-6 text-center text-yellow-300">🏅 Game Leaderboard</h2>
-          
+          <h2 className="text-2xl font-bold mb-6 text-center text-yellow-300">
+            🏅 Game Leaderboard
+          </h2>
+
           {leaderboard.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -304,27 +348,31 @@ export const MatchHistoryTab: React.FC = () => {
                 </thead>
                 <tbody>
                   {leaderboard.map((player) => (
-                    <tr 
-                      key={player.username} 
+                    <tr
+                      key={player.username}
                       className={`border-b border-gray-600 hover:bg-gray-700 transition-colors ${
-                        player.isCurrentUser ? 'bg-blue-900 bg-opacity-50' : ''
+                        player.isCurrentUser ? "bg-blue-900 bg-opacity-50" : ""
                       }`}
                     >
                       <td className="p-3">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${getRankBadgeColor(player.rank)}`}>
+                        <span
+                          className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${getRankBadgeColor(
+                            player.rank
+                          )}`}
+                        >
                           {player.rank}
                         </span>
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           {player.profilePic ? (
-                            <img 
-                              src={player.profilePic} 
+                            <img
+                              src={player.profilePic}
                               alt={player.username}
                               className="w-8 h-8 rounded-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
+                                target.style.display = "none";
                               }}
                             />
                           ) : (
@@ -333,15 +381,29 @@ export const MatchHistoryTab: React.FC = () => {
                             </div>
                           )}
                           <div className="flex items-center gap-2">
-                            {player.isCurrentUser && <span className="text-yellow-400">⭐</span>}
-                            <span className="font-medium">{player.username}</span>
-                            <div className={`w-2 h-2 rounded-full ${getStatusIndicator(player.online_status)}`}></div>
+                            {player.isCurrentUser && (
+                              <span className="text-yellow-400">⭐</span>
+                            )}
+                            <span className="font-medium">
+                              {player.username}
+                            </span>
+                            <div
+                              className={`w-2 h-2 rounded-full ${getStatusIndicator(
+                                player.online_status
+                              )}`}
+                            ></div>
                           </div>
                         </div>
                       </td>
-                      <td className="p-3 text-green-400 font-semibold">{player.wins}</td>
-                      <td className="p-3 text-red-400 font-semibold">{player.losses}</td>
-                      <td className="p-3 font-bold text-yellow-400">{player.points}</td>
+                      <td className="p-3 text-green-400 font-semibold">
+                        {player.wins}
+                      </td>
+                      <td className="p-3 text-red-400 font-semibold">
+                        {player.losses}
+                      </td>
+                      <td className="p-3 font-bold text-yellow-400">
+                        {player.points}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -350,24 +412,33 @@ export const MatchHistoryTab: React.FC = () => {
           ) : (
             <div className="text-center text-gray-400 py-8">
               <p className="text-lg">No leaderboard data available yet.</p>
-              <p className="text-sm">Play some games to appear on the leaderboard!</p>
+              <p className="text-sm">
+                Play some games to appear on the leaderboard!
+              </p>
             </div>
           )}
         </div>
 
         {/* Match History Section */}
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-          <h2 className="text-2xl font-bold mb-6 text-center text-purple-300">📊 Match History</h2>
-          
+          <h2 className="text-2xl font-bold mb-6 text-center text-purple-300">
+            📊 Match History
+          </h2>
+
           {matches.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p className="text-lg mb-2">No matches played yet.</p>
-              <p className="text-sm">Start playing games to see your match history here!</p>
+              <p className="text-sm">
+                Start playing games to see your match history here!
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {matches.map((match) => (
-                <div key={match.id} className="border border-gray-600 rounded-lg overflow-hidden hover:border-gray-500 transition-colors">
+                <div
+                  key={match.id}
+                  className="border border-gray-600 rounded-lg overflow-hidden hover:border-gray-500 transition-colors"
+                >
                   <button
                     onClick={() => toggleGameDetails(match.id)}
                     className="w-full text-left bg-gray-700 hover:bg-gray-600 px-4 py-4 transition-colors"
@@ -375,35 +446,47 @@ export const MatchHistoryTab: React.FC = () => {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                       <div className="flex items-center gap-4 flex-1">
                         <span className="text-3xl">
-                          {match.gameType === 'pingpong' || match.gameType === 'pong' ? '🏓' : 
-                           match.gameType === 'keyclash' ? '⌨️' : '🎮'}
+                          {match.gameType === "pingpong" ||
+                          match.gameType === "pong"
+                            ? "🏓"
+                            : match.gameType === "keyclash"
+                            ? "⌨️"
+                            : "🎮"}
                         </span>
                         <div className="text-left">
                           <div className="font-semibold text-lg">
                             {formatDate(match.date)}
                           </div>
                           <div className="text-sm text-gray-300">
-                            vs <strong>{match.opponent}</strong> • {match.mode} • {match.gameType}
+                            vs <strong>{match.opponent}</strong> • {match.mode}{" "}
+                            • {match.gameType}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          match.result === 'win' ? 'bg-green-500 text-white' : 
-                          match.result === 'loss' ? 'bg-red-500 text-white' : 
-                          'bg-yellow-500 text-black'
-                        }`}>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            match.result === "win"
+                              ? "bg-green-500 text-white"
+                              : match.result === "loss"
+                              ? "bg-red-500 text-white"
+                              : "bg-yellow-500 text-black"
+                          }`}
+                        >
                           {match.result.toUpperCase()}
                         </span>
                         <div className="text-right">
                           <div className="font-mono text-lg">{match.score}</div>
-                          <div className="text-sm text-gray-300">{match.duration}</div>
+                          <div className="text-sm text-gray-300">
+                            {match.duration}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </button>
-                  
-                  {expandedGameId === parseInt(match.id) && renderMatchDetails(match)}
+
+                  {expandedGameId === parseInt(match.id) &&
+                    renderMatchDetails(match)}
                 </div>
               ))}
             </div>
