@@ -1,12 +1,12 @@
-// frontend/src/pages/menu.tsx
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// frontend/src/pages/home.tsx
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const navigate = useNavigate();
-  
+
   const handleStart = () => {
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -26,7 +26,7 @@ const Home = () => {
         <p className="text-base md:text-lg mb-6 text-gray-800 font-medium">
           ⚡ Smash harder. Think faster.
           <br />
-          📈 The leaderboard remembers. Will you be on top? 
+          📈 The leaderboard remembers. Will you be on top?
           <br />
           🏅 Only the elite survive these tables.
           <br />

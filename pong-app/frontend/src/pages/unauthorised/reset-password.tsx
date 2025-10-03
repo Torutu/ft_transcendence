@@ -1,89 +1,93 @@
 // frontend/src/pages/reset-password.tsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import validator from 'validator';
-import api from '../../utils/api';
-import { Alert } from '../../components/general';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import validator from "validator";
+import api from "../../utils/api";
+import { Alert } from "../../components/general";
 
 export default function ResetPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [unverifiedUserId, setUnverifiedUserId] = useState('');
+  const [unverifiedUserId, setUnverifiedUserId] = useState("");
   const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
 
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    setError('');
-    setSuccessMessage('');
-    setUnverifiedUserId('');
+    setError("");
+    setSuccessMessage("");
+    setUnverifiedUserId("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validator.isEmail(email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/reset-password', { email });
-      setError('');
-      setUnverifiedUserId('');
+      const response = await api.post("/auth/reset-password", { email });
+      setError("");
+      setUnverifiedUserId("");
       setSuccessMessage(response.data.message);
     } catch (error: any) {
-      setSuccessMessage('');
-      
-      if (error.response?.data?.error === 'GOOGLE_OAUTH_USER') {
-        setError('Google OAuth users cannot reset password. Please use Google Sign-In.');
-      } 
-      else if (error.response?.data?.error === 'EMAIL_NOT_VERIFIED') {
-        setError('Please verify your email first before resetting password.');
+      setSuccessMessage("");
+
+      if (error.response?.data?.error === "GOOGLE_OAUTH_USER") {
+        setError(
+          "Google OAuth users cannot reset password. Please use Google Sign-In."
+        );
+      } else if (error.response?.data?.error === "EMAIL_NOT_VERIFIED") {
+        setError("Please verify your email first before resetting password.");
         // Store userId for resend functionality
         setUnverifiedUserId(error.response.data.userId);
-      }
-      else if (error.response?.status >= 500) {
-        setError('Unable to reset password. Please try again later.');
-      }
-      else if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
-        setError('Network connection failed. Please check your internet connection.');
-      }
-      else {
-        setError(error.response?.data?.message || 'An unexpected error occurred. Please try again.');
+      } else if (error.response?.status >= 500) {
+        setError("Unable to reset password. Please try again later.");
+      } else if (
+        error.code === "NETWORK_ERROR" ||
+        error.message === "Network Error"
+      ) {
+        setError(
+          "Network connection failed. Please check your internet connection."
+        );
+      } else {
+        setError(
+          error.response?.data?.message ||
+            "An unexpected error occurred. Please try again."
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-const handleResendVerification = async () => {
-  if (!unverifiedUserId) return;
-  
-  setIsResending(true);
-  try {
-    const response = await api.post('/auth/resend-verification', { 
-      userId: unverifiedUserId 
-    });
-    
-    // ⭐⭐ SIMPLE FIX: Redirect to existing verify-email page ⭐⭐
-    navigate('/verify-email', { 
-      state: { 
-        email: email,
-        userId: unverifiedUserId 
-      }
-    });
-    
-  } catch (error: any) {
-    setError('Failed to resend verification email. Please try again.');
-  } finally {
-    setIsResending(false);
-  }
-};
+  const handleResendVerification = async () => {
+    if (!unverifiedUserId) return;
+
+    setIsResending(true);
+    try {
+      const response = await api.post("/auth/resend-verification", {
+        userId: unverifiedUserId,
+      });
+
+      // ⭐⭐ SIMPLE FIX: Redirect to existing verify-email page ⭐⭐
+      navigate("/verify-email", {
+        state: {
+          email: email,
+          userId: unverifiedUserId,
+        },
+      });
+    } catch (error: any) {
+      setError("Failed to resend verification email. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -124,14 +128,15 @@ const handleResendVerification = async () => {
           />
 
           {/* Resend Verification Button (only show for unverified email error) */}
-          {error === 'Please verify your email first before resetting password.' && (
+          {error ===
+            "Please verify your email first before resetting password." && (
             <div className="mt-3 text-center">
               <button
                 onClick={handleResendVerification}
                 disabled={isResending}
                 className="text-blue-400 hover:text-blue-300 underline font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
               >
-                {isResending ? 'Sending...' : 'Resend verification email'}
+                {isResending ? "Sending..." : "Resend verification email"}
               </button>
             </div>
           )}
@@ -156,7 +161,7 @@ const handleResendVerification = async () => {
                 {isLoading ? (
                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : (
-                  'Send Reset Link'
+                  "Send Reset Link"
                 )}
               </button>
             </form>
@@ -164,8 +169,11 @@ const handleResendVerification = async () => {
 
           <div className="mt-6 text-center text-sm">
             <p className="text-gray-400">
-              Remember your password?{' '}
-              <Link to="/login" className="text-base text-blue-400 hover:underline font-medium">
+              Remember your password?{" "}
+              <Link
+                to="/login"
+                className="text-base text-blue-400 hover:underline font-medium"
+              >
                 Log in
               </Link>
             </p>

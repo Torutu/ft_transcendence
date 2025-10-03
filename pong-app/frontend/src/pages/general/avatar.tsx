@@ -1,7 +1,7 @@
 // frontend/src/pages/general/avatar.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAvatars } from "../utils/lobbyApi";
+import api from "../../utils/api";
 
 interface Avatar {
   id: string;
@@ -27,15 +27,15 @@ export const AvatarPage = () => {
 
   const target = state?.target || "user";
   const guestIndex = state?.guestIndex ?? -1;
-  const returnTo = state?.returnTo || "/quickmatch";
+  const returnTo = state?.returnTo || "/quickmatch-local";
 
   // Load avatars from backend
   useEffect(() => {
     const loadAvatars = async () => {
       try {
         setLoading(true);
-        const fetchedAvatars = await getAvatars();
-        setAvatars(fetchedAvatars);
+        const response = await api.get("/user/avatars");
+        setAvatars(response.data);
       } catch (err) {
         setError("Failed to load avatars");
         console.error("Avatar loading error:", err);
@@ -57,8 +57,12 @@ export const AvatarPage = () => {
   }
 
   // Check guest avatar (support both quickmatch and regular guest)
-  const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
-  const guestAvatar = JSON.parse(localStorage.getItem(guestAvatarKey) || "null");
+  const guestAvatarKey = state?.fromQuickMatch
+    ? "quickmatch_guestAvatar"
+    : "guestAvatar";
+  const guestAvatar = JSON.parse(
+    localStorage.getItem(guestAvatarKey) || "null"
+  );
   if (guestAvatar?.name && !(target === "guest")) {
     selectedAvatars.add(guestAvatar.name);
   }
@@ -91,7 +95,8 @@ export const AvatarPage = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
+      <div
+        className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
         style={{ backgroundImage: "url('/background/gray_background.jpg')" }}
       >
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -102,7 +107,8 @@ export const AvatarPage = () => {
 
   if (error) {
     return (
-      <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
+      <div
+        className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
         style={{ backgroundImage: "url('/background/gray_background.jpg')" }}
       >
         <p className="text-red-400 text-xl mb-4">{error}</p>
@@ -117,10 +123,7 @@ export const AvatarPage = () => {
   }
 
   return (
-    <div
-      className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center bg-gray-700 text-white"
-     
-    >
+    <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center bg-gray-700 text-white">
       <button
         onClick={() => navigate(returnTo)}
         className="absolute top-6 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
@@ -128,17 +131,18 @@ export const AvatarPage = () => {
         Back
       </button>
 
-      <h1 className="text-4xl font-bold text-center mb-6">
-        Choose Avatar
-      </h1>
-      
+      <h1 className="text-4xl font-bold text-center mb-6">Choose Avatar</h1>
+
       <p className="text-lg text-gray-300 mb-8 text-center">
-        {target === "user" ? "Choose avatar for Player 1" : "Choose avatar for Player 2 (Guest)"}
+        {target === "user"
+          ? "Choose avatar for Player 1"
+          : "Choose avatar for Player 2 (Guest)"}
       </p>
 
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {avatars.map((avatar) => {
-          const isTaken = selectedAvatars.has(avatar.id) || selectedAvatars.has(avatar.name);
+          const isTaken =
+            selectedAvatars.has(avatar.id) || selectedAvatars.has(avatar.name);
 
           return (
             <div

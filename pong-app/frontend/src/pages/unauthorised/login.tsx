@@ -1,10 +1,10 @@
 // frontend/src/pages/unauthorised/login.tsx
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import validator from 'validator';
-import api from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { Alert } from '../../components/general';
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import validator from "validator";
+import api from "../../utils/api";
+import { useAuth } from "../../contexts/AuthContext";
+import { Alert } from "../../components/general";
 
 declare global {
   interface Window {
@@ -12,25 +12,25 @@ declare global {
   }
 }
 
-const LoginPage = () => {
+export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
-    username: '', // Changed from 'name' to 'username'
-    password: '',
+    username: "",
+    password: "",
   });
 
   const [formErrors, setFormErrors] = useState({
-    username: '',
-    password: '',
+    username: "",
+    password: "",
   });
 
-  const [apiError, setApiError] = useState('');
+  const [apiError, setApiError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (location.state?.message) {
@@ -41,23 +41,23 @@ const LoginPage = () => {
 
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { username: '', password: '' };
+    const newErrors = { username: "", password: "" };
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = "Username is required";
       isValid = false;
     } else if (!validator.isAlphanumeric(formData.username)) {
-      newErrors.username = 'Username must contain only letters and numbers';
+      newErrors.username = "Username must contain only letters and numbers";
       isValid = false;
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
       isValid = false;
     }
 
     setFormErrors(newErrors);
-    setApiError('');
+    setApiError("");
     return isValid;
   };
 
@@ -67,24 +67,30 @@ const LoginPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post("/auth/login", {
         username: formData.username,
         password: formData.password,
       });
-      
+
       if (response.data.requires2FA) {
-        navigate('/verify-2fa', {
+        if (response.data.url) {
+          sessionStorage.setItem("url", response.data.url);
+        }
+
+        navigate("/verify-2fa", {
           state: {
             userId: response.data.userId,
-            username: formData.username // Pass username instead of userId for the 2FA verification
-          } 
+            url: response.data.url,
+          },
         });
       } else {
-        setApiError('Unexpected response from server');
+        setApiError("Unexpected response from server");
       }
     } catch (error: any) {
-      setApiError(error.response?.data?.message || 'Login failed. Please try again.');
-      setFormErrors({ username: '', password: '' });
+      setApiError(
+        error.response?.data?.message || "Login failed. Please try again."
+      );
+      setFormErrors({ username: "", password: "" });
     } finally {
       setIsLoading(false);
     }
@@ -92,31 +98,31 @@ const LoginPage = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
+      setFormErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    setApiError(''); 
-    setSuccessMessage('');
+    setApiError("");
+    setSuccessMessage("");
   };
 
   const handleCredentialResponse = async (response: any) => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/signin-with-google', {
+      const res = await api.post("/auth/signin-with-google", {
         credential: response.credential,
       });
-      
+
       if (res.data.user) {
         login(res.data.user);
-        navigate('/lobby');
+        navigate("/lobby");
       } else {
-        setApiError('Google sign-in failed');
+        setApiError("Google sign-in failed");
       }
     } catch (error: any) {
-      setApiError('An unexpected error occurred. Please try again.');
-      setFormErrors({ username: '', password: '' });
+      setApiError("An unexpected error occurred. Please try again.");
+      setFormErrors({ username: "", password: "" });
     } finally {
       setIsLoading(false);
     }
@@ -126,20 +132,20 @@ const LoginPage = () => {
     if (window.google && googleBtnRef.current) {
       const client_id = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       if (!client_id) {
-        console.error('VITE_GOOGLE_CLIENT_ID is not set');
+        console.error("VITE_GOOGLE_CLIENT_ID is not set");
         return;
       }
-      
+
       window.google.accounts.id.initialize({
         client_id: client_id,
         callback: handleCredentialResponse,
       });
-      
+
       window.google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: 'outline',
-        size: 'large',
-        width: '380',
-        locale: 'en'
+        theme: "outline",
+        size: "large",
+        width: "380",
+        locale: "en",
       });
     }
   }, []);
@@ -161,7 +167,7 @@ const LoginPage = () => {
         {/* Left Side Image */}
         <div className="hidden md:block md:w-1/2">
           <img
-            src="/background/login2.png"
+            src="/background/login.png"
             alt="Login Visual"
             className="w-full h-full object-contain"
           />
@@ -172,7 +178,9 @@ const LoginPage = () => {
           <h1 className="text-3xl font-extrabold text-center mb-2 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
             Welcome Back
           </h1>
-          <p className="text-gray-300 text-center mb-3">Log in to your account</p>
+          <p className="text-gray-300 text-center mb-3">
+            Log in to your account
+          </p>
 
           <Alert type="success" message={successMessage} />
           <Alert type="error" message={apiError} />
@@ -186,14 +194,18 @@ const LoginPage = () => {
                 placeholder="Username"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
                   formErrors.username
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-blue-200'
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-200"
                 }`}
                 value={formData.username}
                 onChange={handleChange}
                 autoFocus
               />
-              {formErrors.username && <p className="mt-1 text-sm text-red-500">{formErrors.username}</p>}
+              {formErrors.username && (
+                <p className="mt-1 text-sm text-red-500">
+                  {formErrors.username}
+                </p>
+              )}
             </div>
 
             <div>
@@ -204,13 +216,17 @@ const LoginPage = () => {
                 placeholder="Password"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-white bg-gray-900 transition ${
                   formErrors.password
-                    ? 'border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:ring-blue-200'
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-200"
                 }`}
                 value={formData.password}
                 onChange={handleChange}
               />
-              {formErrors.password && <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>}
+              {formErrors.password && (
+                <p className="mt-1 text-sm text-red-500">
+                  {formErrors.password}
+                </p>
+              )}
             </div>
 
             <button
@@ -221,12 +237,15 @@ const LoginPage = () => {
               {isLoading ? (
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                'Log In'
+                "Log In"
               )}
             </button>
 
             <p className="text-center">
-              <Link to="/reset-password" className="text-sm font-medium text-blue-400 hover:underline">
+              <Link
+                to="/reset-password"
+                className="text-sm font-medium text-blue-400 hover:underline"
+              >
                 Forgot Password?
               </Link>
             </p>
@@ -254,8 +273,11 @@ const LoginPage = () => {
           {/* Register Link */}
           <div className="mt-6 text-center text-sm">
             <p className="text-center text-sm mt-6 text-gray-400">
-              Don&apos;t have an account?{' '}
-              <Link to="/register" className="text-base text-blue-400 hover:underline font-medium">
+              Don&apos;t have an account?{" "}
+              <Link
+                to="/register"
+                className="text-base text-blue-400 hover:underline font-medium"
+              >
                 Create New Account
               </Link>
             </p>
@@ -265,5 +287,3 @@ const LoginPage = () => {
     </div>
   );
 }
-
-export default LoginPage;
