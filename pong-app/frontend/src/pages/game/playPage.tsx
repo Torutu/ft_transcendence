@@ -16,14 +16,8 @@ const PlayPage: React.FC = () => {
   useEffect(() => {
     let name: string | null = null;
     let playerId: number | null = null;
-    if (location.state?.name)
-      name = location.state.name;
-    if (location.state.user)
-      name = location.state.user;
-    if (location.state?.playerId)
-      playerId = location.state.playerId;
-    if (location.state.userId)
-      playerId = location.state.userId;
+    if (location.state?.name) name = location.state.name;
+    if (location.state?.playerId) playerId = location.state.playerId;
     if (containerRef.current && gameId && mode && type && game === "pong") {
       pongInstance.current = new PingPongClient(
         containerRef.current,
@@ -64,7 +58,12 @@ const PlayPage: React.FC = () => {
   }, [gameId, mode, game, type, location]);
 
   if (game === "pong")
-    return <div ref={containerRef} className="flex-grow relative w-full h-100vh overflow-hidden bg-black" />;
+    return (
+      <div
+        ref={containerRef}
+        className="flex-grow relative w-full h-full bg-black"
+      />
+    );
   else if (game === "keyclash")
     return (
       <div
