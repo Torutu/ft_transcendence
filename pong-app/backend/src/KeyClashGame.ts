@@ -220,6 +220,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                         startGame();
                     }
                 });
+
             });
 
             function startGame() {
@@ -250,12 +251,8 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                         state.player2ready = false;
                         if (state.score1 > state.score2)
                             state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
-                        else if (state.type === "tournament"){ // "coin flip" in case of a tie in tournament
-                            if (Math.random() < 0.5)
-                                state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
-                            else
-                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player2;
-                        }
+                        else
+                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player2; // for now if tie, player2 advances
                         state.matches[state.round - 1].p1score = state.score1;
                         state.matches[state.round - 1].p2score = state.score2;
                         state.matches[state.round - 1].duration = 20;

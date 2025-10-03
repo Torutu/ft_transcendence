@@ -1,6 +1,6 @@
 // frontend/src/pages/general/avatar.tsx
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../utils/api";
 
 interface Avatar {
@@ -10,20 +10,24 @@ interface Avatar {
   description: string;
 }
 
-interface AvatarPageProps {
-  closeForm: () => void;
-  target: string;
-  setUserAvatar: React.Dispatch<any>
-  setGuestAvatar: React.Dispatch<any>
-  selectedAvatars: Set<string>
-}
-
-export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, selectedAvatars}: AvatarPageProps) => {
+export const AvatarPage = () => {
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const state = location.state as {
+    target: "user" | "guest";
+    guestIndex?: number;
+    returnTo?: string;
+    fromQuickMatch?: boolean;
+  };
+
+  const target = state?.target || "user";
+  const guestIndex = state?.guestIndex ?? -1;
+  const returnTo = state?.returnTo || "/quickmatch-local";
 
   // Load avatars from backend
   useEffect(() => {
@@ -42,6 +46,9 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
 
     loadAvatars();
   }, []);
+
+  // Track which avatars are already selected
+  const selectedAvatars = new Set<string>();
 
   // Check user avatar
   const userAvatar = JSON.parse(localStorage.getItem("userAvatar") || "null");
@@ -66,29 +73,24 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
       localStorage.getItem("guests") ||
       "[]"
   );
-  guests.forEach((g: any) => {
-    if (g?.avatar?.name && !(target === "guest")) {
+  guests.forEach((g: any, i: number) => {
+    if (g?.avatar?.name && !(target === "guest" && i === guestIndex)) {
       selectedAvatars.add(g.avatar.name);
     }
   });
 
   const handleSelect = (avatar: Avatar) => {
     const selectedAvatar = { name: avatar.id, image: avatar.imageUrl };
-    if (selectedAvatar && target) {
-      const avatarData = {
-        name: selectedAvatar.name,
-        image: selectedAvatar.image
-      };
-      
-      if (target === "user") {
-        setUserAvatar(avatarData);
-        localStorage.setItem("userAvatar", JSON.stringify(avatarData));
-      } else {
-        setGuestAvatar(avatarData);
-        localStorage.setItem("quickmatch_guestAvatar", JSON.stringify(avatarData));
-      }
-    }
-    closeForm();
+
+    navigate(returnTo, {
+      state: {
+        selectedAvatar,
+        target,
+        guestIndex,
+        fromAvatar: true,
+        fromQuickMatch: state?.fromQuickMatch,
+      },
+    });
   };
 
   if (loading) {
@@ -111,7 +113,7 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
       >
         <p className="text-red-400 text-xl mb-4">{error}</p>
         <button
-          onClick={() => closeForm()}
+          onClick={() => navigate(returnTo)}
           className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold"
         >
           Go Back
@@ -123,7 +125,7 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
   return (
     <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center bg-gray-700 text-white">
       <button
-        onClick={() => closeForm()}
+        onClick={() => navigate(returnTo)}
         className="absolute top-6 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
       >
         Back

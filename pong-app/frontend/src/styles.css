@@ -12,42 +12,34 @@ body {
   padding: 0;
   height: 100vh;
   width: 100vw;
+  /* overflow: hidden; */
 }
 
 html,
 body {
   height: 100%;
-  overflow-y: auto;
+  /* overflow-y: auto; NEED TO FIX THE PONG GAME*/
 }
 
-#avatarForm, #remoteAvatarForm {
+#popupDialog {
   display: none;
-  position: absolute;
-  top: 10;
-  left: 10;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
   z-index: 1000;
-  overflow: auto;
-}
-
-#localForm, #remoteForm, #popupDialog {
-	display: none;
-	position: relative;
-	top: 10;
-	left: 10;
-	padding: 20px;
-	z-index: 1000;
-  overflow: auto;
 }
 
 #overlay {
-	display: none;
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: rgba(0, 0, 0, 0.8);
-	z-index: 1000;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
 #root {
@@ -129,12 +121,12 @@ body {
   text-align: center;
 }
 
-#prompt1, #prompt2 {
-  font-size: 50px;
+.prompt {
+  font-size: 48px;
   margin: 20px 0;
   color: #ffffff;
   transform: scale(0.9);
-  opacity: 1;
+  opacity: 0;
   transition: all 0.2s ease-out;
 }
 
@@ -143,7 +135,7 @@ body {
   opacity: 1;
 }
 
-.score1, .score2 {
+.score {
   font-size: 20px;
   color: #cccccc;
 }

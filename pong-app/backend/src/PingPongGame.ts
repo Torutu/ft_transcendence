@@ -160,12 +160,8 @@ export default class PingPongGame {
                 this.state.matches[i].winner = this.state.matches[i].player2;
             else if (this.state.type === "1v1")
                 this.state.matchInfo = `It's a tie!`;
-            else { // "coin flip" in case of a tie in tournament
-                if (Math.random() < 0.5)
-                    this.state.matches[i].winner = this.state.matches[i].player1;
-                else
-                    this.state.matches[i].winner = this.state.matches[i].player2;
-            }
+            else // for now in a tie in tournament, player 2 advances
+                this.state.matches[i].winner = this.state.matches[i].player2; 
             if (this.state.type === "1v1" && this.state.matches[i].winner)
                 this.state.matchInfo = `${this.state.matches[i].winner} Wins!`;
             else if (this.state.type === "tournament") {
