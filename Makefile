@@ -8,7 +8,7 @@ RED    = \033[1;31m
 CYAN  := \033[1;96m	
 RESET  = \033[0m
 
-COMPOSE_FILE := ./pong-app/docker-compose.yml
+COMPOSE_FILE := ./docker-compose.yml
 PROJECT_DIR  := ./pong-app
 
 all: help 
