@@ -1,7 +1,7 @@
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
-import fs from 'fs';
-import path from 'path';
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import fs from "fs";
+import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +16,7 @@ const httpsOptions = {
 
 export default defineConfig(({ mode }) => {
   // Load env variables based on the current mode (e.g., 'development' or 'production')
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, process.cwd(), "");
 
   return {
     plugins: [react()],
@@ -25,38 +25,44 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       https: httpsOptions,
       proxy: {
-        '/api': {
+        "/api": {
           target: env.VITE_API_URL,
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+          rewrite: (path) => path.replace(/^\/api/, ""),
           secure: false, // Set to true only if using a trusted cert
           configure: (proxy, options) => {
             // Additional configuration for HTTPS
-            proxy.on('proxyReq', (proxyReq, req, res) => {
-              console.log('Proxying request:', req.method, req.url, 'to', options.target);
+            proxy.on("proxyReq", (proxyReq, req, res) => {
+              console.log(
+                "Proxying request:",
+                req.method,
+                req.url,
+                "to",
+                options.target
+              );
             });
-            proxy.on('error', (err, req, res) => {
-              console.error('Proxy error:', err);
+            proxy.on("error", (err, req, res) => {
+              console.error("Proxy error:", err);
             });
-          }
+          },
         },
-        '/socket.io': {
+        "/socket.io": {
           target: env.VITE_API_URL,
           ws: true,
           changeOrigin: true,
           secure: false,
-        }
+        },
       },
       hmr: {
         protocol: "wss",
         host: "brave-widely-chigger.ngrok-free.app",
         clientPort: 443, // wss runs over 443
-      }
+      },
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
-        'three': path.resolve(__dirname, 'node_modules/three'),
+        "@": path.resolve(__dirname, "./src"),
+        three: path.resolve(__dirname, "node_modules/three"),
       },
     },
   };

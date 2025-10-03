@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import PingPongClient from '../../utils/PingPongClient';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import KeyClashClient from '../../utils/keyClashClient';
+import React, { useEffect, useRef } from "react";
+import PingPongClient from "../../utils/PingPongClient";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import KeyClashClient from "../../utils/keyClashClient";
 
 const PlayPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -9,9 +9,9 @@ const PlayPage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const { mode } = useParams<{ mode: "local" | "remote" }>();
   const { game } = useParams<{ game: "pong" | "keyclash" }>();
-  const { type } = useParams<{ type: "1v1" | "tournament" }>(); 
+  const { type } = useParams<{ type: "1v1" | "tournament" }>();
   const navigate = useNavigate();
-  const location  = useLocation();
+  const location = useLocation();
 
   useEffect(() => {
     let name: string | null = null;
@@ -25,19 +25,39 @@ const PlayPage: React.FC = () => {
     if (location.state.userId)
       playerId = location.state.userId;
     if (containerRef.current && gameId && mode && type && game === "pong") {
-      pongInstance.current = new PingPongClient(containerRef.current, gameId, mode, type, navigate, name, playerId);
+      pongInstance.current = new PingPongClient(
+        containerRef.current,
+        gameId,
+        mode,
+        type,
+        navigate,
+        name,
+        playerId
+      );
       return () => {
         if (pongInstance.current) {
           pongInstance.current.dispose?.(); // fix the game dup
-          pongInstance.current = null; 
-        }      
-      }
-    }
-    else if (containerRef.current && gameId && mode && type && game === "keyclash") {
-      const cleanup = KeyClashClient(containerRef.current, gameId, mode, type, navigate, name, playerId);
+          pongInstance.current = null;
+        }
+      };
+    } else if (
+      containerRef.current &&
+      gameId &&
+      mode &&
+      type &&
+      game === "keyclash"
+    ) {
+      const cleanup = KeyClashClient(
+        containerRef.current,
+        gameId,
+        mode,
+        type,
+        navigate,
+        name,
+        playerId
+      );
       return cleanup;
-    }
-    else {
+    } else {
       alert("No such page");
       navigate("/");
     }
@@ -47,7 +67,10 @@ const PlayPage: React.FC = () => {
     return <div ref={containerRef} className="flex-grow relative w-full h-100vh overflow-hidden bg-black" />;
   else if (game === "keyclash")
     return (
-      <div ref={containerRef} className="flex-grow relative w-full h-full bg-black">
+      <div
+        ref={containerRef}
+        className="flex-grow relative w-full h-full bg-black"
+      >
         <div className="players-row">
           <div className="player" id="p1">
             <div id="prompt1">-</div>
@@ -58,12 +81,12 @@ const PlayPage: React.FC = () => {
             <div id="score2">Score: 0</div>
           </div>
         </div>
-    
+
         <div id="timer">Time Left: 20s</div>
         <div id="start-prompt">Press SPACE to Start</div>
       </div>
     );
-  else return; 
+  else return;
 };
 
 export default PlayPage;

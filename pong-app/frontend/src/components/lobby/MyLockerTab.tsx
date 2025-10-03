@@ -52,16 +52,18 @@ export const MyLockerTab: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const response = await api.get('/user/profile');
+
+        const response = await api.get("/user/profile");
         const profileData = response.data;
-        
+
         setProfile(profileData);
 
         const newForm = {
           firstName: profileData.firstName || "",
           lastName: profileData.lastName || "",
-          dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.substring(0, 10) : "",
+          dateOfBirth: profileData.dateOfBirth
+            ? profileData.dateOfBirth.substring(0, 10)
+            : "",
           gender: profileData.gender || "",
           favAvatar: profileData.favAvatar || "",
           profilePic: profileData.profilePic || "",
@@ -84,13 +86,15 @@ export const MyLockerTab: React.FC = () => {
   useEffect(() => {
     const loadAvatars = async () => {
       try {
-        const response = await api.get('/user/avatars');
+        const response = await api.get("/user/avatars");
         const avatarsData = response.data;
-        
+
         setAvatars(avatarsData);
 
         if (form.favAvatar) {
-          const currentFav = avatarsData.find((avatar: Avatar) => avatar.id === form.favAvatar);
+          const currentFav = avatarsData.find(
+            (avatar: Avatar) => avatar.id === form.favAvatar
+          );
           if (currentFav) {
             setFavoriteAvatar(currentFav);
           }
@@ -105,14 +109,14 @@ export const MyLockerTab: React.FC = () => {
 
   // Check for changes
   useEffect(() => {
-    const changesDetected = 
+    const changesDetected =
       form.firstName !== originalForm.firstName ||
       form.lastName !== originalForm.lastName ||
       form.dateOfBirth !== originalForm.dateOfBirth ||
       form.gender !== originalForm.gender ||
       form.favAvatar !== originalForm.favAvatar ||
       form.profilePic !== originalForm.profilePic;
-    
+
     setHasChanges(changesDetected);
   }, [form, originalForm]);
 
@@ -127,20 +131,22 @@ export const MyLockerTab: React.FC = () => {
   const handleCancel = () => {
     setForm(originalForm);
     setProfileImage(originalForm.profilePic);
-    
+
     // Reset favorite avatar if needed
     if (originalForm.favAvatar) {
-      const originalFav = avatars.find(a => a.id === originalForm.favAvatar);
+      const originalFav = avatars.find((a) => a.id === originalForm.favAvatar);
       setFavoriteAvatar(originalFav || null);
     } else {
       setFavoriteAvatar(null);
     }
-    
+
     setMessage("Changes cancelled");
     setTimeout(() => setMessage(""), 2000);
   };
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
     clearMessage();
     setForm({ ...form, [e.target.name]: e.target.value });
   }
@@ -148,15 +154,23 @@ export const MyLockerTab: React.FC = () => {
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     clearMessage();
     const file = e.target.files && e.target.files[0];
-    
+
     if (!file) return;
 
     // Validate file type
-    const allowedExtensions = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedExtensions = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!allowedExtensions.includes(file.type)) {
-      setMessage("Invalid file type. Please upload JPEG, PNG, GIF, or WebP image.");
+      setMessage(
+        "Invalid file type. Please upload JPEG, PNG, GIF, or WebP image."
+      );
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
       return;
     }
@@ -166,7 +180,7 @@ export const MyLockerTab: React.FC = () => {
     if (file.size > MAX_FILE_SIZE) {
       setMessage("File size exceeds the limit of 1 MB.");
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
       return;
     }
@@ -190,20 +204,20 @@ export const MyLockerTab: React.FC = () => {
     clearMessage();
     const avatarId = e.target.value;
     setForm((prev) => ({ ...prev, favAvatar: avatarId }));
-    const avatar = avatars.find(a => a.id === avatarId);
+    const avatar = avatars.find((a) => a.id === avatarId);
     setFavoriteAvatar(avatar || null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     try {
       // Only validate if user actually entered something in name fields
       if (form.firstName && !form.firstName.trim()) {
         setMessage("Update failed! First name cannot be only spaces");
         return;
       }
-      
+
       if (form.lastName && !form.lastName.trim()) {
         setMessage("Update failed! Last name cannot be only spaces");
         return;
@@ -217,30 +231,31 @@ export const MyLockerTab: React.FC = () => {
         }
       }
 
-      const response = await api.put('/user/profile', {
+      const response = await api.put("/user/profile", {
         firstName: form.firstName,
         lastName: form.lastName,
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
         favAvatar: favoriteAvatar?.id || "",
-        profilePic: form.profilePic
+        profilePic: form.profilePic,
       });
-      
+
       // Update profile with response data
       if (response.data.user) {
         setProfile(response.data.user);
       }
-      
+
       // Update original form to reflect saved state
       setOriginalForm(form);
       setMessage("Profile updated successfully!");
-      
     } catch (err: any) {
       console.error("Profile update error:", err);
-      
+
       // Check if it's a 413 Payload Too Large error
       if (err?.response?.status === 413) {
-        setMessage("Image file is too large after processing. Please choose a smaller image.");
+        setMessage(
+          "Image file is too large after processing. Please choose a smaller image."
+        );
       } else if (err?.response?.data?.message) {
         setMessage(err.response.data.message);
       } else {
@@ -278,7 +293,7 @@ export const MyLockerTab: React.FC = () => {
         <div className="bg-gray-800 rounded-xl p-8">
           <div className="text-center">
             <div className="text-red-400 mb-4">{error}</div>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg"
             >
@@ -292,7 +307,10 @@ export const MyLockerTab: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <form className="bg-gray-800 rounded-xl p-8 relative" onSubmit={handleSubmit}>
+      <form
+        className="bg-gray-800 rounded-xl p-8 relative"
+        onSubmit={handleSubmit}
+      >
         {/* Cancel Button - Top Right Corner */}
         {hasChanges && (
           <button
@@ -304,7 +322,9 @@ export const MyLockerTab: React.FC = () => {
             <span className="text-lg">✕</span>
           </button>
         )}
-        <h2 className="text-3xl font-bold mb-6 text-center text-blue-300">🧳 My Locker</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-blue-300">
+          🧳 My Locker
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div>
             <div className="flex justify-center">
@@ -322,9 +342,17 @@ export const MyLockerTab: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={profileImage ? handleImageEdit : () => fileInputRef.current?.click()}
+                  onClick={
+                    profileImage
+                      ? handleImageEdit
+                      : () => fileInputRef.current?.click()
+                  }
                   className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 rounded-full p-2 transition-colors"
-                  title={profileImage ? "Edit profile picture" : "Add profile picture"}
+                  title={
+                    profileImage
+                      ? "Edit profile picture"
+                      : "Add profile picture"
+                  }
                 >
                   {profileImage ? (
                     <span className="text-white text-lg">✏️</span>
@@ -345,10 +373,26 @@ export const MyLockerTab: React.FC = () => {
           </div>
           <div className="flex flex-col justify-center">
             <div className="space-y-3 text-lg text-left">
-              <div><span className="text-gray-400">Username:</span> <span className="font-bold">{user?.username}</span></div>
-              <div><span className="text-gray-400">Email:</span> <span className="font-bold">{user?.email}</span></div>
-              <div><span className="text-gray-400">Wins:</span> <span className="font-bold text-green-400">{profile?.wins ?? 0}</span></div>
-              <div><span className="text-gray-400">Losses:</span> <span className="font-bold text-red-400">{profile?.losses ?? 0}</span></div>
+              <div>
+                <span className="text-gray-400">Username:</span>{" "}
+                <span className="font-bold">{user?.username}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Email:</span>{" "}
+                <span className="font-bold">{user?.email}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Wins:</span>{" "}
+                <span className="font-bold text-green-400">
+                  {profile?.wins ?? 0}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400">Losses:</span>{" "}
+                <span className="font-bold text-red-400">
+                  {profile?.losses ?? 0}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -373,7 +417,12 @@ export const MyLockerTab: React.FC = () => {
             />
           </div>
           <div className="mb-3">
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-left mb-1">Date of Birth:</label>
+            <label
+              htmlFor="dateOfBirth"
+              className="block text-sm font-medium text-left mb-1"
+            >
+              Date of Birth:
+            </label>
             <input
               type="date"
               name="dateOfBirth"
@@ -439,11 +488,13 @@ export const MyLockerTab: React.FC = () => {
           </div>
         </div>
         {message && (
-          <div className={`mt-3 text-center ${
-            message.includes("successfully") || message.includes("cancelled") 
-              ? "text-green-400" 
-              : "text-red-400"
-          }`}>
+          <div
+            className={`mt-3 text-center ${
+              message.includes("successfully") || message.includes("cancelled")
+                ? "text-green-400"
+                : "text-red-400"
+            }`}
+          >
             {message}
           </div>
         )}

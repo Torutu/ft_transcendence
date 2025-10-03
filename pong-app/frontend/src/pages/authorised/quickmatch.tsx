@@ -85,16 +85,25 @@ export default function QuickmatchPage() {
     socketRef.current = io("/quickmatch", {
       path: "/socket.io",
       transports: ["websocket"],
-      secure: true
+      secure: true,
     });
 
     socketRef.current.on("connect", () => {
-      socketRef.current?.emit("name", name, playerId, (res: { error: string }) => {
-        if (res.error) {
-          alert(res.error);
-          navigate("/lobby")
+      if (user) {
+        name = user.username;
+        playerId = user.id;
+      }
+      socketRef.current?.emit(
+        "name",
+        name,
+        playerId,
+        (res: { error: string }) => {
+          if (res.error) {
+            alert(res.error);
+            navigate("/lobby");
+          }
         }
-      });
+      );
     });
 
     socketRef.current.on("guestName", (guestName) => {
@@ -104,52 +113,53 @@ export default function QuickmatchPage() {
     socketRef.current.on("lobby_update", (data) => {
       setPlayers(data.players);
       setPongGames(data.pongGames);
-      setKeyClashGames(data.keyClashGames)
+      setKeyClashGames(data.keyClashGames);
     });
 
     socketRef.current.on("created_game", (gameId, game, mode) => {
       try {
-				// Get guest name from localStorage
-				const storedGuest = localStorage.getItem('quickmatch_guestName');
-				console.log("📦 Retrieved stored guest:", storedGuest);
+        // Get guest name from localStorage
+        const storedGuest = localStorage.getItem("quickmatch_guestName");
+        console.log("📦 Retrieved stored guest:", storedGuest);
 
-				const playerNames = {
-					player1: name,
-					player2: storedGuest
+        const playerNames = {
+          player1: name,
+          player2: storedGuest,
         };
         if (socketRef.current) {
           console.log("🔌 Disconnecting socket...");
           socketRef.current.disconnect();
           socketRef.current = null;
         }
-			
+
         const type = "1v1";
         const routePath = `/${game}/${mode}/${type}/${gameId}`;
         console.log("🎯 Navigating to:", routePath);
-			
-        navigate(routePath, { 
-          state: { 
+
+        navigate(routePath, {
+          state: {
             name: playerNames,
             playerId: playerId,
             gameType: game,
             mode: mode,
             type: type,
             gameId: gameId,
-          } 
+          },
         });
         console.log("✅ Navigation completed");
-        
       } catch (error) {
-          console.error("❌ Error in created_game handler:", error);
-        	alert("Navigation failed: " + error.message);
-      	}
-    })
+        console.error("❌ Error in created_game handler:", error);
+        alert("Navigation failed: " + error.message);
+      }
+    });
 
     socketRef.current.on("joined_game", (gameId, game, mode) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
-	    const type = "1v1";
-      navigate(`/${game}/${mode}/${type}/${gameId}`, { state: { name: name, playerId: playerId } });
+      const type = "1v1";
+      navigate(`/${game}/${mode}/${type}/${gameId}`, {
+        state: { name: name, playerId: playerId },
+      });
     });
 
     socketRef.current?.on("invitation_sent", (data: {

@@ -27,21 +27,21 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
 
   // Load avatars from backend
   useEffect(() => {
-  const loadAvatars = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/user/avatars');
-      setAvatars(response.data);
-    } catch (err) {
-      setError("Failed to load avatars");
-      console.error("Avatar loading error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadAvatars = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/user/avatars");
+        setAvatars(response.data);
+      } catch (err) {
+        setError("Failed to load avatars");
+        console.error("Avatar loading error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  loadAvatars();
-}, []);
+    loadAvatars();
+  }, []);
 
   // Check user avatar
   const userAvatar = JSON.parse(localStorage.getItem("userAvatar") || "null");
@@ -50,8 +50,12 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
   }
 
   // Check guest avatar (support both quickmatch and regular guest)
-  // const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
-  const guestAvatar = JSON.parse(localStorage.getItem("guestAvatar") || "null");
+  const guestAvatarKey = state?.fromQuickMatch
+    ? "quickmatch_guestAvatar"
+    : "guestAvatar";
+  const guestAvatar = JSON.parse(
+    localStorage.getItem(guestAvatarKey) || "null"
+  );
   if (guestAvatar?.name && !(target === "guest")) {
     selectedAvatars.add(guestAvatar.name);
   }
@@ -89,7 +93,8 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
+      <div
+        className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
         style={{ backgroundImage: "url('/background/gray_background.jpg')" }}
       >
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -100,7 +105,8 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
 
   if (error) {
     return (
-      <div className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
+      <div
+        className="w-full min-h-screen bg-cover bg-center text-white p-8 flex flex-col items-center justify-center"
         style={{ backgroundImage: "url('/background/gray_background.jpg')" }}
       >
         <p className="text-red-400 text-xl mb-4">{error}</p>
@@ -124,14 +130,17 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
       </button>
 
       <h1 className="text-4xl font-bold text-center mb-6">Choose Avatar</h1>
-      
+
       <p className="text-lg text-gray-300 mb-8 text-center">
-        {target === "user" ? "Choose avatar for Player 1" : "Choose avatar for Player 2 (Guest)"}
+        {target === "user"
+          ? "Choose avatar for Player 1"
+          : "Choose avatar for Player 2 (Guest)"}
       </p>
 
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {avatars.map((avatar) => {
-          const isTaken = selectedAvatars.has(avatar.id) || selectedAvatars.has(avatar.name);
+          const isTaken =
+            selectedAvatars.has(avatar.id) || selectedAvatars.has(avatar.name);
 
           return (
             <div

@@ -5,13 +5,13 @@ import { useAuth } from "../../contexts/AuthContext";
 import TournamentPlayerForm from "../../components/tournament-lobby/TournamentPlayerForm";
 
 interface Player {
-	socketId: string;
-	name: string;
+  socketId: string;
+  name: string;
 }
 interface GameRoom {
-	id: string;
-	status: "waiting" | "in-progress" | "finished";
-	players: Player[];
+  id: string;
+  status: "waiting" | "in-progress" | "finished";
+  players: Player[];
 }
 
 export default function TournamentPage() {
