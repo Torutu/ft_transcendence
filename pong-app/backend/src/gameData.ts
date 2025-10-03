@@ -1,7 +1,6 @@
 import { Player, LobbyState, GameResult } from "./types/lobby";
 import PingPongGame from "./PingPongGame";
 import { state as KeyClashState } from "./KeyClashGame"
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
 export const playersOnline: Player[] = [];
@@ -73,9 +72,7 @@ export async function saveGameResult(gameResult: GameResult, prisma: PrismaClien
             rounds,
             timestamp: new Date(),
             winner: winner,
-            // userWon: userIsPlayer1 ? player1Data.isWinner : (userIsPlayer2 ? player2Data.isWinner : false),
             finalScore: `${player1.score} - ${player2.score}`,
-            // userIsPlayer1
           })
         }
       });

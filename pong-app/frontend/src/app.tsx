@@ -84,7 +84,6 @@ const App = () => {
             {/* Public routes without layout */}
             <Route path="/" element={<Home />} />
             <Route path="/play" element={<PlayPage />} />
-            <Route path="/avatar" element={<AvatarPage />} />
             <Route path="/:game/:mode/:type/:gameId" element={<PlayPage />} />
 
             {/* Public routes with layout */}

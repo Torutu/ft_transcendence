@@ -6,20 +6,7 @@ interface GameRoutesOptions {
   prisma: PrismaClient;
 }
 
-interface SaveGameInput {
-  opponent: string;
-  gameType: string;
-  mode: string;
-  result: "win" | "loss" | "draw";
-  score: string;
-  duration: string;
-  rounds?: any[];
-}
-
-export default function gameRoutes(
-  app: FastifyInstance,
-  options: GameRoutesOptions
-) {
+export default function gameRoutes(app: FastifyInstance, options: GameRoutesOptions) {
   const { prisma } = options;
 
   // Helper function to verify authentication
@@ -52,31 +39,42 @@ export default function gameRoutes(
         const userIsPlayer1 = game.id_player1 === currentUser.userId;
         const userIsPlayer2 = game.id_player2 === currentUser.userId;
 
-        // OPPONENT - Simple extraction
+      if (gameData.winner) {
+        if (gameData.winner.name === currentUser.username) {
+          result = 'win';
+        } else {
+          result = 'loss';
+        }
+      }
+
+      if (gameData.player1 && gameData.player2) {
         if (userIsPlayer1) {
           opponent = gameData.player2?.username || "Unknown";
         } else if (userIsPlayer2) {
           opponent = gameData.player1?.username || "Unknown";
         }
-
-        // RESULT - Direct from isWinner flag
-        if (userIsPlayer1) {
-          result = gameData.player1?.isWinner === true ? "win" : "loss";
-        } else if (userIsPlayer2) {
-          result = gameData.player2?.isWinner === true ? "win" : "loss";
+        if (!gameData.winner && (gameData.player1.isWinner || gameData.player2.isWinner)) {
+          if (userIsPlayer1) {
+            result = gameData.player1.isWinner === true ? 'win' : 'loss';
+          } else if (userIsPlayer2) {
+            result = gameData.player2.isWinner === true ? 'win' : 'loss';
+          }
         }
-
-        // SCORE - Direct from player objects
-        if (
-          gameData.player1?.score !== undefined &&
-          gameData.player2?.score !== undefined
-        ) {
+        if (gameData.player1.score !== undefined && gameData.player2.score !== undefined) {
           const p1Score = gameData.player1.score;
           const p2Score = gameData.player2.score;
-          score = userIsPlayer1
-            ? `${p1Score}-${p2Score}`
-            : `${p2Score}-${p1Score}`;
+          score = userIsPlayer1 ? `${p1Score}-${p2Score}` : `${p2Score}-${p1Score}`;          
         }
+      }
+      else if (gameData.finalScore) {
+        const scoreParts = gameData.finalScore.split(/\s*[-–—]\s*/);
+        if (scoreParts.length === 2) {
+          const [p1Score, p2Score] = scoreParts.map((s: string) => s.trim());
+          score = userIsPlayer1 ? `${p1Score}-${p2Score}` : `${p2Score}-${p1Score}`;
+        } else {
+          score = gameData.finalScore;
+        }
+      }
 
         // DURATION - Direct extraction
         if (gameData.duration !== undefined) {
@@ -380,106 +378,6 @@ app.get("/game/stats", async (request, reply) => {
       });
     }
   });
-
-  /* **********************************************************************
-   * POST /games - Save new game result
-   ************************************************************************ */
-  app.post<{ Body: SaveGameInput }>(
-    "/game",
-    {
-      schema: {
-        body: {
-          type: "object",
-          required: ["opponent", "gameType", "result", "score"],
-          properties: {
-            opponent: { type: "string" },
-            gameType: { type: "string", enum: ["pingpong", "keyclash"] },
-            mode: { type: "string" },
-            result: { type: "string", enum: ["win", "loss", "draw"] },
-            score: { type: "string" },
-            duration: { type: "string" },
-            rounds: { type: "array" },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const decoded = verifyAuth(request);
-        const { opponent, gameType, mode, result, score, duration, rounds } =
-          request.body;
-
-        console.log(
-          `Saving game for user ${decoded.userId} (${decoded.username}):`,
-          {
-            opponent,
-            gameType,
-            mode,
-            result,
-            score,
-            duration,
-          }
-        );
-
-        const gameData = {
-          opponent,
-          mode: mode || "standard",
-          result,
-          score,
-          duration: duration || "N/A",
-          rounds: rounds || [],
-          savedBy: decoded.username,
-          savedAt: new Date().toISOString(),
-        };
-
-        const savedGame = await prisma.game.create({
-          data: {
-            id_player1: decoded.userId,
-            game_name: gameType as any,
-            rounds_json: JSON.stringify(gameData),
-            date: new Date(),
-          },
-        });
-
-        console.log(
-          `Game saved with ID ${savedGame.id_game} for user ${decoded.userId}`
-        );
-
-        if (result === "win") {
-          await prisma.user.update({
-            where: { id: decoded.userId },
-            data: { wins: { increment: 1 } },
-          });
-        } else if (result === "loss") {
-          await prisma.user.update({
-            where: { id: decoded.userId },
-            data: { losses: { increment: 1 } },
-          });
-        }
-
-        return reply.status(201).send({
-          success: true,
-          message: "Game result saved successfully",
-          gameId: savedGame.id_game,
-        });
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === "AUTHENTICATION_REQUIRED"
-        ) {
-          return reply.status(401).send({
-            error: "AUTHENTICATION_REQUIRED",
-            message: "Authentication required",
-          });
-        }
-        console.error("Save game error:", error);
-        return reply.status(500).send({
-          error: "GAME_SAVE_FAILED",
-          message: "Failed to save game result",
-        });
-      }
-    }
-  );
 
   /* **********************************************************************
    * GET /games/recent - Recent matches for overview (for OverviewTab)

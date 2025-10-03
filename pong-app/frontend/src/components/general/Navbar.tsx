@@ -28,7 +28,7 @@ export const Navbar = () => {
     <nav className="bg-gray-800 p-4">
       <div className="container mx-auto flex flex-wrap justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="mb-2 sm:mb-0">
+        <Link to="/lobby" className="mb-2 sm:mb-0">
           <span className="text-2xl font-bold text-[#c82fb3]">
             H5 Asteroids
           </span>
@@ -39,7 +39,7 @@ export const Navbar = () => {
 
         {/* Right section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 w-full sm:w-auto space-y-3 sm:space-y-0 mt-3 sm:mt-0">
-          {user && (
+          {user ? (
             <>
               {/* Avatar + User info */}
               <div className="flex items-center space-x-3">
@@ -70,5 +70,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-
-

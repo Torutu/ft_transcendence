@@ -166,10 +166,14 @@ export default class PingPongClient {
 		this.latestBallZ = 0;
 
 		// HUD
-		this.hud = document.createElement('div');
-		this.hud.className = 'overlay';
-		this.hud.innerHTML = 'W/S: left paddle &nbsp; ArrowUp/Down: right paddle &nbsp; Esc: pause';
-		document.body.appendChild(this.hud);
+		// this.hud = document.createElement('div');
+		// Object.assign(this.hud.style, {
+		// 	position: 'absolute',
+		// 	top: '90%',
+		// 	left: '50%',
+		// });
+		// this.hud.innerHTML = 'Move with W/S or ArrowUp/Down &nbsp;';
+		// document.body.appendChild(this.hud);
 
 		// Score Display
 		this.scoreDisplay = document.createElement('div');
@@ -327,10 +331,10 @@ export default class PingPongClient {
 				this.matchInfoDisplay.textContent = state.matchInfo;
 			}
 			this.status = state.status;
-      if (this.status === 'in-progress')
-        this.backButton.style.display = "none";
-      else 
-        this.backButton.style.display = "block";
+			if (this.status === 'in-progress')
+				this.backButton.style.display = "none";
+			else 
+				this.backButton.style.display = "block";
 			if (this.type === "1v1" && (state.status === "finished")) {
 				this.restartButton.style.display = "block";
 			}
@@ -362,7 +366,7 @@ export default class PingPongClient {
 			}
 			this.restartButton.style.display = "none";
 			this.matchInfoDisplay.style.display = "none";
-			this.scoreDisplay.style.display = "none";
+			this.timerDisplay.textContent = state.timerDisplay;
 			this.status = "waiting";
 		});
 
@@ -401,7 +405,7 @@ export default class PingPongClient {
 		}
 
 		// Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
-		[this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
+		[this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
 			if (el.parentNode) el.parentNode.removeChild(el);
 		});
 
