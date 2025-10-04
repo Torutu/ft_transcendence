@@ -132,7 +132,7 @@ export default function TournamentPage() {
         
         	console.log("✅ Navigation completed");
         
-      		} catch (error) {
+      		} catch (error: any) {
         		console.error("❌ Error in created_game handler:", error);
         		alert("Navigation failed: " + error.message);
       		}
@@ -213,7 +213,7 @@ export default function TournamentPage() {
 			
 			setShowPopup(false);
 
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Error starting tournament:", error);
 			alert("Failed to start tournament: " + error.message);
 		}

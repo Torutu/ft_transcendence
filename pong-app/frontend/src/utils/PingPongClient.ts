@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
 import { getValidatedPlayerName } from './keyClashClient';
+import { Player } from '../shared/types';
 
 export default class PingPongClient {
 	private groundEmission = 0.5;
@@ -33,7 +34,7 @@ export default class PingPongClient {
 		roughness: 0.2,
 		metalness: 0.8,
 	});
-	private ball: THREE.Mesh;
+	private ball: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
 	private ballVel = new THREE.Vector3(6.0, 0, 3.5);
 	private latestBallZ: number;
 	private latestBallX: number;
@@ -43,7 +44,6 @@ export default class PingPongClient {
 
 	private lastFrame: DOMHighResTimeStamp;
 
-	private hud: HTMLDivElement;
 	private scoreDisplay: HTMLDivElement;
 	private restartButton: HTMLButtonElement;
 	private timerDisplay: HTMLDivElement;
@@ -164,16 +164,6 @@ export default class PingPongClient {
 		this.scene.add(this.ball);
 		this.latestBallX = 0;
 		this.latestBallZ = 0;
-
-		// HUD
-		// this.hud = document.createElement('div');
-		// Object.assign(this.hud.style, {
-		// 	position: 'absolute',
-		// 	top: '90%',
-		// 	left: '50%',
-		// });
-		// this.hud.innerHTML = 'Move with W/S or ArrowUp/Down &nbsp;';
-		// document.body.appendChild(this.hud);
 
 		// Score Display
 		this.scoreDisplay = document.createElement('div');
@@ -300,9 +290,10 @@ export default class PingPongClient {
 		this.socket.on('playerSide', (side) => {
 			this.playerSide = side;
 		});
-		this.socket.on('refreshPlayerSides', (players) => {
+		this.socket.on('refreshPlayerSides', (players: Player[]) => {
 			const player = players.find(p => p.socketId === this.socket?.id);
-			this.playerSide = player.side;
+			if (player)
+				this.playerSide = player.side;
 		})
 
 		this.socket.on('stateUpdate', (state, start: string | null) => {
@@ -404,7 +395,7 @@ export default class PingPongClient {
 			this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
 		}
 
-		// Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
+		// Remove Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
 		[this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
 			if (el.parentNode) el.parentNode.removeChild(el);
 		});

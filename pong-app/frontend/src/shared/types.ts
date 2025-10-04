@@ -1,14 +1,15 @@
 // frontend/src/shared/types.ts
 export interface Player {
-    socketId: string;
-    name: string;
-    playerId: number;
+	playerId: number | null,
+	socketId: string | null,
+	name: string | null,
+	side: "left" | "right" | null
   }
   
   export interface OnlineUser {
-    socketId: string;
-    name: string;
-    playerId: number;
+    socketId: string | null;
+    name: string | null;
+    playerId: number | null;
     status?: string;
   }
   
@@ -31,7 +32,7 @@ export interface Player {
   
   export interface Invitation {
     id: string;
-    from: { socketId: string; name: string };
+    from: { socketId: string | null; name: string | null };
     gameType: "pong" | "keyclash";
     message: string;
     timestamp?: number;
@@ -39,7 +40,7 @@ export interface Player {
   
   export interface SentInvitation {
     id: string;
-    to: { socketId: string; name: string };
+    to: { socketId: string | null; name: string | null };
     gameType: "pong" | "keyclash";
     timestamp?: number;
   }

@@ -16,7 +16,7 @@ const TABS = [
 ];
 
 export default function LobbyPage() {
-  const [activeTab, setActiveTab] = useState("overview" || null);
+  const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
 
   return (

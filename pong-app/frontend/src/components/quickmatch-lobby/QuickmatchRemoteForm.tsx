@@ -190,7 +190,7 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                     </p>
 
                     <div className="w-32 h-32 rounded-full border-4 border-green-400 mb-4 flex items-center justify-center bg-gradient-to-r from-purple-400 to-pink-400 text-white text-4xl font-bold">
-                      {selectedOpponent.name.charAt(0).toUpperCase()}
+                      {selectedOpponent.name?.charAt(0).toUpperCase()}
                     </div>
                     <p className="text-sm text-gray-400 mb-4">Their avatar will be set by them</p>
 
@@ -292,7 +292,7 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                     <div key={player.socketId} className="bg-gray-700 p-4 rounded-lg">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold">
-                          {player.name.charAt(0).toUpperCase()}
+                          {player.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-semibold">{player.name}</p>

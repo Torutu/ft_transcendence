@@ -139,7 +139,7 @@ export default function QuickmatchPage() {
         });
         console.log("✅ Navigation completed");
         
-      } catch (error) {
+      } catch (error: any) {
           console.error("❌ Error in created_game handler:", error);
         	alert("Navigation failed: " + error.message);
       	}
@@ -901,7 +901,7 @@ export default function QuickmatchPage() {
                     <div key={player.socketId} className="bg-gray-700 p-4 rounded-lg">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-bold">
-                          {player.name.charAt(0).toUpperCase()}
+                          {player.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-semibold">{player.name} {isYou && (<i className="font-medium text-xs display-inline">(you)</i>)}</p>
