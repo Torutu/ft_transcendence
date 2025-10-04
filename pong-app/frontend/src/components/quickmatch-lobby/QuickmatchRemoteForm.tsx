@@ -234,7 +234,9 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                   "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
                 }`}
               >
-                🏓 {isPaired() ? "Start" : selectedOpponent ? "Invite for" : "Start Open"} Ping Pong
+				🏓 { !selectedOpponent && !isPaired() && "Start Open" }
+					{ isPaired() && selectedOpponent && "Start" }
+					{ !isPaired() && selectedOpponent && "Invite for"} Ping Pong
                 {selectedOpponent && (
                   <div className="text-base font-normal mt-2">
                     {isPaired() ? "vs" : "invite"} {selectedOpponent.name}
@@ -248,7 +250,9 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
                   "bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
                 }`}
               >
-                ⌨️ {isPaired() ? "Start" : selectedOpponent ? "Invite for" : "Start Open"} Key Clash
+                ⌨️ { !selectedOpponent && !isPaired() && "Start Open" }
+					{ isPaired() && selectedOpponent && "Start" }
+					{ !isPaired() && selectedOpponent && "Invite for" } Key Clash
                 {selectedOpponent && (
                   <div className="text-base font-normal mt-2">
                     {isPaired() ? "vs" : "invite"} {selectedOpponent.name}

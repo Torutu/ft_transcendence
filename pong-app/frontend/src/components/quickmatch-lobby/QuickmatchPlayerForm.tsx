@@ -101,7 +101,8 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
     if (!/^[A-Za-z0-9 _-]+$/.test(trimmedGuestName)) return false;
     if (trimmedGuestName.toLowerCase() === trimmedUsername.toLowerCase()) return false;
     
-    return userAvatar && guestAvatar;
+    // return userAvatar && guestAvatar;
+	return true;
   }, [guestName, userAvatar, guestAvatar, username]);
 
   // Start game

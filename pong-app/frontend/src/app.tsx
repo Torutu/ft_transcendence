@@ -137,9 +137,6 @@ const App = () => {
                   </PublicRoute>
                 }
               />
-
-              {/* Dynamic game routes */}
-              {/* <Route path="/:game/:mode/:gameId" element={<PlayPage />} /> */}
             </Route>
 
             {/* Protected routes with layout */}
