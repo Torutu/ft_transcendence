@@ -923,6 +923,7 @@ export default function QuickmatchPage() {
                             <button
                               onClick={() => {
                                 setSelectedOpponent(player);
+								showRemoteForm();
                                 setTimeout(() => {
                                   respondToInvitation(receivedInvitation.id, "accept");
                                 }, 100);

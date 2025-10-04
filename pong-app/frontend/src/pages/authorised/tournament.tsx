@@ -104,7 +104,7 @@ export default function TournamentPage() {
 				console.log("📦 Retrieved stored players:", storedPlayers);
 				
 				const playerNames = storedPlayers ? JSON.parse(storedPlayers) : {
-					player1: "Guest1",
+					player1: user?.username || "You",
 					player2: "Guest2", 
 					player3: "Guest3",
 					player4: "Guest4"
