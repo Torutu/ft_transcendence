@@ -49,6 +49,7 @@ export default class PingPongClient {
 	private timerDisplay: HTMLDivElement;
 	private matchInfoDisplay: HTMLDivElement;
   	private backButton: HTMLButtonElement;
+	private quikButton: HTMLButtonElement;
 
 	private socket: Socket | null = null;
 	private gameId: string;
@@ -199,11 +200,21 @@ export default class PingPongClient {
 
     // Back Button
       this.backButton = document.createElement('button');
-      this.backButton.textContent = '🔙 Back to Lobby'
+	  if (playerId)
+      	this.backButton.textContent = 'Back to Lobby';
+	  else
+		this.backButton.textContent = 'Exit';
       this.backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
       this.backButton.style.display= 'block';
       document.body.appendChild(this.backButton);
       this.backButton.addEventListener('click', () => navigate('/lobby'));
+
+	  this.quikButton = document.createElement('button');
+	  this.quikButton.textContent = 'Back to quickmatch'
+      this.quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+	  this.quikButton.style.display= 'block';
+	  document.body.appendChild(this.quikButton);
+	  this.quikButton.addEventListener('click', () => navigate('/quickmatch')); 
 
 		// Timer Display
 		this.timerDisplay = document.createElement('div');
@@ -323,9 +334,15 @@ export default class PingPongClient {
 			}
 			this.status = state.status;
 			if (this.status === 'in-progress')
+			{
 				this.backButton.style.display = "none";
-			else 
+				this.quikButton.style.display = "none";
+			}
+			else
+			{ 
 				this.backButton.style.display = "block";
+				this.quikButton.style.display = "block";
+			}
 			if (this.type === "1v1" && (state.status === "finished")) {
 				this.restartButton.style.display = "block";
 			}
@@ -396,7 +413,7 @@ export default class PingPongClient {
 		}
 
 		// Remove Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
-		[this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
+		[this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton, this.quikButton].forEach(el => {
 			if (el.parentNode) el.parentNode.removeChild(el);
 		});
 

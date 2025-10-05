@@ -53,11 +53,23 @@ export default function KeyClashClient(
 
   // Back Button
   const backButton = document.createElement('button');
-  backButton.textContent = '🔙 Back to Lobby'
+  if (playerId)
+  	backButton.textContent = 'Back to Lobby';
+  else
+	backButton.textContent = "Exit";
   backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
   backButton.style.display= 'block';
   document.body.appendChild(backButton);
   backButton.addEventListener('click', () => navigate('/lobby')); 
+
+  const quikButton = document.createElement('button');
+  quikButton.textContent = 'Back to quickmatch'
+  quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+  quikButton.style.display= 'block';
+  document.body.appendChild(quikButton);
+  quikButton.addEventListener('click', () => navigate('/quickmatch')); 
+
+
 
 	const socket = io("/keyclash", {
 		path: '/socket.io',
@@ -66,11 +78,13 @@ export default function KeyClashClient(
 	});
 
 	function onKeyDown(e: KeyboardEvent) {
-		if (e.code === "Space" || e.key === "r")
-			socket.emit("setReady");
-		else if (arrowKeys.includes(e.key) || wasdKeys.includes(e.key))
-			socket.emit("keypress", { key: e.key });
+		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key; // lowercase only single-char keys
+
+		if (key === " " || key === "r") socket.emit("setReady");
+		else if (arrowKeys.includes(key) || wasdKeys.includes(key)) socket.emit("keypress", { key });
 	}
+
+
 
 	window.addEventListener("keydown", onKeyDown);
 
@@ -120,6 +134,7 @@ export default function KeyClashClient(
 
 	socket.on("gameStart", (state) => {
     backButton.style.display = "none";
+	quikButton.style.display = "none";
 		score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
 		score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
 		if (state.type === "1v1")
@@ -135,9 +150,15 @@ export default function KeyClashClient(
 		score1El.textContent = `${state.player1.name}: ${state.player1.score}`;
 		score2El.textContent = `${state.player2.name}: ${state.player2.score}`;
     if (state.status === "in-progress")
+	{
       backButton.style.display = "none";
+	  quikButton.style.display = "none";
+	}
     else
+	{
       backButton.style.display = "block";
+	  quikButton.style.display = "block";
+	}
 		if (state.status === "in-progress" || state.status === "starting") {
 			if (state.type === "1v1")
 				timerEl.textContent = `Time Left: ${state.timeLeft}s`;
@@ -174,6 +195,7 @@ export default function KeyClashClient(
 			timerEl.textContent = `Time's Up! Final Score ${p1.name}: ${p1.score} | ${p2.name}: ${p2.score}`;
 			startPrompt.textContent = "Press SPACE to Restart";
       backButton.style.display = "block";
+	  quikButton.style.display = "block";
 		}
 		else if (state.type === "tournament") {
 			const i = state.round - 2;
@@ -193,6 +215,7 @@ export default function KeyClashClient(
 				timerEl.textContent = `Tournament finished! The winner is: ${state.matches[i].winner.name}!`;
 				startPrompt.textContent = "Congratulations!";
         backButton.style.display = "block";
+		quikButton.style.display = "block";
 			}
 		}
 	});
@@ -212,9 +235,11 @@ export default function KeyClashClient(
 		navigate('/tournament');
 	});
 
-	// Return cleanup function
+	// Return cleanup function quikButton
 	return () => {
     if (backButton.parentNode) backButton.parentNode.removeChild(backButton);
+	if (quikButton.parentNode) quikButton.parentNode.removeChild(quikButton);
+
 		window.removeEventListener("keydown", onKeyDown);
 		if (socket) {
 			socket.off();

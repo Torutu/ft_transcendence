@@ -748,9 +748,20 @@ export default function QuickmatchPage() {
     if (remoteForm) remoteForm.style.display = "none";
   };
 
+  const [stars, setStars] = useState<{ x: number; y: number; char: string }[]>([]);
+  useEffect(() => {
+    const starChars = ["*", "+", "•", "✦", "✧"];
+    const newStars = Array.from({ length: 80 }).map(() => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      char: starChars[Math.floor(Math.random() * starChars.length)],
+    }));
+    setStars(newStars);
+  }, []);
+
   return (
-    
     <div style={{ padding: "1rem" }}>
+
       {showInvitationModal && (
         <div className="fixed top-40 right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
           <p>{invitationMessage}</p>
@@ -764,8 +775,12 @@ export default function QuickmatchPage() {
         </div>
       )} */}
 
-      <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
-        <button onClick={showLocalForm}>Create A Local Quickmatch</button>
+      <div className="mb-4">
+      <button
+      onClick={showLocalForm}
+      className="w-full p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800"> 
+        Create A Local Quickmatch
+      </button>
           
         <div id="overlay"></div>
           <div id="localForm">
@@ -776,8 +791,12 @@ export default function QuickmatchPage() {
         </div>
 
       { socketRef.current ? (      
-        <div className="p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
-          <button onClick={showRemoteForm}>Create A Remote Quickmatch</button>
+        <div className="mb-4">
+        <button
+        onClick={showLocalForm}
+        className="w-full p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
+          Create A Remote Quickmatch
+        </button>
           <div id="overlay"></div>
             <div id="remoteForm">
               <QuickmatchRemoteForm socket={socketRef.current}
@@ -876,7 +895,7 @@ export default function QuickmatchPage() {
         </div>
       </div>
 
-      <div className="w-1/3">
+      <div className="w-1/3 mt-4">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg sticky top-6">
             <h2 className="text-2xl font-bold mb-4 text-center">🌐 Players in Lobby</h2>
         

@@ -70,21 +70,23 @@ const PlayPage: React.FC = () => {
     return (
       <div
         ref={containerRef}
-        className="flex-grow relative w-full h-full bg-black"
+        className="flex items-center justify-center w-full h-screen bg-black"
       >
-        <div className="players-row">
-          <div className="player" id="p1">
-            <div id="prompt1">-</div>
-            <div id="score1">Score: 0</div>
+        <div className="flex flex-col items-center justify-center text-white">
+          <div className="players-row flex gap-8 mb-4">
+            <div className="player text-center" id="p1">
+              <div id="prompt1">-</div>
+              <div id="score1">Score: 0</div>
+            </div>
+            <div className="player text-center" id="p2">
+              <div id="prompt2">-</div>
+              <div id="score2">Score: 0</div>
+            </div>
           </div>
-          <div className="player" id="p2">
-            <div id="prompt2">-</div>
-            <div id="score2">Score: 0</div>
-          </div>
-        </div>
 
-        <div id="timer">Time Left: 20s</div>
-        <div id="start-prompt">Press SPACE to Start</div>
+          <div id="timer" className="mb-2">Time Left: 20s</div>
+          <div id="start-prompt">Press SPACE to Start</div>
+        </div>
       </div>
     );
   else return;
