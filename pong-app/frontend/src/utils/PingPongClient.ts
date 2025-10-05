@@ -385,16 +385,20 @@ export default class PingPongClient {
 	}
 
 	private handleKeyDown(e: KeyboardEvent) {
-		if (e.key === "Escape")
-			this.socket?.emit("pause");
-		else if (e.code === "Space")
-			this.socket?.emit("setReady");
-		else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
+		let key = e.key;
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase(); // normalize letters to lowercase
+
+		if (key === "Escape") this.socket?.emit("pause");
+		else if (e.code === "Space") this.socket?.emit("setReady");
+		else if (key in this.keys) this.keys[key as keyof typeof this.keys] = true;
 	}
 
 	private handleKeyUp(e: KeyboardEvent) {
-		if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
+		let key = e.key;
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase(); // normalize letters to lowercase
+		if (key in this.keys) this.keys[key as keyof typeof this.keys] = false;
 	}
+
 
 	private handleResize() {
 		this.onResize();
