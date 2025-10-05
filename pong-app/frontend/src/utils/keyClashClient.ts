@@ -87,18 +87,18 @@ export default function KeyClashClient(
 	});
 
 	socket.on("get_names", (existing) => {
-		if (existing.length >= 1)
-			players.player1 = existing[0].name;
-		if (existing.length >= 2)
-			players.player2 = existing[1].name;
-		if (existing.length >= 3)
-			players.player3 = existing[2].name;
-		if (existing.length >= 4)
-			players.player4 = existing[3].name;
+		// if (existing.length >= 1)
+		// 	players.player1 = existing[0].name;
+		// if (existing.length >= 2)
+		// 	players.player2 = existing[1].name;
+		// if (existing.length >= 3)
+		// 	players.player3 = existing[2].name;
+		// if (existing.length >= 4)
+		// 	players.player4 = existing[3].name;
 
 		if (typeof name === 'string' && name) {
 			players.player1 = name;
-		} else if (!players.player1) {
+		} else if (!players.player1 && !name) {
 			players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", players);
 		}
 
@@ -151,7 +151,7 @@ export default function KeyClashClient(
 		prompt1.textContent = wasdSymbols[state.prompts[0]];
 		prompt2.textContent = arrowSymbols[state.prompts[1]];
 		if (((state.players.length === 2 && state.type === "1v1") ||
-			(state.players.length === 4 && state.type === "tournament")) &&
+			(state.type === "tournament")) &&
 			state.status === "starting" && state.mode === "remote") {
 			let readyCount = 0;
 			if (state.player1.ready) readyCount++;

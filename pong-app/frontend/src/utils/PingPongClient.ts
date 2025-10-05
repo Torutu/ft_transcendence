@@ -335,7 +335,7 @@ export default class PingPongClient {
 			}
 			else this.matchInfoDisplay.style.display = "none";
 			if (((this.type === "1v1" && state.players.length === 2) ||
-				(this.type === "tournament" && state.players.length === 4)) &&
+				this.type === "tournament") &&
 				state.status === "starting" && state.mode === "remote") {
 				let readyCount = 0;
 				if (state.player1ready) readyCount++;

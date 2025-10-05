@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import { pongRooms, pongTournaments, getLobbyState, getTournamentLobbyState,
-        saveGameResult, createGameResult } from "./gameData.js";
-import { validatePlayerNames } from "./KeyClashGame";
+        saveGameResult, createGameResult, canLeaveTournament, validatePlayerNames } from "./gameData.js";
 import PingPongGame from "./PingPongGame.js";
 import { PrismaClient } from '@prisma/client';
 
@@ -170,15 +169,14 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                     pongNamespace.to(roomId).emit('stateUpdate', gameRoom.state);           
                 }
                 socket.on("setReady", () => {
-                    if (gameRoom.state.status !== "starting" || gameRoom.state.players.length < 4) return;
+                    if (gameRoom.state.status !== "starting") return;
                     if (gameRoom.state.mode === "local")
                         return startGame();
                     if (player?.side === "left") { gameRoom.state.player1ready = true; }
                     else if (player?.side === "right") { gameRoom.state.player2ready = true; }
                     else return;
                     pongNamespace.to(roomId).emit("stateUpdate", gameRoom.state);
-                    if (gameRoom.state.players.length === 4 && 
-                        gameRoom.state.player1ready && gameRoom.state.player2ready) {
+                    if (gameRoom.state.player1ready && gameRoom.state.player2ready) {
                         startGame();
                     }
                 });
@@ -283,7 +281,9 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                 game.state.players.splice(playerindex, 1);
 
             if (game.state.type === "tournament") {
-                if (game.state.status !== "waiting" || game.state.players.length === 0 || game.state.mode === "local") {
+                if (game.state.players.length === 0 || game.state.mode === "local" ||
+					(game.state.mode === "remote" && !canLeaveTournament(socket.id, game.state)))
+				{
                     pongNamespace.to(game.getId()).emit("disconnection");
                     const i = pongTournaments.findIndex(g => g.getId() === socket.data.roomId);
                     if (i !== -1) pongTournaments.splice(i, 1);
