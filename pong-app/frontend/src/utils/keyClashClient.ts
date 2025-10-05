@@ -63,11 +63,11 @@ export default function KeyClashClient(
   backButton.addEventListener('click', () => navigate('/lobby')); 
 
   const quikButton = document.createElement('button');
-  quikButton.textContent = 'Back to quickmatch'
+  quikButton.textContent = type === "1v1" ? 'Back to quickmatch' : 'Back to tournament';
   quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
   quikButton.style.display= 'block';
   document.body.appendChild(quikButton);
-  quikButton.addEventListener('click', () => navigate('/quickmatch')); 
+  quikButton.addEventListener('click', () => type === "1v1" ? navigate('/quickmatch') : navigate('/tournament')); 
 
 
 
@@ -100,7 +100,7 @@ export default function KeyClashClient(
 		});
 	});
 
-	socket.on("get_names", (existing) => {
+	socket.on("get_names", (/*existing*/) => {
 		// if (existing.length >= 1)
 		// 	players.player1 = existing[0].name;
 		// if (existing.length >= 2)

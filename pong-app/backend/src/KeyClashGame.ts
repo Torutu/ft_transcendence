@@ -84,7 +84,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                 return callback({ error: "The game is full!" });
             }
             socket.data.roomId = roomId;
-            socket.emit("get_names", state.players);
+            socket.emit("get_names"/*, state.players*/);
             socket.on("names", (names) => {
                 const p_num = validatePlayerNames(names, type, mode);
                 if (p_num > 0)

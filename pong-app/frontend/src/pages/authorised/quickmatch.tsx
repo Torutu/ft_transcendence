@@ -793,7 +793,7 @@ export default function QuickmatchPage() {
       { socketRef.current ? (      
         <div className="mb-4">
         <button
-        onClick={showLocalForm}
+        onClick={showRemoteForm}
         className="w-full p-3 rounded border cursor-pointer bg-green-900 border-green-600 hover:bg-green-800">
           Create A Remote Quickmatch
         </button>
