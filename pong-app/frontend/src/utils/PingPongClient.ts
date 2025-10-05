@@ -386,7 +386,7 @@ export default class PingPongClient {
 
 	private handleKeyDown(e: KeyboardEvent) {
 		let key = e.key;
-		if (/^[a-z]$/i.test(key)) key = key.toLowerCase(); // normalize letters to lowercase
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase();
 
 		if (key === "Escape") this.socket?.emit("pause");
 		else if (e.code === "Space") this.socket?.emit("setReady");
@@ -395,10 +395,9 @@ export default class PingPongClient {
 
 	private handleKeyUp(e: KeyboardEvent) {
 		let key = e.key;
-		if (/^[a-z]$/i.test(key)) key = key.toLowerCase(); // normalize letters to lowercase
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase();
 		if (key in this.keys) this.keys[key as keyof typeof this.keys] = false;
 	}
-
 
 	private handleResize() {
 		this.onResize();

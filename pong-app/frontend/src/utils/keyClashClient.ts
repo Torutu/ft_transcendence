@@ -78,7 +78,7 @@ export default function KeyClashClient(
 	});
 
 	function onKeyDown(e: KeyboardEvent) {
-		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key; // lowercase only single-char keys
+		const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 
 		if (key === " " || key === "r") socket.emit("setReady");
 		else if (arrowKeys.includes(key) || wasdKeys.includes(key)) socket.emit("keypress", { key });
