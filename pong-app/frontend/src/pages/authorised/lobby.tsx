@@ -18,7 +18,6 @@ const TABS = [
 export default function LobbyPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1b1443] to-[#4f1461] text-white">
       {/* Welcome and buttons */}

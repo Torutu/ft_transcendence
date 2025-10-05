@@ -16,8 +16,6 @@ services:
     env_file: ./ngrok/.env
     environment:
       - APP_MODE=prod
-      - NGROK_HOST=frontend
-      - NGROK_PORT=4243
     depends_on:
       - frontend
       - backend

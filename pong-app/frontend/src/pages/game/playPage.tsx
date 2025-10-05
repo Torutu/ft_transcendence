@@ -68,24 +68,23 @@ const PlayPage: React.FC = () => {
     );
   else if (game === "keyclash")
     return (
-      <div
-        ref={containerRef}
-        className="flex-grow relative w-full h-full bg-black"
-      >
-        <div className="players-row">
-          <div className="player" id="p1">
-            <div id="prompt1">-</div>
-            <div id="score1">Score: 0</div>
-          </div>
-          <div className="player" id="p2">
-            <div id="prompt2">-</div>
-            <div id="score2">Score: 0</div>
-          </div>
-        </div>
-
-        <div id="timer">Time Left: 20s</div>
-        <div id="start-prompt">Press SPACE to Start</div>
-      </div>
+    <div ref={containerRef} className="flex items-center justify-center w-full h-screen bg-black" > 
+    <div className="flex flex-col items-center justify-center text-white"> 
+      <div className="players-row flex flex-wrap justify-center gap-8 mb-4 w-full max-w-6xl"> 
+        <div className="player text-center bg-gray-800 border-2 border-white rounded-lg p-6 w-50 h-50 flex flex-col items-center justify-center" id="p1" > 
+          <div id="prompt1" className="text-xl font-bold mb-2">-</div> 
+          <div id="score1" className="text-lg">Score: 0
+            </div> 
+            </div> 
+            <div className="player text-center bg-gray-800 border-2 border-white rounded-lg p-6 w-50 h-50 flex flex-col items-center justify-center" id="p2" > 
+              <div id="prompt2" className="text-xl font-bold mb-2">-</div> 
+              <div id="score2" className="text-lg">Score: 0</div> 
+              </div> 
+              </div> 
+              <div id="timer" className="mb-2">Time Left: 20s</div> 
+              <div id="start-prompt">Press SPACE to Start</div> 
+              </div> 
+              </div>
     );
   else return;
 };
