@@ -13,5 +13,5 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/dist /usr/src/app/dist
 COPY ./tls /etc/nginx/ssl
 
-EXPOSE 443
+EXPOSE 4243
 CMD ["nginx", "-g", "daemon off;"]

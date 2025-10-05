@@ -18,8 +18,8 @@ RUN printf '#!/bin/sh\n' > /entrypoint.sh \
     && printf '# Detect mode: default to dev\n' >> /entrypoint.sh \
     && printf 'MODE=${APP_MODE:-dev}\n' >> /entrypoint.sh \
     && printf 'if [ "$MODE" = "prod" ]; then\n' >> /entrypoint.sh \
-    && printf '  NGROK_PORT=443\n' >> /entrypoint.sh \
-    && printf '  NGROK_HOST=frontend\n' >> /entrypoint.sh \
+    && printf '  NGROK_PORT=4243\n' >> /entrypoint.sh \
+    && printf '  NGROK_HOST=https://frontend\n' >> /entrypoint.sh \
     && printf 'else\n' >> /entrypoint.sh \
     && printf '  NGROK_PORT=${VITE_PORT:-5173}\n' >> /entrypoint.sh \
     && printf '  NGROK_HOST=${VITE_HOST:-frontend}\n' >> /entrypoint.sh \

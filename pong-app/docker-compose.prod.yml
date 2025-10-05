@@ -1,12 +1,10 @@
-version: "3.9"
-
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
     ports:
-      - "443:443"
+      - "4243:4243"
     depends_on:
       - backend
     networks:
@@ -19,7 +17,7 @@ services:
     environment:
       - APP_MODE=prod
       - NGROK_HOST=frontend
-      - NGROK_PORT=443
+      - NGROK_PORT=4243
     depends_on:
       - frontend
       - backend
