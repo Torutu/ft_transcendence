@@ -15,12 +15,11 @@ services:
       - ./backend:/app
       - ./tls:/app/tls
       - /app/node_modules
-    environment:
-      - TLS_PATH=/app/tls
-      - NODE_TLS_REJECT_UNAUTHORIZED=0 # Allow self-signed certificates for development
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     networks:
       - pong-network
     ports:
@@ -31,24 +30,19 @@ services:
       - ./frontend:/app
       - ./tls:/app/tls
       - /app/node_modules
-    environment:
-      - TLS_PATH=/app/tls
-      - NODE_TLS_REJECT_UNAUTHORIZED=0 # Allow self-signed certificates for development
-    command: npm run dev
     depends_on:
       - backend
 
   ngrok:
     build: ./ngrok
     container_name: ngrok
+    env_file: ./ngrok/.env
     environment:
-      - NGROK_AUTHTOKEN= #31n4ws6BtctGyeqtvgsJqCfNf6U_53Wz1pUyFLNJaHED1HYaL
-      - VITE_PORT=5173
-      - VITE_HOST=https://frontend
+      - APP_MODE=dev
     depends_on:
       - frontend
       - backend
     ports:
-      - '4040:4040'
+      - "4040:4040"
     networks:
       - pong-network

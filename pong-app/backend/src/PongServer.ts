@@ -100,7 +100,7 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                 if (!gameRoom.state.loop) {
 					const p1 = gameRoom.state.players.find(p => p.side === "left");
                     const p2 = gameRoom.state.players.find(p => p.side === "right");
-                    if (!p1 || !p2) return; // add some error msg?
+                    if (!p1 || !p2) return;
                     gameRoom.state.matches.push( {player1: p1, player2: p2, p1score: 0, p2score: 0, winner: null, duration: 0 });
 					gameRoom.state.round++;
                     // Broadcast game state at 60fps

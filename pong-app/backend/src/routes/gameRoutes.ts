@@ -60,9 +60,9 @@ export default function gameRoutes(
         }
 
         // RESULT - Direct from isWinner flag
-        if (userIsPlayer1) {
+        if (userIsPlayer1 && gameData.winner) {
           result = gameData.player1?.isWinner === true ? "win" : "loss";
-        } else if (userIsPlayer2) {
+        } else if (userIsPlayer2 && gameData.winner) {
           result = gameData.player2?.isWinner === true ? "win" : "loss";
         }
 

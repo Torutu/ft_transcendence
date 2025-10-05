@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const baseTlsPath = process.env.TLS_PATH || path.join(__dirname, "../tls");
+const baseTlsPath = process.env.TLS_PATH || path.join(__dirname, "./tls");
 
 const httpsOptions = {
   key: fs.readFileSync(path.join(baseTlsPath, "key.pem")),

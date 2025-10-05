@@ -1,0 +1,26 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "4243:4243"
+    depends_on:
+      - backend
+    networks:
+      - pong-network
+
+  ngrok:
+    build: ./ngrok
+    container_name: ngrok
+    env_file: ./ngrok/.env
+    environment:
+      - APP_MODE=prod
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "4040:4040"
+    networks:
+      - pong-network
+

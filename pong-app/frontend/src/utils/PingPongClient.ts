@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { io, Socket } from 'socket.io-client';
 import { NavigateFunction } from 'react-router-dom';
 import { getValidatedPlayerName } from './keyClashClient';
+import { Player } from '../shared/types';
 
 export default class PingPongClient {
 	private groundEmission = 0.5;
@@ -33,7 +34,7 @@ export default class PingPongClient {
 		roughness: 0.2,
 		metalness: 0.8,
 	});
-	private ball: THREE.Mesh;
+	private ball: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
 	private ballVel = new THREE.Vector3(6.0, 0, 3.5);
 	private latestBallZ: number;
 	private latestBallX: number;
@@ -43,12 +44,12 @@ export default class PingPongClient {
 
 	private lastFrame: DOMHighResTimeStamp;
 
-	private hud: HTMLDivElement;
 	private scoreDisplay: HTMLDivElement;
 	private restartButton: HTMLButtonElement;
 	private timerDisplay: HTMLDivElement;
 	private matchInfoDisplay: HTMLDivElement;
   	private backButton: HTMLButtonElement;
+	private quikButton: HTMLButtonElement;
 
 	private socket: Socket | null = null;
 	private gameId: string;
@@ -165,12 +166,6 @@ export default class PingPongClient {
 		this.latestBallX = 0;
 		this.latestBallZ = 0;
 
-		// HUD
-		this.hud = document.createElement('div');
-		this.hud.className = 'overlay';
-		this.hud.innerHTML = 'W/S: left paddle &nbsp; ArrowUp/Down: right paddle &nbsp; Esc: pause';
-		document.body.appendChild(this.hud);
-
 		// Score Display
 		this.scoreDisplay = document.createElement('div');
 		Object.assign(this.scoreDisplay.style, {
@@ -205,11 +200,21 @@ export default class PingPongClient {
 
     // Back Button
       this.backButton = document.createElement('button');
-      this.backButton.textContent = '🔙 Back to Lobby'
+	  if (playerId)
+      	this.backButton.textContent = 'Back to Lobby';
+	  else
+		this.backButton.textContent = 'Exit';
       this.backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
       this.backButton.style.display= 'block';
       document.body.appendChild(this.backButton);
       this.backButton.addEventListener('click', () => navigate('/lobby'));
+
+	  this.quikButton = document.createElement('button');
+	  this.quikButton.textContent = 'Back to quickmatch'
+      this.quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+	  this.quikButton.style.display= 'block';
+	  document.body.appendChild(this.quikButton);
+	  this.quikButton.addEventListener('click', () => navigate('/quickmatch')); 
 
 		// Timer Display
 		this.timerDisplay = document.createElement('div');
@@ -296,9 +301,10 @@ export default class PingPongClient {
 		this.socket.on('playerSide', (side) => {
 			this.playerSide = side;
 		});
-		this.socket.on('refreshPlayerSides', (players) => {
+		this.socket.on('refreshPlayerSides', (players: Player[]) => {
 			const player = players.find(p => p.socketId === this.socket?.id);
-			this.playerSide = player.side;
+			if (player)
+				this.playerSide = player.side;
 		})
 
 		this.socket.on('stateUpdate', (state, start: string | null) => {
@@ -327,10 +333,16 @@ export default class PingPongClient {
 				this.matchInfoDisplay.textContent = state.matchInfo;
 			}
 			this.status = state.status;
-      if (this.status === 'in-progress')
-        this.backButton.style.display = "none";
-      else 
-        this.backButton.style.display = "block";
+			if (this.status === 'in-progress')
+			{
+				this.backButton.style.display = "none";
+				this.quikButton.style.display = "none";
+			}
+			else
+			{ 
+				this.backButton.style.display = "block";
+				this.quikButton.style.display = "block";
+			}
 			if (this.type === "1v1" && (state.status === "finished")) {
 				this.restartButton.style.display = "block";
 			}
@@ -362,7 +374,7 @@ export default class PingPongClient {
 			}
 			this.restartButton.style.display = "none";
 			this.matchInfoDisplay.style.display = "none";
-			this.scoreDisplay.style.display = "none";
+			this.timerDisplay.textContent = state.timerDisplay;
 			this.status = "waiting";
 		});
 
@@ -373,15 +385,18 @@ export default class PingPongClient {
 	}
 
 	private handleKeyDown(e: KeyboardEvent) {
-		if (e.key === "Escape")
-			this.socket?.emit("pause");
-		else if (e.code === "Space")
-			this.socket?.emit("setReady");
-		else if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = true;
+		let key = e.key;
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase();
+
+		if (key === "Escape") this.socket?.emit("pause");
+		else if (e.code === "Space") this.socket?.emit("setReady");
+		else if (key in this.keys) this.keys[key as keyof typeof this.keys] = true;
 	}
 
 	private handleKeyUp(e: KeyboardEvent) {
-		if (e.key in this.keys) this.keys[e.key as keyof typeof this.keys] = false;
+		let key = e.key;
+		if (/^[a-z]$/i.test(key)) key = key.toLowerCase();
+		if (key in this.keys) this.keys[key as keyof typeof this.keys] = false;
 	}
 
 	private handleResize() {
@@ -400,8 +415,8 @@ export default class PingPongClient {
 			this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
 		}
 
-		// Remove HUD, Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
-		[this.hud, this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton].forEach(el => {
+		// Remove Score Display, Timer Display, Restart Button, Match Info Display, Back button from DOM
+		[this.scoreDisplay, this.timerDisplay, this.restartButton, this.matchInfoDisplay, this.backButton, this.quikButton].forEach(el => {
 			if (el.parentNode) el.parentNode.removeChild(el);
 		});
 
