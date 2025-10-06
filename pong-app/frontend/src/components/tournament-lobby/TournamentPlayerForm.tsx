@@ -13,7 +13,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
   const allFilled = players.every((p) => p.trim().length > 0);
   
   const displayName: string =
-    user?.firstName?.trim() ||
+    user?.nickname?.trim() ||
     user?.username?.trim() ||
     "empty";
 

@@ -11,8 +11,7 @@ interface Avatar {
 }
 
 interface Profile {
-  firstName?: string;
-  lastName?: string;
+  nickname?: string;
   dateOfBirth?: string;
   gender?: string;
   favAvatar?: string;
@@ -31,8 +30,7 @@ export const MyLockerTab: React.FC = () => {
 
   // Store original values to compare for changes
   const [originalForm, setOriginalForm] = useState({
-    firstName: "",
-    lastName: "",
+    nickname: "",
     dateOfBirth: "",
     gender: "",
     favAvatar: "",
@@ -59,8 +57,7 @@ export const MyLockerTab: React.FC = () => {
         setProfile(profileData);
 
         const newForm = {
-          firstName: profileData.firstName || "",
-          lastName: profileData.lastName || "",
+          nickname: profileData.nickname || "",
           dateOfBirth: profileData.dateOfBirth
             ? profileData.dateOfBirth.substring(0, 10)
             : "",
@@ -110,8 +107,7 @@ export const MyLockerTab: React.FC = () => {
   // Check for changes
   useEffect(() => {
     const changesDetected =
-      form.firstName !== originalForm.firstName ||
-      form.lastName !== originalForm.lastName ||
+      form.nickname !== originalForm.nickname ||
       form.dateOfBirth !== originalForm.dateOfBirth ||
       form.gender !== originalForm.gender ||
       form.favAvatar !== originalForm.favAvatar ||
@@ -213,13 +209,8 @@ export const MyLockerTab: React.FC = () => {
 
     try {
       // Only validate if user actually entered something in name fields
-      if (form.firstName && !form.firstName.trim()) {
-        setMessage("Update failed! First name cannot be only spaces");
-        return;
-      }
-
-      if (form.lastName && !form.lastName.trim()) {
-        setMessage("Update failed! Last name cannot be only spaces");
+      if (form.nickname && !form.nickname.trim()) {
+        setMessage("Update failed! Nickname cannot be only spaces");
         return;
       }
 
@@ -232,8 +223,7 @@ export const MyLockerTab: React.FC = () => {
       }
 
       const response = await api.put("/user/profile", {
-        firstName: form.firstName,
-        lastName: form.lastName,
+        nickname: form.nickname,
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
         favAvatar: favoriteAvatar?.id || "",
@@ -244,7 +234,7 @@ export const MyLockerTab: React.FC = () => {
         await refreshUser();
       
           // Broadcast name update to any connected game lobbies
-        const newDisplayName = form.firstName?.trim() || user?.username?.trim() || "empty";
+        const newDisplayName = form.nickname?.trim() || user?.username?.trim() || "empty";
         window.dispatchEvent(new CustomEvent('displayNameUpdated', { 
           detail: { newDisplayName } 
         }));
@@ -394,14 +384,14 @@ export const MyLockerTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Nickname */}
           <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="nickname" className="block text-sm font-medium text-gray-300 mb-1">
               Nickname for tournaments
             </label>
             <input
-              id="firstName"
-              name="firstName"
-              placeholder="Enter your first name"
-              value={form.firstName}
+              id="nickname"
+              name="nickname"
+              placeholder="Enter your nickname"
+              value={form.nickname}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
             />

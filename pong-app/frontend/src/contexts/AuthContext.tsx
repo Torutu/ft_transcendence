@@ -14,7 +14,7 @@ interface User {
   email: string;
   username: string;
   isVerified: boolean;
-  firstName?: string | null;
+  nickname?: string | null;
 }
 
 interface AuthContextType {

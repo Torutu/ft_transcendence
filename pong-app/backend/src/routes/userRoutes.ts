@@ -8,8 +8,7 @@ interface UserRoutesOptions {
 }
 
 interface UpdateProfileInput {
-  firstName?: string;
-  lastName?: string;
+  nickname?: string;
   dateOfBirth?: string;
   gender?: string;
   favAvatar?: string;
@@ -42,8 +41,7 @@ export default function userRoutes(
           id: true,
           username: true,
           email: true,
-          firstName: true,
-          lastName: true,
+          nickname: true,
           dateOfBirth: true,
           gender: true,
           favAvatar: true,
@@ -89,8 +87,7 @@ export default function userRoutes(
       try {
         const decoded = verifyAuth(request);
         const {
-          firstName,
-          lastName,
+          nickname,
           dateOfBirth,
           gender,
           favAvatar,
@@ -124,24 +121,24 @@ export default function userRoutes(
           }
         }
 
-        // Check for firstName duplicates
-        if (firstName && firstName.trim() !== "") {
+        // Check for nickname duplicates
+        if (nickname && nickname.trim() !== "") {
           const candidates = await prisma.user.findMany({
             where: {
               NOT: { id: decoded.userId },
-              firstName: { not: null },
+              nickname: { not: null },
             },
-            select: { id: true, firstName: true },
+            select: { id: true, nickname: true },
           });
 
           const duplicate = candidates.find(
-            u => u.firstName?.trim() === firstName.trim()
+            u => u.nickname?.trim() === nickname.trim()
           );
 
           if (duplicate) {
             return reply.status(409).send({
-              error: "FIRSTNAME_DUPLICATE",
-              message: "This first name is already taken by another user.",
+              error: "NICKNAME_DUPLICATE",
+              message: "This nickname is already taken by another user.",
             });
           }
         }
@@ -154,8 +151,7 @@ export default function userRoutes(
         const updatedUser = await prisma.user.update({
           where: { id: decoded.userId },
           data: {
-            firstName: firstName || null,
-            lastName: lastName || null,
+            nickname: nickname || null,
             dateOfBirth: dateOfBirth || null,
             gender: genderValue,
             favAvatar: favAvatarValue,
@@ -165,8 +161,7 @@ export default function userRoutes(
             id: true,
             username: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            nickname: true,
             dateOfBirth: true,
             gender: true,
             favAvatar: true,

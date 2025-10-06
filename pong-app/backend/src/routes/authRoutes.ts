@@ -949,7 +949,7 @@ export default function authRoutes(
           username: true,
           email: true,
           isVerified: true,
-          firstName: true,
+          nickname: true,
           profilePic: true,
           wins: true,
           losses: true,

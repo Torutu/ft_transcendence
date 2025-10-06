@@ -51,7 +51,7 @@ export default function TournamentPage() {
 	let name: string | null = null;
 	let playerId: number | null = null;
 	const [showPopup, setShowPopup] = useState(false);
-	const displayName: string = user?.firstName?.trim() || user?.username?.trim() || "empty";
+	const displayName: string = user?.nickname?.trim() || user?.username?.trim() || "empty";
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
