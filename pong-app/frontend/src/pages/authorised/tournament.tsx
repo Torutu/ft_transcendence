@@ -155,6 +155,12 @@ export default function TournamentPage() {
     };
   }, [user]);
 
+	// Utility to get the latest display name from the lobby players array
+	const getLatestDisplayName = (name: string) => {
+		const found = players.find(p => p.name === name);
+		return found ? found.name : name;
+	};
+
 	const createRemotePong = () => {
 		socketRef.current?.emit("create_game", "pong", "remote");
 	};
@@ -345,10 +351,10 @@ export default function TournamentPage() {
 											<div className="flex flex-wrap gap-2">
 												{game.players.map(p => (
 													<span 
-														key={p.socketId}
+														key={p.name}
 														className="px-2 py-1 bg-gray-600 text-gray-200 rounded text-xs border border-gray-500"
 													>
-														{p.name}
+														{getLatestDisplayName(p.name)}
 													</span>
 												))}
 											</div>
@@ -415,10 +421,10 @@ export default function TournamentPage() {
 											<div className="flex flex-wrap gap-2">
 												{game.players.map(p => (
 													<span 
-														key={p.socketId}
+														key={p.name}
 														className="px-2 py-1 bg-gray-600 text-gray-200 rounded text-xs border border-gray-500"
 													>
-														{p.name}
+														{getLatestDisplayName(p.name)}
 													</span>
 												))}
 											</div>
