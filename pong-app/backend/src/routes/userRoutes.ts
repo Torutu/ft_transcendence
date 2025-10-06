@@ -124,6 +124,28 @@ export default function userRoutes(
           }
         }
 
+        // Check for firstName duplicates
+        if (firstName && firstName.trim() !== "") {
+          const candidates = await prisma.user.findMany({
+            where: {
+              NOT: { id: decoded.userId },
+              firstName: { not: null },
+            },
+            select: { id: true, firstName: true },
+          });
+
+          const duplicate = candidates.find(
+            u => u.firstName?.trim() === firstName.trim()
+          );
+
+          if (duplicate) {
+            return reply.status(409).send({
+              error: "FIRSTNAME_DUPLICATE",
+              message: "This first name is already taken by another user.",
+            });
+          }
+        }
+
         const genderValue =
           gender && gender.trim() ? (gender as any) : undefined;
         const favAvatarValue =

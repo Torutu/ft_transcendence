@@ -22,7 +22,7 @@ interface Profile {
 }
 
 export const MyLockerTab: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -239,6 +239,10 @@ export const MyLockerTab: React.FC = () => {
         favAvatar: favoriteAvatar?.id || "",
         profilePic: form.profilePic,
       });
+      if (response.status === 200) {
+        // Refresh the user data in AuthContext after successful update
+        await refreshUser();
+      }
 
       // Update profile with response data
       if (response.data.user) {

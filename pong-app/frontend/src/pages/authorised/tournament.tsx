@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
 import TournamentPlayerForm from "../../components/tournament-lobby/TournamentPlayerForm";
+import api from "../../utils/api";
 
 interface Player {
   socketId: string;
@@ -50,6 +51,7 @@ export default function TournamentPage() {
 	let name: string | null = null;
 	let playerId: number | null = null;
 	const [showPopup, setShowPopup] = useState(false);
+	const displayName: string = user?.firstName?.trim() || user?.username?.trim() || "empty";
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
@@ -76,7 +78,7 @@ export default function TournamentPage() {
 
     socketRef.current.on("connect", () => {
       if (user) {
-        name = user.username;
+        name = displayName;
         playerId = user.id;
       }
       socketRef.current?.emit(
@@ -104,7 +106,7 @@ export default function TournamentPage() {
 				console.log("📦 Retrieved stored players:", storedPlayers);
 				
 				const playerNames = storedPlayers ? JSON.parse(storedPlayers) : {
-					player1: user?.username || "You",
+					player1: displayName || "You",
 					player2: "Guest2", 
 					player3: "Guest3",
 					player4: "Guest4"
@@ -196,7 +198,7 @@ export default function TournamentPage() {
 
       // Ensure the authenticated user is always Player 1
       const playerNamesObject = {
-        player1: user?.username || "You",
+        player1: displayName || "You",
         player2: playerNames[1] || "Guest2",
         player3: playerNames[2] || "Guest3",
         player4: playerNames[3] || "Guest4",
