@@ -210,11 +210,11 @@ export default class PingPongClient {
       this.backButton.addEventListener('click', () => navigate('/lobby'));
 
 	  this.quikButton = document.createElement('button');
-	  this.quikButton.textContent = 'Back to quickmatch'
+	  this.quikButton.textContent = type === "1v1" ? 'Back to quickmatch' : 'Back to tournament';
       this.quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
 	  this.quikButton.style.display= 'block';
 	  document.body.appendChild(this.quikButton);
-	  this.quikButton.addEventListener('click', () => navigate('/quickmatch')); 
+	  this.quikButton.addEventListener('click', () => type === "1v1" ? navigate('/quickmatch') : navigate('/tournament')); 
 
 		// Timer Display
 		this.timerDisplay = document.createElement('div');
@@ -352,7 +352,7 @@ export default class PingPongClient {
 			}
 			else this.matchInfoDisplay.style.display = "none";
 			if (((this.type === "1v1" && state.players.length === 2) ||
-				(this.type === "tournament" && state.players.length === 4)) &&
+				this.type === "tournament") &&
 				state.status === "starting" && state.mode === "remote") {
 				let readyCount = 0;
 				if (state.player1ready) readyCount++;

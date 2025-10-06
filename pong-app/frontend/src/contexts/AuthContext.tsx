@@ -14,6 +14,7 @@ interface User {
   email: string;
   username: string;
   isVerified: boolean;
+  nickname?: string | null;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   login: (userData: User) => void;
   logout: () => void;
   isLoading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +54,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.error("Auth check failed:", error);
       }
       return null;
+    }
+  };
+
+  const refreshUser = async (): Promise<void> => {
+    try {
+      const userData = await checkAuth();
+      if (userData) {
+        setUser(userData);
+        // Broadcast the updated user data to other tabs
+        try {
+          getAuthChannel().postMessage({ type: "USER_UPDATED", user: userData });
+        } catch (error) {
+          console.error("Failed to broadcast user update:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh user data:", error);
     }
   };
 
@@ -94,6 +113,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setIsLoading(false);
           setAuthChecked(true);
           isLoggingOut.current = false;
+          break;
+        case "USER_UPDATED":
+          setUser(event.data.user);
           break;
       }
     };
@@ -152,7 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

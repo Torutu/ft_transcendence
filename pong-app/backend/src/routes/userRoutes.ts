@@ -8,8 +8,7 @@ interface UserRoutesOptions {
 }
 
 interface UpdateProfileInput {
-  firstName?: string;
-  lastName?: string;
+  nickname?: string;
   dateOfBirth?: string;
   gender?: string;
   favAvatar?: string;
@@ -42,8 +41,7 @@ export default function userRoutes(
           id: true,
           username: true,
           email: true,
-          firstName: true,
-          lastName: true,
+          nickname: true,
           dateOfBirth: true,
           gender: true,
           favAvatar: true,
@@ -89,8 +87,7 @@ export default function userRoutes(
       try {
         const decoded = verifyAuth(request);
         const {
-          firstName,
-          lastName,
+          nickname,
           dateOfBirth,
           gender,
           favAvatar,
@@ -124,6 +121,31 @@ export default function userRoutes(
           }
         }
 
+        // Check for nickname duplicates or conflicts with usernames
+        if (nickname && nickname.trim() !== "") {
+          const trimmed = nickname.trim();
+
+          // Check both nickname and username collisions
+          const conflict = await prisma.user.findFirst({
+            where: {
+              NOT: { id: decoded.userId },
+              OR: [
+                { nickname: trimmed },
+                { username: trimmed },
+              ],
+            },
+            select: { id: true },
+          });
+
+          if (conflict) {
+            return reply.status(409).send({
+              error: "NICKNAME_CONFLICT",
+              message:
+                "This nickname is already used as a nickname or username by another user.",
+            });
+          }
+        }
+
         const genderValue =
           gender && gender.trim() ? (gender as any) : undefined;
         const favAvatarValue =
@@ -132,8 +154,7 @@ export default function userRoutes(
         const updatedUser = await prisma.user.update({
           where: { id: decoded.userId },
           data: {
-            firstName: firstName || null,
-            lastName: lastName || null,
+            nickname: nickname || null,
             dateOfBirth: dateOfBirth || null,
             gender: genderValue,
             favAvatar: favAvatarValue,
@@ -143,8 +164,7 @@ export default function userRoutes(
             id: true,
             username: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            nickname: true,
             dateOfBirth: true,
             gender: true,
             favAvatar: true,

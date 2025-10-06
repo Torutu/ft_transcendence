@@ -12,6 +12,11 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
   
   const allFilled = players.every((p) => p.trim().length > 0);
   
+  const displayName: string =
+    user?.nickname?.trim() ||
+    user?.username?.trim() ||
+    "empty";
+
   const handleChange = (index: number, value: string) => {
     const updated = [...players];
     updated[index] = value;
@@ -37,7 +42,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
       setIsStarting(true);
       // Include the authenticated user as player 1, then the 3 entered names
       const allPlayerNames = [
-        user?.username || "You",
+        displayName || "You",
         ...players
       ];
       const uniquePlayers = makeUniquePlayers(allPlayerNames);
@@ -61,7 +66,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
           Player 1 (You)
         </label>
         <div className="h-11 w-full rounded-lg bg-gray-600/50 px-4 font-medium text-gray-300 border border-gray-500 flex items-center">
-          {user?.username || "You"}
+          {displayName || "You"}
         </div>
       </div>
       

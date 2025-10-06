@@ -2,7 +2,8 @@ import { Server } from "socket.io";
 import  { shufflePlayers } from "./PingPongGame"
 import { Player } from "./types/lobby";
 import { keyClashRooms, getLobbyState, keyClashTournaments, 
-    getTournamentLobbyState, saveGameResult, createGameResult } from "./gameData.js";
+    getTournamentLobbyState, saveGameResult, createGameResult,
+	canLeaveTournament, validatePlayerNames } from "./gameData.js";
 import { PrismaClient } from '@prisma/client';
 
 export interface state {
@@ -83,7 +84,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                 return callback({ error: "The game is full!" });
             }
             socket.data.roomId = roomId;
-            socket.emit("get_names", state.players);
+            socket.emit("get_names"/*, state.players*/);
             socket.on("names", (names) => {
                 const p_num = validatePlayerNames(names, type, mode);
                 if (p_num > 0)
@@ -216,7 +217,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                     state.score2 = 0;
                     keyClash.to(roomId).emit("gameState", getPublicState(state));
                     if ((state.type === "1v1" && state.players.length === 2 && state.player1ready && state.player2ready) ||
-                    (state.type === "tournament" && state.players.length === 4 && state.player1ready && state.player2ready)) {
+                    (state.type === "tournament" && state.status === "starting" && state.player1ready && state.player2ready)) {
                         startGame();
                     }
                 });
@@ -250,6 +251,8 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                         state.player2ready = false;
                         if (state.score1 > state.score2)
                             state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
+						else if (state.score1 < state.score2)
+							state.matches[state.round - 1].winner = state.matches[state.round - 1].player2;
                         else if (state.type === "tournament"){ // "coin flip" in case of a tie in tournament
                             if (Math.random() < 0.5)
                                 state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
@@ -337,7 +340,9 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
             }
 
             if (game.type === "tournament") {
-                if (game.status !== "waiting" || game.players.length === 0 || game.mode === "local") {
+                if (game.players.length === 0 || game.mode === "local"
+					|| (game.mode === "remote" && !canLeaveTournament(socket.id, game))
+				) {
                     keyClash.to(game.id).emit("disconnection");
                     const i = keyClashTournaments.findIndex(g => g.id === socket.data.roomId);
                     if (i !== -1) keyClashTournaments.splice(i, 1);
@@ -367,30 +372,4 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
             }
         });
     });
-};
-
-export function validatePlayerNames(players: {player1: string, player2: string, 
-                                    player3: string, player4: string},
-                                    type: "1v1" | "tournament", mode: "local" | "remote") {
-    let count = 1;
-    const validNameRegex = /^[A-Za-z0-9 _-]+$/;
-    if (!players.player1 || players.player1.length > 20 || !validNameRegex.test(players.player1))
-        return count;
-    count++;
-    if (mode === "local") {
-        if (!players.player2 || players.player2.length > 20 || !validNameRegex.test(players.player2) ||
-            players.player2 === players.player1)
-            return count;
-        count++;
-        if (type === "tournament") {
-            if (!players.player3 || players.player3.length > 20 || !validNameRegex.test(players.player3) ||
-                players.player3 === players.player2)
-                return count;
-            count++;
-            if (!players.player4 || players.player4.length > 20 || !validNameRegex.test(players.player4) ||
-                players.player4 === players.player3)
-                return count;              
-        }
-    }
-    return (0);
 };
