@@ -84,7 +84,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                 return callback({ error: "The game is full!" });
             }
             socket.data.roomId = roomId;
-            socket.emit("get_names"/*, state.players*/);
+            socket.emit("get_names", state.players);
             socket.on("names", (names) => {
                 const p_num = validatePlayerNames(names, type, mode);
                 if (p_num > 0)
@@ -249,15 +249,19 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
                         state.status = "finished";
                         state.player1ready = false;
                         state.player2ready = false;
-                        if (state.score1 > state.score2)
+                        if (state.score1 > state.score2) {
                             state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
-						else if (state.score1 < state.score2)
+                        }
+						else if (state.score1 < state.score2) {
 							state.matches[state.round - 1].winner = state.matches[state.round - 1].player2;
+                        }
                         else if (state.type === "tournament"){ // "coin flip" in case of a tie in tournament
-                            if (Math.random() < 0.5)
+                            if (Math.random() < 0.5) {
                                 state.matches[state.round - 1].winner = state.matches[state.round - 1].player1;
-                            else
-                            state.matches[state.round - 1].winner = state.matches[state.round - 1].player2;
+                            }
+                            else {
+                                state.matches[state.round - 1].winner = state.matches[state.round - 1].player2;
+                            }
                         }
                         state.matches[state.round - 1].p1score = state.score1;
                         state.matches[state.round - 1].p2score = state.score2;

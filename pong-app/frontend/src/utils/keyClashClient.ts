@@ -100,22 +100,19 @@ export default function KeyClashClient(
 		});
 	});
 
-	socket.on("get_names", (/*existing*/) => {
-		// if (existing.length >= 1)
-		// 	players.player1 = existing[0].name;
-		// if (existing.length >= 2)
-		// 	players.player2 = existing[1].name;
-		// if (existing.length >= 3)
-		// 	players.player3 = existing[2].name;
-		// if (existing.length >= 4)
-		// 	players.player4 = existing[3].name;
+	socket.on("get_names", (existing) => {
+		if (existing.length >= 1)
+			players.player2 = existing[0].name;
+		if (existing.length >= 2)
+			players.player3 = existing[1].name;
+		if (existing.length >= 3)
+			players.player4 = existing[2].name;
 
 		if (typeof name === 'string' && name) {
 			players.player1 = name;
 		} else if (!players.player1 && !name) {
 			players.player1 = getValidatedPlayerName("Enter name for player1:", "Guest", players);
 		}
-
 		if (mode === "local") {
 			if (!players.player2) {
 				players.player2 = getValidatedPlayerName("Enter name for player2:", "Guest", players);
