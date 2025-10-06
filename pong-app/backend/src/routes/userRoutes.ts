@@ -121,24 +121,27 @@ export default function userRoutes(
           }
         }
 
-        // Check for nickname duplicates
+        // Check for nickname duplicates or conflicts with usernames
         if (nickname && nickname.trim() !== "") {
-          const candidates = await prisma.user.findMany({
+          const trimmed = nickname.trim();
+
+          // Check both nickname and username collisions
+          const conflict = await prisma.user.findFirst({
             where: {
               NOT: { id: decoded.userId },
-              nickname: { not: null },
+              OR: [
+                { nickname: trimmed },
+                { username: trimmed },
+              ],
             },
-            select: { id: true, nickname: true },
+            select: { id: true },
           });
 
-          const duplicate = candidates.find(
-            u => u.nickname?.trim() === nickname.trim()
-          );
-
-          if (duplicate) {
+          if (conflict) {
             return reply.status(409).send({
-              error: "NICKNAME_DUPLICATE",
-              message: "This nickname is already taken by another user.",
+              error: "NICKNAME_CONFLICT",
+              message:
+                "This nickname is already used as a nickname or username by another user.",
             });
           }
         }
