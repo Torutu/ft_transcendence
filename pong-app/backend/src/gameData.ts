@@ -182,11 +182,11 @@ export function validatePlayerNames(players: {player1: string, player2: string,
         count++;
         if (type === "tournament") {
             if (!players.player3 || players.player3.length > 20 || !validNameRegex.test(players.player3) ||
-                players.player3 === players.player2)
+                players.player3 === players.player2 || players.player3 === players.player1)
                 return count;
             count++;
             if (!players.player4 || players.player4.length > 20 || !validNameRegex.test(players.player4) ||
-                players.player4 === players.player3)
+                players.player4 === players.player3 || players.player4 === players.player2 || players.player4 === players.player1)
                 return count;              
         }
     }

@@ -19,7 +19,7 @@ export default function QuickmatchPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const playerId: number | null = user?.id || null;
-  const [name, setName] = useState<string | null>(user?.username || null);
+  const [name, setName] = useState<string | null>(user?.nickname || user?.username || null);
   
    // Lobby state
   const [players, setPlayers] = useState<Player[]>([]);
@@ -526,20 +526,6 @@ export default function QuickmatchPage() {
     });
   };
 
-  // // Debug logging for invitation states
-  // useEffect(() => {
-  //   console.log("Sent invitations updated:", sentInvitations);
-  // }, [sentInvitations]);
-
-  // useEffect(() => {
-  //   console.log("Received invitations updated:", receivedInvitations);
-  // }, [receivedInvitations]);
-
-  // useEffect(() => {
-  //   console.log("Invitation timers updated:", invitationTimers);
-  // }, [invitationTimers]);
-
-
   // Cleanup  any stale pairing data on mount
   useEffect(() => {
     const pairingData = localStorage.getItem("pairingData");
@@ -768,13 +754,6 @@ export default function QuickmatchPage() {
         </div>
       )}
 
-      {/* Pending Invitations Badge */}
-      {/* {receivedInvitations.length > 0 && (
-        <div className="fixed top-42 right-42 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold z-40">
-          {receivedInvitations.length}
-        </div>
-      )} */}
-
       <div className="mb-4">
       <button
       onClick={showLocalForm}
@@ -907,14 +886,6 @@ export default function QuickmatchPage() {
                   const isPairedWithThisPlayer = selectedOpponent && isPaired() && 
                                                  selectedOpponent.socketId === player.socketId;
                   const isYou = player.socketId === socketRef.current?.id;
-
-                  // console.log(`=== PLAYER ${player.name} RENDER DEBUG ===`);
-                  // console.log("Player socketId:", player.socketId);
-                  // console.log("My socketId:", socketRef.current?.id);
-                  // console.log("sentInvitation found:", !!sentInvitation);
-                  // console.log("receivedInvitation found:", !!receivedInvitation);
-                  // console.log("isPairedWithThisPlayer:", isPairedWithThisPlayer);
-                  // console.log("All receivedInvitations:", receivedInvitations);
                   
                   return (
                     <div key={player.socketId} className="bg-gray-700 p-4 rounded-lg">
