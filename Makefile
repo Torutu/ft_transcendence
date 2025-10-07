@@ -8,8 +8,7 @@ RED    = \033[1;31m
 CYAN  := \033[1;96m	
 RESET  = \033[0m
 
-COMPOSE_FILE := ./pong-app/docker-compose.yml
-PROJECT_DIR  := ./pong-app
+COMPOSE_FILE := ./docker-compose.yml
 
 all: help 
 
@@ -77,13 +76,13 @@ fclean:  ## Full clean: remove containers, volumes, orphans
 	@echo "[$(shell date +%T)] $(RED)[x] Performing full cleanup...$(RESET)"
 	docker compose -f $(COMPOSE_FILE) down -v --remove-orphans
 	docker system prune -f --volumes
-		@if [ -d "$(PROJECT_DIR)/frontend/node_modules" ]; then \
+		@if [ -d "./frontend/node_modules" ]; then \
 		echo "[$(shell date +%T)] $(RED)[x] Removing frontend/node_modules...$(RESET)"; \
-		rm -rf $(PROJECT_DIR)/frontend/node_modules; \
+		rm -rf ./frontend/node_modules; \
 	fi
-	@if [ -d "$(PROJECT_DIR)/backend/node_modules" ]; then \
+	@if [ -d "./backend/node_modules" ]; then \
 		echo "[$(shell date +%T)] $(RED)[x] Removing backend/node_modules...$(RESET)"; \
-		rm -rf $(PROJECT_DIR)/backend/node_modules; \
+		rm -rf ./backend/node_modules; \
 	fi
 	@echo "[$(shell date +%T)] $(CYAN)[✓] Full cleanup completed.$(RESET)"
 

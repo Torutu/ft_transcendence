@@ -1,0 +1,61 @@
+networks:
+  pong-network:
+    driver: bridge
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    networks:
+      - pong-network
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./backend/.env # Load environment variables from file
+    volumes:
+      - ./backend:/app
+      - ./tls:/app/tls
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks:
+      - pong-network
+    env_file:
+      - ./frontend/.env # Load environment variables from file
+    volumes:
+      - ./frontend:/app
+      - ./tls:/app/tls
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  nginx:
+    build: ./nginx
+    networks:
+      - pong-network    
+    ports:
+      - "4243:4243"
+    volumes:
+      - ./frontend/dist:/usr/src/app/dist:ro
+      - ./tls:/etc/nginx/ssl:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+  ngrok:
+    build: ./ngrok
+    container_name: ngrok
+    env_file: ./ngrok/.env
+    environment:
+      - APP_MODE=prod
+    depends_on:
+      - nginx
+    ports:
+      - "4040:4040"
+    networks:
+      - pong-network
