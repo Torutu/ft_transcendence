@@ -51,8 +51,8 @@ export async function saveGameResult(gameResult: GameResult, prisma: PrismaClien
         gameResult
       });
 
-      // For local games, only save if one of the players has a playerId
-      if (mode === 'local' && !player1.playerId && !player2.playerId) {
+      // Only save the result if one of the players is a logged in user
+      if (!player1.playerId && !player2.playerId) {
         console.log('Cannot save local game where a user is not a participant')
         return;
       }

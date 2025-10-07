@@ -4,9 +4,9 @@ networks:
 
 services:
   backend:
-    build: 
+    build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     networks:
       - pong-network
     ports:
@@ -21,9 +21,11 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     networks:
       - pong-network
+    ports:
+      - '5173:5173'
     env_file:
       - ./frontend/.env # Load environment variables from file
     volumes:
@@ -34,27 +36,19 @@ services:
       - backend
 
   nginx:
-    build: ./nginx
-    networks:
-      - pong-network    
-    ports:
-      - "4243:4243"
-    volumes:
-      - ./frontend/dist:/usr/src/app/dist:ro
-      - ./tls:/etc/nginx/ssl:ro
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - frontend
+    # Disable nginx in dev mode — frontend serves directly
+    deploy:
+      replicas: 0
 
   ngrok:
     build: ./ngrok
     container_name: ngrok
     env_file: ./ngrok/.env
     environment:
-      - APP_MODE=prod
+      - APP_MODE=dev
     depends_on:
-      - nginx
+      - frontend
+      - backend
     ports:
       - "4040:4040"
     networks:
