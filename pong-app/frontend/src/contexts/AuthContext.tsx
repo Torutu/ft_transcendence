@@ -138,6 +138,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, [user, authChecked]);
 
+    // Check auth every 5 minutes
+  useEffect(() => {
+  const interval = setInterval(async () => {
+    try {
+      await api.get('/user/profile');
+    } catch (error: any) {
+      if (error.response?.status === 404 || error.response?.status === 401) {
+        logout(); // Account deleted or token invalid
+      }
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  return () => clearInterval(interval);
+}, [user]);
+
   const login = (userData: User) => {
     setUser(userData);
     setIsLoading(false);

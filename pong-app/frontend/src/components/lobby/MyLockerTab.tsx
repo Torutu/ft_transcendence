@@ -11,6 +11,8 @@ interface Avatar {
 }
 
 interface Profile {
+  firstName?: string;
+  lastName?: string;
   nickname?: string;
   dateOfBirth?: string;
   gender?: string;
@@ -30,6 +32,8 @@ export const MyLockerTab: React.FC = () => {
 
   // Store original values to compare for changes
   const [originalForm, setOriginalForm] = useState({
+    firstName: "",
+    lastName: "",
     nickname: "",
     dateOfBirth: "",
     gender: "",
@@ -57,6 +61,8 @@ export const MyLockerTab: React.FC = () => {
         setProfile(profileData);
 
         const newForm = {
+          firstName: profileData.firstName || "",
+          lastName: profileData.lastName || "",
           nickname: profileData.nickname || "",
           dateOfBirth: profileData.dateOfBirth
             ? profileData.dateOfBirth.substring(0, 10)
@@ -107,6 +113,8 @@ export const MyLockerTab: React.FC = () => {
   // Check for changes
   useEffect(() => {
     const changesDetected =
+      form.firstName !== originalForm.firstName ||
+      form.lastName !== originalForm.lastName ||
       form.nickname !== originalForm.nickname ||
       form.dateOfBirth !== originalForm.dateOfBirth ||
       form.gender !== originalForm.gender ||
@@ -209,6 +217,16 @@ export const MyLockerTab: React.FC = () => {
 
     try {
       // Only validate if user actually entered something in name fields
+      if (form.firstName && !form.firstName.trim()) {
+        setMessage("Update failed! First name cannot be only spaces");
+        return;
+      }
+
+      if (form.lastName && !form.lastName.trim()) {
+        setMessage("Update failed! Last name cannot be only spaces");
+        return;
+      }
+
       if (form.nickname && !form.nickname.trim()) {
         setMessage("Update failed! Nickname cannot be only spaces");
         return;
@@ -223,6 +241,8 @@ export const MyLockerTab: React.FC = () => {
       }
 
       const response = await api.put("/user/profile", {
+        firstName: form.firstName,
+        lastName: form.lastName,
         nickname: form.nickname,
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
@@ -232,12 +252,15 @@ export const MyLockerTab: React.FC = () => {
       if (response.status === 200) {
         // Refresh the user data in AuthContext after successful update
         await refreshUser();
-      
-          // Broadcast name update to any connected game lobbies
-        const newDisplayName = form.nickname?.trim() || user?.username?.trim() || "empty";
-        window.dispatchEvent(new CustomEvent('displayNameUpdated', { 
-          detail: { newDisplayName } 
-        }));
+
+        // Broadcast name update to any connected game lobbies
+        const newDisplayName =
+          form.nickname?.trim() || user?.username?.trim() || "empty";
+        window.dispatchEvent(
+          new CustomEvent("displayNameUpdated", {
+            detail: { newDisplayName },
+          })
+        );
       }
 
       // Update profile with response data
@@ -308,10 +331,10 @@ export const MyLockerTab: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <form
-        className="bg-gray-800 rounded-xl p-8 relative space-y-8"
+        className="bg-gray-800 rounded-xl p-8 relative"
         onSubmit={handleSubmit}
       >
-        {/* Cancel Button */}
+        {/* Cancel Button - Top Right Corner */}
         {hasChanges && (
           <button
             type="button"
@@ -322,75 +345,121 @@ export const MyLockerTab: React.FC = () => {
             <span className="text-lg">✕</span>
           </button>
         )}
-        {/* Header */}
         <h2 className="text-3xl font-bold mb-6 text-center text-blue-300">
           🧳 My Locker
         </h2>
 
-        {/* Profile Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center">
-                {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-gray-400 text-4xl">👤</span>
-                )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div>
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center">
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-4xl">👤</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={
+                    profileImage
+                      ? handleImageEdit
+                      : () => fileInputRef.current?.click()
+                  }
+                  className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 rounded-full p-2 transition-colors"
+                  title={
+                    profileImage
+                      ? "Edit profile picture"
+                      : "Add profile picture"
+                  }
+                >
+                  {profileImage ? (
+                    <span className="text-white text-lg">✏️</span>
+                  ) : (
+                    <span className="text-white text-lg">📷</span>
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  id="profile-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
               </div>
-              <button
-                type="button"
-                onClick={profileImage ? handleImageEdit : () => fileInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 rounded-full p-2 transition-colors"
-                title={profileImage ? "Edit profile picture" : "Add profile picture"}
-              >
-                {profileImage ? <span className="text-white text-lg">✏️</span> : <span className="text-white text-lg">📷</span>}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
             </div>
           </div>
-
-          {/* User Info */}
-          <div className="flex flex-col justify-center space-y-2 text-left text-lg">
-            <div>
-              <span className="text-gray-400">Username:</span>{" "}
-              <span className="font-bold">{user?.username}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Email:</span>{" "}
-              <span className="font-bold">{user?.email}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Wins:</span>{" "}
-              <span className="font-bold text-green-400">{profile?.wins ?? 0}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Losses:</span>{" "}
-              <span className="font-bold text-red-400">{profile?.losses ?? 0}</span>
+          
+          <div className="flex flex-col justify-center">
+            <div className="space-y-3 text-lg text-left">
+              <div>
+                <span className="text-gray-400">
+                  Username:
+                </span>{" "}
+                <span className="font-bold">{user?.username}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Email:</span>{" "}
+                <span className="font-bold">{user?.email}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Wins:</span>{" "}
+                <span className="font-bold text-green-400">
+                  {profile?.wins ?? 0}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400">Losses:</span>{" "}
+                <span className="font-bold text-red-400">
+                  {profile?.losses ?? 0}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
         {/* Form Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* First Name */}
+          <div>
+            <input
+              placeholder="First Name"
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              className="input w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 bg-white text-black focus:ring-blue-200 transition"
+            />
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <input
+              placeholder="Last Name"
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              className="input w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 placeholder-gray-400 text-black bg-white border-gray-300 focus:ring-blue-200 transition"
+            />
+          </div>
+
           {/* Nickname */}
           <div>
-            <label htmlFor="nickname" className="block text-sm font-medium text-gray-300 mb-1">
+            <label
+              htmlFor="nickname"
+              className="block text-sm font-medium text-left mb-1"
+            >
               Nickname for tournaments
             </label>
             <input
               id="nickname"
               name="nickname"
-              placeholder="Enter your nickname"
+              placeholder="Nickname"
               value={form.nickname}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
@@ -399,7 +468,10 @@ export const MyLockerTab: React.FC = () => {
 
           {/* Date of Birth */}
           <div>
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-300 mb-1">
+            <label
+              htmlFor="dateOfBirth"
+              className="block text-sm font-medium text-left mb-1"
+            >
               Date of Birth
             </label>
             <input
@@ -414,7 +486,10 @@ export const MyLockerTab: React.FC = () => {
 
           {/* Gender */}
           <div>
-            <label htmlFor="gender" className="block text-sm font-medium text-gray-300 mb-1">
+            <label
+              htmlFor="gender"
+              className="block text-sm font-medium text-left mb-1"
+            >
               Gender
             </label>
             <select
@@ -431,12 +506,10 @@ export const MyLockerTab: React.FC = () => {
               <option value="prefer-not-to-say">Prefer not to say</option>
             </select>
           </div>
-        </div>
 
         {/* Favorite Avatar */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Favorite Avatar</label>
+            <label className="block text-sm font-medium text-left mb-1">Favorite Avatar</label>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border border-gray-300 bg-gray-100">
                 {favoriteAvatar ? (
@@ -463,17 +536,19 @@ export const MyLockerTab: React.FC = () => {
               </select>
             </div>
           </div>
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition"
-            >
-              ✏️ Save
-            </button>
-          </div>
+
+
         </div>
-        {/* Feedback Message */}
+
+        <div className="mt-6">
+          <button
+            type="submit"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg"
+          >
+            ✏️ Save
+          </button>
+        </div>
+
         {message && (
           <div
             className={`mt-3 text-center text-sm font-medium ${

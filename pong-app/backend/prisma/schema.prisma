@@ -60,6 +60,8 @@ model User {
   twoFactorURL         String?
   twoFactorRegistered  Boolean  @default(false)
   googleId             String?
+  firstName     String?
+  lastName      String?
   nickname     String?
   dateOfBirth   String?
   gender        Gender    @default(other)
