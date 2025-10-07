@@ -232,11 +232,19 @@ export default function TournamentPage() {
 		<div className="max-w-7xl mx-auto space-y-6">
 			
 			{/* ===== Header ===== */}
-			<header className="text-center py-6">
-			<h1 className="text-3xl font-bold mb-2">Tournament Lobby</h1>
-			<p className="text-gray-300">
+			<header className="py-4 md:py-6">
+			<div className="mb-3 md:mb-0 md:relative md:text-center">
+				<button
+				onClick={() => navigate('/lobby')}
+				className="w-full md:w-auto md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 bg-orange-500 hover:bg-orange-600 px-3 md:px-4 py-2 rounded-lg font-semibold shadow-md text-sm md:text-base transition-colors"
+				>
+				← Back to Lobby
+				</button>
+				<h1 className="text-2xl md:text-3xl font-bold mb-2 mt-3 md:mt-0">Tournament Lobby</h1>
+				<p className="text-sm md:text-base text-gray-300">
 				Join or create tournaments to compete with other players
-			</p>
+				</p>
+			</div>
 			</header>
 
 			{/* ===== Main Body ===== */}
@@ -251,7 +259,7 @@ export default function TournamentPage() {
 					<h2 className="text-xl font-semibold">Play on your device</h2>
 					<button
 					onClick={() => setShowPopup(true)}
-					className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors"
+					className="px-4 md:px-6 py-2 md:py-3 bg-green-500 hover:bg-green-600 text-white text-sm md:text-base font-semibold rounded-lg transition-colors w-full lg:w-auto"
 					>
 					Create A Local Tournament
 					</button>
@@ -266,7 +274,7 @@ export default function TournamentPage() {
 						className="w-full max-w-md mx-4"
 						onClick={(e) => e.stopPropagation()}
 					>
-						<div className="relative bg-neutral-900/95 text-white rounded-2xl p-6 shadow-2xl border border-white/10 max-h-[90vh] overflow-auto">
+						<div className="relative bg-gray-800 text-white rounded-2xl p-6 shadow-2xl border border-white/10 max-h-[90vh] overflow-auto">
 						<div className="flex items-start justify-between">
 							<h3 className="text-lg font-semibold">Create Local Tournament</h3>
 							<button
@@ -438,7 +446,7 @@ export default function TournamentPage() {
 			{/* === Right Sidebar === */}
 			<aside className="w-full lg:w-80 bg-gray-800 rounded-lg border border-gray-600 p-6 self-start">
 				<h2 className="text-xl font-semibold mb-4">
-				Players in Tournament Lobby ({players.length})
+				Players in Lobby ({players.length})
 				</h2>
 				<PlayerList players={players} />
 			</aside>
