@@ -86,7 +86,6 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
 
  // Cleanup on mount
   useEffect(() => {
-    localStorage.removeItem("userInGame");
     localStorage.removeItem("activeGameInfo");
     localStorage.removeItem("currentGameId");
   }, []);
@@ -101,8 +100,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
     if (!/^[A-Za-z0-9 _-]+$/.test(trimmedGuestName)) return false;
     if (trimmedGuestName.toLowerCase() === trimmedUsername.toLowerCase()) return false;
     
-    // return userAvatar && guestAvatar;
-	return true;
+	  return true;
   }, [guestName, userAvatar, guestAvatar, username]);
 
   // Start game

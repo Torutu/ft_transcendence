@@ -82,6 +82,8 @@ export default function QuickmatchPage() {
   };
 
   useEffect(() => {
+    localStorage.removeItem("quickmatch_guestName");
+    localStorage.removeItem("quickmatch_guestAvatar");
     socketRef.current = io("/quickmatch", {
       path: "/socket.io",
       transports: ["websocket"],
@@ -398,6 +400,8 @@ export default function QuickmatchPage() {
     return () => {
       socketRef.current?.disconnect();
       socketRef.current = null;
+      localStorage.removeItem("quickmatch_guestName");
+      localStorage.removeItem("quickmatch_guestAvatar");
     };
   }, [user, name, userAvatar]);
 
@@ -545,16 +549,6 @@ export default function QuickmatchPage() {
         setPairedGameType(null);
       }
     }
-  }, []);
-
-  // Add window beforeunload handler to clear game state if needed
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Don't clear game state on page refresh - user might be in actual game
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   // Clear selected opponent if they're no longer in the online list

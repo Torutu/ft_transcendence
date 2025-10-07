@@ -48,7 +48,7 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
 
   // Check guest avatar (support both quickmatch and regular guest)
   // const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
-  const guestAvatar = JSON.parse(localStorage.getItem("guestAvatar") || "null");
+  const guestAvatar = JSON.parse(localStorage.getItem("quickmatch_guestAvatar") || "null");
   if (guestAvatar?.name && !(target === "guest")) {
     selectedAvatars.add(guestAvatar.name);
   }
