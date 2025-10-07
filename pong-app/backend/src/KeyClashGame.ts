@@ -47,8 +47,8 @@ function getPublicState(state: state) {
 	  type: state.type,
       round: state.round,
     };
-}
-;
+};
+
 function getRandomKey(keys: string[]) {
     return keys[Math.floor(Math.random() * keys.length)];
 };

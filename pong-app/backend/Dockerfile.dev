@@ -12,7 +12,7 @@ RUN npm install
 
 # Generate Prisma client and build TypeScript
 RUN npx prisma generate
-RUN npm run dev
+RUN npm run build
 
 # Verify index.js exists in the dist directory
 RUN ls -a dist/

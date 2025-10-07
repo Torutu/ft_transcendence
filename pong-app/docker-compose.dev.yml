@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     networks:
       - pong-network
     ports:
@@ -34,11 +34,6 @@ services:
       - /app/node_modules
     depends_on:
       - backend
-
-  nginx:
-    # Disable nginx in dev mode — frontend serves directly
-    deploy:
-      replicas: 0
 
   ngrok:
     build: ./ngrok
