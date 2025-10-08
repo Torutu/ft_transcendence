@@ -738,7 +738,7 @@ export default function QuickmatchPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen text-white p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {showInvitationModal && (
           <div className="fixed top-20 md:top-40 right-4 md:right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
@@ -748,17 +748,19 @@ export default function QuickmatchPage() {
 
         {/* ===== Header ===== */}
         <header className="py-4 md:py-6">
-          <div className="mb-3 md:mb-0 md:relative md:text-center">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
             <button
               onClick={() => navigate('/lobby')}
-              className="w-full md:w-auto md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 bg-orange-500 hover:bg-orange-600 px-3 md:px-4 py-2 rounded-lg font-semibold shadow-md text-sm md:text-base transition-colors"
+              className="bg-gray-800/70 hover:bg-gray-700/80 text-white text-sm font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm shadow-md transition self-start"
             >
-              ← Back to Lobby
+              Back
             </button>
+            <div className="flex-grow text-center">
             <h1 className="text-2xl md:text-3xl font-bold mb-2 mt-3 md:mt-0">Quick Match Lobby</h1>
             <p className="text-sm md:text-base text-gray-300">
               Play matches locally or online with friends and other players
             </p>
+            </div>
           </div>
         </header>
 

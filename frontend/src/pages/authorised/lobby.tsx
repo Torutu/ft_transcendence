@@ -18,11 +18,13 @@ const TABS = [
 export default function LobbyPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1b1443] to-[#4f1461] text-white">
+    // Full viewport gradient
+    <div className="min-h-screen w-full text-white">
       {/* Welcome and buttons */}
-      <div className="flex flex-col items-center mt-1 mb-6 px-4">
-        <h2 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mt-1 mb-2 text-center">
+      <div className="flex flex-col items-center mt-6 mb-6 px-4">
+        <h2 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mt-4 mb-2 text-center">
           Welcome to the Arena
         </h2>
         <p className="text-base md:text-lg text-gray-300 mb-6 text-center max-w-2xl">

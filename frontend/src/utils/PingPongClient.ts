@@ -201,17 +201,17 @@ export default class PingPongClient {
     // Back Button
       this.backButton = document.createElement('button');
 	  if (playerId)
-      	this.backButton.textContent = 'Back to Lobby';
+      	this.backButton.textContent = 'Home';
 	  else
 		this.backButton.textContent = 'Exit';
-      this.backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+      this.backButton.className = "fixed top-4 left-4 z-50 bg-gray-800/60 hover:bg-gray-700/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm transition";
       this.backButton.style.display= 'block';
       document.body.appendChild(this.backButton);
       this.backButton.addEventListener('click', () => navigate('/lobby'));
 
 	  this.quikButton = document.createElement('button');
-	  this.quikButton.textContent = type === "1v1" ? 'Back to quickmatch' : 'Back to tournament';
-      this.quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+	  this.quikButton.textContent = 'Back';
+      this.quikButton.className = "fixed top-4 left-4 z-50 bg-gray-800/60 hover:bg-gray-700/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm transition mt-12";
 	  this.quikButton.style.display= 'block';
 	  document.body.appendChild(this.quikButton);
 	  this.quikButton.addEventListener('click', () => type === "1v1" ? navigate('/quickmatch') : navigate('/tournament')); 

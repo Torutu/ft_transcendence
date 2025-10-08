@@ -25,7 +25,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="bg-gray-800 p-4">
+    <nav className="bg-gray-800 shadow-sm shadow-black/20 p-4">
       <div className="container mx-auto flex flex-wrap justify-between items-center">
         {/* Logo */}
         <Link to="/lobby" className="mb-2 sm:mb-0">
@@ -38,16 +38,16 @@ export const Navbar = () => {
         </Link>
 
         {/* Right section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 w-full sm:w-auto space-y-3 sm:space-y-0 mt-3 sm:mt-0">
+        <div className="flex flex-row flex-wrap items-center gap-3">
           {user ? (
             <>
               {/* Avatar + User info */}
               <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
                   {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                 </div>
-                <div className="text-left sm:text-right">
-                <p className="font-semibold">
+                <div className="text-left">
+                  <p className="font-semibold">
                     Hello, {user?.username || 'User'}
                   </p>
                   <p className="text-gray-300 text-xs">{user?.email}</p>
@@ -57,7 +57,7 @@ export const Navbar = () => {
               {/* Logout button */}
               <button
                 onClick={handleLogout}
-                className="bg-gray-700 hover:bg-red-600 px-5 py-2 rounded-lg text-white font-semibold"
+                className="bg-gray-700 hover:bg-red-600 px-5 py-2 rounded-lg text-white font-semibold inline-flex"
                 disabled={isLoggingOut}
               >
                 🚪 Logout
@@ -76,6 +76,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-
-
-

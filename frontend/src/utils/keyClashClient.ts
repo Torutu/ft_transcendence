@@ -54,17 +54,17 @@ export default function KeyClashClient(
   // Back Button
   const backButton = document.createElement('button');
   if (playerId)
-  	backButton.textContent = 'Back to Lobby';
+  	backButton.textContent = 'Home';
   else
 	backButton.textContent = "Exit";
-  backButton.className="absolute top-20 left-60 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+  backButton.className="fixed top-4 left-4 z-50 bg-gray-800/60 hover:bg-gray-700/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm transition";
   backButton.style.display= 'block';
   document.body.appendChild(backButton);
   backButton.addEventListener('click', () => navigate('/lobby')); 
 
   const quikButton = document.createElement('button');
-  quikButton.textContent = type === "1v1" ? 'Back to quickmatch' : 'Back to tournament';
-  quikButton.className="absolute top-35 left-60 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg font-semibold shadow-md";
+  quikButton.textContent = 'Back';
+  quikButton.className="fixed top-4 left-4 z-50 bg-gray-800/60 hover:bg-gray-700/70 text-white text-sm font-semibold px-3 py-1.5 rounded-lg backdrop-blur-sm transition mt-12";
   quikButton.style.display= 'block';
   document.body.appendChild(quikButton);
   quikButton.addEventListener('click', () => type === "1v1" ? navigate('/quickmatch') : navigate('/tournament')); 
