@@ -5,8 +5,6 @@ CREATE TABLE "User" (
     "password" TEXT,
     "email" TEXT NOT NULL,
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
-    "twoFactorSecret" TEXT,
-    "twoFactorURL" TEXT,
     "twoFactorRegistered" BOOLEAN NOT NULL DEFAULT false,
     "googleId" TEXT,
     "firstName" TEXT,

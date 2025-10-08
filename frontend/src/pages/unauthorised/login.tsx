@@ -73,14 +73,9 @@ export default function LoginPage() {
       });
 
       if (response.data.requires2FA) {
-        if (response.data.url) {
-          sessionStorage.setItem("url", response.data.url);
-        }
-
         navigate("/verify-2fa", {
           state: {
             userId: response.data.userId,
-            url: response.data.url,
           },
         });
       } else {

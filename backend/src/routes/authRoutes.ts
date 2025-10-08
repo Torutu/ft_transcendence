@@ -1,4 +1,4 @@
-// backend/src/routes/authRoutes.ts
+// pong-app/backend/src/routes/authRoutes.ts
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import {PrismaClient} from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -12,7 +12,6 @@ import {
 } from '../service/emailService';
 import {OAuth2Client} from 'google-auth-library';
 import validator from 'validator';
-import speakeasy from 'speakeasy';
 
 if (!env.GOOGLE_CLIENT_ID) {
   throw new Error('GOOGLE_CLIENT_ID environment variable is required');
@@ -75,20 +74,6 @@ export default function authRoutes(
   const getBaseUrl = (request: FastifyRequest) => {
     const origin = request.headers.origin;
     return origin?.includes('ngrok') ? env.FRONTEND_REMOTE_URL : env.CP_URL;
-  };
-
-  // 2FA functions
-  const generateTwoFactorSecret = (
-    email: string,
-  ): speakeasy.GeneratedSecret => {
-    const issuer = env.TEAM_NAME ?? 'Hivers5 Asteroids';
-    const label = `${issuer}:${email}`;
-
-    return speakeasy.generateSecret({
-      name: label,
-      issuer,
-      length: 20,
-    });
   };
 
   // Helper function to generate random code
@@ -270,16 +255,12 @@ export default function authRoutes(
         if (!user) {
           // Generate unique username
           let username = payload.name.replace(/\s+/g, '');
-          let existingUser = await prisma.user.findFirst({where: {
-															OR: [{username: username}, {nickname: username}]
-														}});
+          let existingUser = await prisma.user.findUnique({where: {username}});
 
           while (existingUser) {
             const randomSuffix = Math.floor(Math.random() * 10000);
             username = `${payload.name.replace(/\s+/g, '')}${randomSuffix}`;
-            existingUser = await prisma.user.findFirst({where: {
-															OR: [{username: username}, {nickname: username}]
-														}});
+            existingUser = await prisma.user.findUnique({where: {username}});
           }
 
           // Create new user
@@ -379,12 +360,12 @@ export default function authRoutes(
         // Check if user already exists
         const existingUser = await prisma.user.findFirst({
           where: {
-            OR: [{username: username}, {email: email}, {nickname: username}],
+            OR: [{username: username}, {email: email}],
           },
         });
 
         if (existingUser) {
-          if (existingUser.username === username || existingUser.nickname === username) {
+          if (existingUser.username === username) {
             return reply
               .status(400)
               .send({
@@ -401,14 +382,6 @@ export default function authRoutes(
 
         const hashedPassword = await hashPassword(password);
 
-        const twoFactorSecret = generateTwoFactorSecret(email);
-        if (twoFactorSecret.otpauth_url === undefined) {
-          return reply.status(500).send({
-            error: '2FA_ERROR',
-            message: 'Failed to generate two-factor authentication secret',
-          });
-        }
-
         // Create new user
         const newUser = await prisma.user.create({
           data: {
@@ -416,8 +389,6 @@ export default function authRoutes(
             password: hashedPassword,
             email,
             isVerified: false,
-            twoFactorSecret: twoFactorSecret.base32,
-            twoFactorURL: twoFactorSecret.otpauth_url,
             auth_provider: 'email',
           },
         });
@@ -491,7 +462,6 @@ export default function authRoutes(
             username: user.username,
             isVerified: true,
           },
-          totp_url: user.twoFactorURL,
         });
       } catch (error) {
         if (error instanceof Error && error.message === 'INVALID_CODE') {
@@ -578,22 +548,6 @@ export default function authRoutes(
             });
         }
 
-        if (!user.twoFactorSecret) {
-          return reply.status(403).send({
-            error: 'INVALID_TWOFACTOR_SECRET',
-            message: 'Invalid 2 factor secret',
-          });
-        }
-
-        if (!user.twoFactorURL) {
-          return reply.status(403).send({
-            error: 'INVALID_TWOFACTOR_URL',
-            message: 'Invalid 2 factor URL',
-          });
-        }
-
-        const url = user.twoFactorRegistered ? null : user.twoFactorURL;
-
         // Use helper function for verification code creation and email sending
         await createAndSendVerificationCode(user, 'login-2fa');
 
@@ -601,7 +555,6 @@ export default function authRoutes(
           requires2FA: true,
           userId: user.id,
           message: '2FA code sent to your email. Please verify to continue.',
-          url,
         });
       } catch (error) {
         console.error('Login error:', error);
@@ -644,13 +597,6 @@ export default function authRoutes(
           return reply.status(401).send({
             error: 'USER_NOT_FOUND',
             message: 'User not found',
-          });
-        }
-
-        if (!user.twoFactorSecret) {
-          return reply.status(401).send({
-            error: 'TWOFACTOR_SECRET_NOT_FOUND',
-            message: 'twoFactorSecret not found',
           });
         }
 

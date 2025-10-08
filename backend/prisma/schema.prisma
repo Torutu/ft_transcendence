@@ -56,8 +56,6 @@ model User {
   password      String?
   email         String    @unique
   isVerified           Boolean  @default(false)
-  twoFactorSecret      String?
-  twoFactorURL         String?
   twoFactorRegistered  Boolean  @default(false)
   googleId             String?
   firstName     String?

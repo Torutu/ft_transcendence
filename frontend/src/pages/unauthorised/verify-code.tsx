@@ -80,7 +80,6 @@ export default function VerifyCodePage() {
         fallbackRoute: "/login",
         onSuccess: (response, navigate, login, setError) => {
           sessionStorage.removeItem("userId");
-          sessionStorage.removeItem("url");
           if (response.data.user) {
             login(response.data.user);
             navigate("/lobby", { replace: true });
