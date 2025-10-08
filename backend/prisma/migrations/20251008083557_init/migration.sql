@@ -9,6 +9,8 @@ CREATE TABLE "User" (
     "twoFactorURL" TEXT,
     "twoFactorRegistered" BOOLEAN NOT NULL DEFAULT false,
     "googleId" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "nickname" TEXT,
     "dateOfBirth" TEXT,
     "gender" TEXT NOT NULL DEFAULT 'other',

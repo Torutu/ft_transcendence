@@ -428,6 +428,12 @@ export const MyLockerTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* First Name */}
           <div>
+          <label
+              htmlFor="firstname"
+              className="block text-sm font-medium text-left mb-1"
+            >
+              First name
+            </label>
             <input
               placeholder="First Name"
               name="firstName"
@@ -439,6 +445,12 @@ export const MyLockerTab: React.FC = () => {
 
           {/* Last Name */}
           <div>
+          <label
+              htmlFor="lastname"
+              className="block text-sm font-medium text-left mb-1"
+            >
+              Last name
+            </label>
             <input
               placeholder="Last Name"
               name="lastName"
@@ -454,7 +466,7 @@ export const MyLockerTab: React.FC = () => {
               htmlFor="nickname"
               className="block text-sm font-medium text-left mb-1"
             >
-              Nickname for tournaments
+              Nickname / Display name
             </label>
             <input
               id="nickname"

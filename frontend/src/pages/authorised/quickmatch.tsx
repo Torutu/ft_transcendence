@@ -101,6 +101,7 @@ export default function QuickmatchPage() {
   useEffect(() => {
     localStorage.removeItem("quickmatch_guestName");
     localStorage.removeItem("quickmatch_guestAvatar");
+    localStorage.removeItem("userAvatar");
     socketRef.current = io("/quickmatch", {
       path: "/socket.io",
       transports: ["websocket"],
@@ -419,6 +420,7 @@ export default function QuickmatchPage() {
       socketRef.current = null;
       localStorage.removeItem("quickmatch_guestName");
       localStorage.removeItem("quickmatch_guestAvatar");
+      localStorage.removeItem("userAvatar");
     };
   }, [user, name, userAvatar]);
 

@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY . .
-#COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npm install
 
 # Copy everything else (source code)
