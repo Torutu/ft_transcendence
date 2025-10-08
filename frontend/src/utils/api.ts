@@ -35,13 +35,21 @@ api.interceptors.response.use(
       url: error.config?.url,
     });
 
+    // Handle 404 USER_NOT_FOUND errors
+    if (error.response?.status === 404 && error.response?.data?.error === "USER_NOT_FOUND") {
+      console.log("User account deleted - redirecting to login");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
     // Handle 401 errors properly
     if (error.response?.status === 401) {
       // Don't try to logout if we're already on auth endpoints
       if (!error.config?.url?.includes("/auth/")) {
         try {
           // Call logout to set user offline in database
-          await axios.post("/auth/logout", {}, { withCredentials: true });
+          await axios.post("/api/auth/logout", {}, { withCredentials: true });
           console.log("User marked offline due to token expiry");
         } catch (logoutError) {
           console.error("Failed to call logout on token expiry:", logoutError);

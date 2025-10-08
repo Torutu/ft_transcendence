@@ -8,6 +8,8 @@ interface UserRoutesOptions {
 }
 
 interface UpdateProfileInput {
+  firstName?: string;
+  lastName?: string;
   nickname?: string;
   dateOfBirth?: string;
   gender?: string;
@@ -41,6 +43,8 @@ export default function userRoutes(
           id: true,
           username: true,
           email: true,
+          firstName: true,
+          lastName: true,
           nickname: true,
           dateOfBirth: true,
           gender: true,
@@ -87,6 +91,8 @@ export default function userRoutes(
       try {
         const decoded = verifyAuth(request);
         const {
+          firstName,
+          lastName,
           nickname,
           dateOfBirth,
           gender,
@@ -154,6 +160,8 @@ export default function userRoutes(
         const updatedUser = await prisma.user.update({
           where: { id: decoded.userId },
           data: {
+            firstName: firstName || null,
+            lastName: lastName || null,
             nickname: nickname || null,
             dateOfBirth: dateOfBirth || null,
             gender: genderValue,
@@ -164,6 +172,8 @@ export default function userRoutes(
             id: true,
             username: true,
             email: true,
+            firstName: true,
+            lastName: true,
             nickname: true,
             dateOfBirth: true,
             gender: true,

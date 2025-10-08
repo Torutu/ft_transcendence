@@ -150,13 +150,17 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
   };
   
   return (
-    <div className="w-full min-h-screen text-white p-8 flex flex-col items-center">
+    <div className="text-white p-6 flex flex-col">
+    <div className="flex items-start justify-between mb-4">
+      <h1 className="text-3xl font-bold">🏠 Local Quick Match Setup</h1>
       <button
         onClick={() => closeForm()}
-        className="absolute top-30 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
+        aria-label="Close"
+        className="ml-3 rounded-md p-2 hover:bg-white/5 text-2xl leading-none"
       >
-        Close
+        ✕
       </button>
+    </div>
 
       { user && 
         <div id="avatarForm">
@@ -168,11 +172,8 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
           />
         </div>
       }
-      <h1 className="text-4xl font-bold text-center mb-6">
-        🏠 Local Quick Match Setup
-      </h1>
 
-      <div className="w-full max-w-4xl space-y-6">
+      <div className="max-w-4xl space-y-6">
         <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
           <h2 className="text-2xl font-bold mb-6 text-center">Setup Players & Avatars</h2>
           

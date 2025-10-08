@@ -85,7 +85,7 @@ export default function TournamentPlayerForm({ onStart }: TournamentPlayerFormPr
             type="text"
             value={p}
             onChange={(e) => handleChange(idx, e.target.value)}
-            className="h-11 w-full rounded-lg bg-white/20 backdrop-blur-sm px-4 font-medium text-white
+            className="h-11 w-full rounded-lg bg-white/10 backdrop-blur-sm px-4 font-medium text-white
               placeholder-gray-300 outline-none border border-white/30 transition-all duration-200 ease-in-out
               focus:bg-white/30 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
             placeholder={`Enter name for Player ${idx + 2}`}

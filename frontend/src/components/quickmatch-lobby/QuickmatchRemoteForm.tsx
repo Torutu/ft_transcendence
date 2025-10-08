@@ -110,16 +110,20 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
   };
 
   return (
-    <div className="w-full min-h-screen text-white p-8 flex flex-col items-center">
+    <div className="w-full text-white p-6 flex flex-col">
+    <div className="flex items-start justify-between mb-4">
+      <h1 className="text-3xl font-bold">🌐 Remote Quick Match Setup</h1>
       <button
         onClick={() => closeForm()}
-        className="absolute top-30 left-6 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold shadow-md"
+        aria-label="Close"
+        className="ml-3 rounded-md p-2 hover:bg-white/5 text-2xl leading-none"
       >
-        Close
+        ✕
       </button>
+    </div>
 
       {showInvitationModal && (
-        <div className="fixed top-40 right-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-sm text-center">
           <p>{invitationMessage}</p>
         </div>
       )}
@@ -135,12 +139,8 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
         </div> )
       }
 
-      <h1 className="text-4xl font-bold text-center mb-6">
-        🌐 Remote Quick Match Setup
-      </h1>
-
-      <div className="w-full max-w-7xl flex gap-6">
-        <div className="w-2/3 space-y-6">
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-2/3 space-y-6">
           <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
             <h2 className="text-2xl font-bold mb-6 text-center">Choose Your Opponent</h2>
             
@@ -266,8 +266,8 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
           </div>
         </div>
 
-        <div className="w-1/3">
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg sticky top-6">
+        <div className="w-full lg:w-1/3">
+          <div className="bg-gray-800 p-6 rounded-xl shadow-lg lg:sticky lg:top-6">
             <h2 className="text-2xl font-bold mb-4 text-center">🌐 Players available</h2>
             <p className="text-center text-gray-400 text-sm mb-4">
               Click any player to select them ({otherPlayers.length} online)
