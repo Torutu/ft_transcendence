@@ -131,21 +131,17 @@ export default function QuickmatchPage() {
       try {
 				// Get guest name from localStorage
 				const storedGuest = localStorage.getItem('quickmatch_guestName');
-				console.log("📦 Retrieved stored guest:", storedGuest);
-
 				const playerNames = {
 					player1: name,
 					player2: storedGuest
         };
         if (socketRef.current) {
-          console.log("🔌 Disconnecting socket...");
           socketRef.current.disconnect();
           socketRef.current = null;
         }
 			
         const type = "1v1";
         const routePath = `/${game}/${mode}/${type}/${gameId}`;
-        console.log("🎯 Navigating to:", routePath);
 			
         navigate(routePath, { 
           state: { 
@@ -157,7 +153,6 @@ export default function QuickmatchPage() {
             gameId: gameId,
           } 
         });
-        console.log("✅ Navigation completed");
         
       } catch (error: any) {
           console.error("❌ Error in created_game handler:", error);
@@ -177,8 +172,6 @@ export default function QuickmatchPage() {
       to: { socketId: string; name: string };
       gameType: GameType;
     }) => {
-      console.log("Received invitation_sent:", data);
-      
       setSentInvitations(prev => {
         const tempInvitation = prev.find(inv => 
           inv.to.socketId === data.to.socketId && inv.id.startsWith('temp-')
@@ -201,7 +194,6 @@ export default function QuickmatchPage() {
         const tempIds = Object.keys(updated).filter(id => id.startsWith('temp-'));
         const tempTimer = tempIds.length > 0 ? updated[tempIds[tempIds.length - 1]] : 120;
         
-        console.log(`Transferring timer from temp invitation (${tempTimer}s) to ${data.id}`);
         tempIds.forEach(tempId => delete updated[tempId]);
         updated[data.id] = tempTimer;
         
@@ -210,11 +202,9 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("invitation_received", (invitation: Invitation) => {
-      console.log("Received invitation_received:", invitation);
       setReceivedInvitations(prev => [...prev, invitation]);
       
       setInvitationTimers(prev => {
-        console.log(`Starting timer for received invitation ${invitation.id}: 120 seconds`);
         return {
           ...prev,
           [invitation.id]: 120
@@ -239,7 +229,6 @@ export default function QuickmatchPage() {
       gameType: "pong" | "keyclash";
       timestamp: number;
     }) => {
-      console.log("Players paired received:", data);
       
       // Clear invitations since we're now paired
       setReceivedInvitations([]);
@@ -285,8 +274,6 @@ export default function QuickmatchPage() {
       senderData: { name: string; socketId: string; playerId: number };
       receiverData: { name: string; socketId: string; playerId: number };
     }) => {
-      console.log("Game setup complete received:", gameData);
-
       
       let navigationState;
       
@@ -324,13 +311,10 @@ export default function QuickmatchPage() {
         };
       }
       
-      console.log("Navigation state prepared:", navigationState);
-      
       setInvitationMessage("🎮 Game starting...");
       setShowInvitationModal(true);
       
       setTimeout(() => {
-        console.log("Navigating to game...");
         // Clean up pairing data
         localStorage.removeItem("pairingData");
         
@@ -344,7 +328,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("invitation_declined", (data: { id: string; by: string }) => {
-      console.log("Invitation declined:", data);
       setSentInvitations(prev => prev.filter(inv => inv.id !== data.id));
       
       setInvitationTimers(prev => {
@@ -363,7 +346,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("invitation_expired", (data: { id: string }) => {
-      console.log("Invitation expired from server:", data);
       
       const wasSentInvitation = sentInvitations.some(inv => inv.id === data.id);
       
@@ -386,7 +368,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("pairing_expired", (data: { pairId: string }) => {
-      console.log("Pairing expired:", data);
       setSelectedOpponent(null);
       setPairedGameType(null);
       localStorage.removeItem("pairingData");
@@ -396,7 +377,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("pairing_cancelled", (data: { pairId: string; reason?: string }) => {
-      console.log("Pairing cancelled:", data);
       setSelectedOpponent(null);
       setPairedGameType(null);
       localStorage.removeItem("pairingData");
@@ -406,7 +386,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current?.on("invitation_cancelled", (data: { id: string; reason?: string; by?: string }) => {
-      console.log("Invitation cancelled:", data);
       setReceivedInvitations(prev => prev.filter(inv => inv.id !== data.id));
       if (data.reason) {
         setInvitationMessage(`Invitation cancelled: ${data.reason}`);
@@ -444,8 +423,6 @@ export default function QuickmatchPage() {
   const sendPlayRequest = (opponent: OnlineUser, gameType: GameType) => {
     if (!socketRef.current) return;
 
-    console.log("sendPlayRequest called for:", opponent.name, "gameType:", gameType);
-
     const tempInvitation: SentInvitation = {
       id: `temp-${Date.now()}`,
       to: { socketId: opponent.socketId, name: opponent.name },
@@ -456,7 +433,6 @@ export default function QuickmatchPage() {
     setSentInvitations(prev => [...prev, tempInvitation]);
 
     setInvitationTimers(prev => {
-      console.log(`Starting timer for invitation ${tempInvitation.id}: 120 seconds`);
       return {
         ...prev,
         [tempInvitation.id]: 120
@@ -464,7 +440,6 @@ export default function QuickmatchPage() {
     });
 
     socketRef.current.emit("send_invitation", opponent.socketId, gameType, (response: any) => {
-      console.log("send_invitation response:", response);
       
       if (response.error) {
         setSentInvitations(prev => prev.filter(inv => inv.id !== tempInvitation.id));
@@ -486,44 +461,32 @@ export default function QuickmatchPage() {
   const respondToInvitation = (invitationId: string, response: "accept" | "decline") => {
     if (!socketRef.current) return;
 
-    console.log("=== RESPOND TO INVITATION START ===");
-    console.log("Invitation ID:", invitationId);
-    console.log("Response:", response);
-
     socketRef.current.emit("respond_to_invitation", invitationId, response, (result: any) => {
-      console.log("Response result:", result);
       
       if (result.error) {
         console.log("Error in response:", result.error);
         alert(result.error);
-      } else {
-        console.log("Successfully responded to invitation");
-        
+      } else {        
         setReceivedInvitations(prev => {
           const filtered = prev.filter(inv => inv.id !== invitationId);
-          console.log("Received invitations after cleanup:", filtered.length);
           return filtered;
         });
         
         setInvitationTimers(prev => {
           const updated = { ...prev };
           delete updated[invitationId];
-          console.log("Timers after cleanup:", Object.keys(updated).length);
           return updated;
         });
         
         if (response === "accept") {
-          console.log("Invitation accepted - waiting for players_paired...");
           setInvitationMessage("Pairing players...");
           setShowInvitationModal(true);
         } else {
-          console.log("Invitation declined");
           setInvitationMessage("Invitation declined.");
           setShowInvitationModal(true);
           setTimeout(() => setShowInvitationModal(false), 1500);
         }
       }
-      console.log("=== RESPOND TO INVITATION END ===");
     });
   };
 
@@ -578,7 +541,6 @@ export default function QuickmatchPage() {
       );
       
       if (!isOpponentStillOnline) {
-        console.log(`Selected opponent ${selectedOpponent.name} is no longer online - clearing selection`);
         setSelectedOpponent(null);
       }
     }
@@ -587,7 +549,6 @@ export default function QuickmatchPage() {
   useEffect(() => {
     // Clear selected opponent if no players are available online
     if (otherPlayers.length === 0 && selectedOpponent) {
-      console.log("No players online - clearing selected opponent");
       setSelectedOpponent(null);
     }
   }, [otherPlayers.length, selectedOpponent]);
@@ -602,12 +563,8 @@ export default function QuickmatchPage() {
         Object.keys(updated).forEach(invitationId => {
           if (updated[invitationId] > 0) {
             updated[invitationId] -= 1;
-            if (updated[invitationId] % 10 === 0) {
-              console.log(`Invitation ${invitationId} timer: ${updated[invitationId]}s remaining`);
-            }
           } else if (updated[invitationId] === 0) {
             hasExpired = true;
-            console.log(`Invitation ${invitationId} expired!`);
             
             const sentInvitation = sentInvitations.find(inv => inv.id === invitationId);
             const receivedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
@@ -672,8 +629,6 @@ export default function QuickmatchPage() {
         const isPaired = pairing.opponent.socketId === selectedOpponent.socketId;
         
         if (isPaired) {
-          console.log("Already paired! Starting game directly:", gameType);
-          
           if (!socketRef.current) {
             alert("Connection lost. Please refresh and try again.");
             return;
@@ -689,7 +644,6 @@ export default function QuickmatchPage() {
               setSelectedOpponent(null);
               setPairedGameType(null);
             } else {
-              console.log("Paired game starting...");
               setInvitationMessage("🎮 Starting game...");
               setShowInvitationModal(true);
             }
@@ -704,7 +658,6 @@ export default function QuickmatchPage() {
 
     // Not paired yet, send invitation as usual
     if (selectedOpponent) {
-      console.log("Sending invitation for remote game to:", selectedOpponent.name);
       sendPlayRequest(selectedOpponent, gameType);
     } else {
       if (gameType === "pong")

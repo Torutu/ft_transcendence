@@ -1,5 +1,5 @@
 // backend/src/routes/friendRoutes.ts
-import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { PrismaClient } from "@prisma/client";
 
 interface FriendRoutesOptions {
@@ -82,10 +82,6 @@ export default function friendRoutes(
           index === self.findIndex((f) => f.friend.id === friendship.friend.id)
       );
 
-      console.log(
-        `Found ${friendships.length} friendship records, filtered to ${uniqueFriends.length} unique friends for user ${decoded.userId}`
-      );
-
       return reply.send(uniqueFriends);
     } catch (error) {
       if (
@@ -145,10 +141,6 @@ export default function friendRoutes(
           name: friend.username,
           status: friend.online_status,
         }));
-
-      console.log(
-        `Found ${friendships.length} friendship records, ${allFriends.length} online friends (with duplicates), ${uniqueOnlineFriends.length} unique online friends for user ${decoded.userId}`
-      );
 
       return reply.send(uniqueOnlineFriends);
     } catch (error) {
@@ -310,10 +302,6 @@ export default function friendRoutes(
       // Combine both arrays
       const allRequests = [...mappedReceivedRequests, ...mappedSentRequests];
 
-      console.log(
-        `Found ${receivedRequests.length} received requests and ${sentRequests.length} sent requests for user ${decoded.userId}`
-      );
-
       return reply.send(allRequests);
     } catch (error) {
       if (
@@ -409,10 +397,6 @@ export default function friendRoutes(
           },
         });
 
-        console.log(
-          `Friend request sent from user ${decoded.userId} to user ${targetUserId}`
-        );
-
         return reply.send({ message: "Friend request sent successfully" });
       } catch (error) {
         if (
@@ -461,10 +445,6 @@ export default function friendRoutes(
             data: { status: "Friend" },
           }),
         ]);
-
-        console.log(
-          `Friend request accepted: ${senderId} and ${receiverId} are now friends`
-        );
 
         return reply.send({ message: "Friend request accepted" });
       } catch (error) {
@@ -517,8 +497,6 @@ export default function friendRoutes(
           }),
         ]);
 
-        console.log(`Friend request declined: ${senderId} to ${receiverId}`);
-
         return reply.send({ message: "Friend request declined" });
       } catch (error) {
         if (
@@ -567,10 +545,6 @@ export default function friendRoutes(
             data: { status: "NotFriend" },
           }),
         ]);
-
-        console.log(
-          `Friendship removed between users ${userId1} and ${userId2}`
-        );
 
         return reply.send({ message: "Friendship removed" });
       } catch (error) {

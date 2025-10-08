@@ -257,8 +257,6 @@ export default class PingPongClient {
 		});
 
 		this.socket.on('connect', () => {
-			console.log('Connected to server:', this.socket?.id);
-
 			if (this.type === "1v1") {
 				this.socket?.emit('join_game_room', this.gameId, this.playerId, (callback: { error: string }) => {
 					if (callback.error) {

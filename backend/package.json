@@ -6,7 +6,7 @@
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "generate": "prisma generate",
-    "migrate": "prisma migrate dev",
+    "migrate": "prisma migrate deploy",
     "prepare": "npm run build"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 // backend/src/routes/gameRoutes.ts
-import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { PrismaClient } from "@prisma/client";
 
 interface GameRoutesOptions {
@@ -87,10 +87,6 @@ export default function gameRoutes(
                 ).padStart(2, "0")}`
               : gameData.duration.toString();
         }
-
-        console.log(
-          `Parsed game ${game.id_game}: opponent=${opponent}, result=${result}, score=${score}`
-        );
       }
     } catch (error) {
       console.error(
@@ -125,10 +121,6 @@ export default function gameRoutes(
         offset?: string;
       };
 
-      console.log(
-        `Fetching game history for user ${decoded.userId} (${decoded.username})`
-      );
-
       // Query for games where user was EITHER player1 OR player2
       const games = await prisma.game.findMany({
         where: {
@@ -138,27 +130,6 @@ export default function gameRoutes(
         take: limit ? parseInt(limit) : 50,
         skip: offset ? parseInt(offset) : 0,
       });
-
-      console.log(
-        `Found ${games.length} games for user ${decoded.userId} (including as player1 and player2)`
-      );
-
-      if (games.length === 0) {
-        console.log(
-          `No games found for user ${decoded.userId}. Checking database state...`
-        );
-
-        const allGames = await prisma.game.findMany({ take: 5 });
-        console.log(
-          `Sample games in database:`,
-          allGames.map((g) => ({
-            id: g.id_game,
-            player1: g.id_player1,
-            player2: g.id_player2,
-            date: g.date,
-          }))
-        );
-      }
 
       const parsedGames = games.map((game) => parseGameData(game, decoded));
 
@@ -188,10 +159,6 @@ app.get("/game/stats", async (request, reply) => {
   try {
     const decoded = verifyAuth(request);
 
-    console.log(
-      `Fetching game stats for user ${decoded.userId} (${decoded.username})`
-    );
-
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { wins: true, losses: true, username: true },
@@ -207,10 +174,6 @@ app.get("/game/stats", async (request, reply) => {
     const totalMatches = user.wins + user.losses;
     const winRate = totalMatches > 0 ? (user.wins / totalMatches) * 100 : 0;
 
-    console.log(
-      `User table stats: wins=${user.wins}, losses=${user.losses}, total=${totalMatches}`
-    );
-
     // Get all games for streak calculations
     const games = await prisma.game.findMany({
       where: {
@@ -219,8 +182,6 @@ app.get("/game/stats", async (request, reply) => {
       orderBy: { date: "desc" },
       take: 100,
     });
-
-    console.log(`Found ${games.length} games for streak/monthly calculations`);
 
     // Helper function to check if user won a game
     const isUserWin = (game: any): boolean => {
@@ -297,8 +258,6 @@ app.get("/game/stats", async (request, reply) => {
       recentGamesCount: games.length,
       source: "game_api",
     };
-
-    console.log(`Final stats for ${decoded.username}:`, stats);
 
     return reply.send(stats);
   } catch (error) {
@@ -382,116 +341,12 @@ app.get("/game/stats", async (request, reply) => {
   });
 
   /* **********************************************************************
-   * POST /games - Save new game result
-   ************************************************************************ */
-  app.post<{ Body: SaveGameInput }>(
-    "/game",
-    {
-      schema: {
-        body: {
-          type: "object",
-          required: ["opponent", "gameType", "result", "score"],
-          properties: {
-            opponent: { type: "string" },
-            gameType: { type: "string", enum: ["pingpong", "keyclash"] },
-            mode: { type: "string" },
-            result: { type: "string", enum: ["win", "loss", "draw"] },
-            score: { type: "string" },
-            duration: { type: "string" },
-            rounds: { type: "array" },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const decoded = verifyAuth(request);
-        const { opponent, gameType, mode, result, score, duration, rounds } =
-          request.body;
-
-        console.log(
-          `Saving game for user ${decoded.userId} (${decoded.username}):`,
-          {
-            opponent,
-            gameType,
-            mode,
-            result,
-            score,
-            duration,
-          }
-        );
-
-        const gameData = {
-          opponent,
-          mode: mode || "standard",
-          result,
-          score,
-          duration: duration || "N/A",
-          rounds: rounds || [],
-          savedBy: decoded.username,
-          savedAt: new Date().toISOString(),
-        };
-
-        const savedGame = await prisma.game.create({
-          data: {
-            id_player1: decoded.userId,
-            game_name: gameType as any,
-            rounds_json: JSON.stringify(gameData),
-            date: new Date(),
-          },
-        });
-
-        console.log(
-          `Game saved with ID ${savedGame.id_game} for user ${decoded.userId}`
-        );
-
-        if (result === "win") {
-          await prisma.user.update({
-            where: { id: decoded.userId },
-            data: { wins: { increment: 1 } },
-          });
-        } else if (result === "loss") {
-          await prisma.user.update({
-            where: { id: decoded.userId },
-            data: { losses: { increment: 1 } },
-          });
-        }
-
-        return reply.status(201).send({
-          success: true,
-          message: "Game result saved successfully",
-          gameId: savedGame.id_game,
-        });
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === "AUTHENTICATION_REQUIRED"
-        ) {
-          return reply.status(401).send({
-            error: "AUTHENTICATION_REQUIRED",
-            message: "Authentication required",
-          });
-        }
-        console.error("Save game error:", error);
-        return reply.status(500).send({
-          error: "GAME_SAVE_FAILED",
-          message: "Failed to save game result",
-        });
-      }
-    }
-  );
-
-  /* **********************************************************************
    * GET /games/recent - Recent matches for overview (for OverviewTab)
    ************************************************************************ */
   app.get("/game/recent", async (request, reply) => {
     try {
       const decoded = verifyAuth(request);
       const { limit } = request.query as { limit?: string };
-
-      console.log(
-        `Fetching recent games for user ${decoded.userId} (${decoded.username})`
-      );
 
       const games = await prisma.game.findMany({
         where: {
@@ -500,10 +355,6 @@ app.get("/game/stats", async (request, reply) => {
         orderBy: { date: "desc" },
         take: limit ? parseInt(limit) : 5,
       });
-
-      console.log(
-        `Found ${games.length} recent games for user ${decoded.userId}`
-      );
 
       const recentMatches = games.map((game) => {
         const parsedGame = parseGameData(game, decoded);

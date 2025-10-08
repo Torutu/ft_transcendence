@@ -94,22 +94,6 @@ body {
   animation: bgMove 200s linear infinite;
 }
 
-
-
-
-/********* keyClash *********/
-
-/* html, body {
-  font-family: sans-serif;
-  text-align: center;
-  background: #000000;
-  color: #ffffff;
-  margin: 0;
-  padding: 20px;
-  min-height: 100vh;
-  overflow: hidden;
-} */
-
 #game {
   display: flex;
   justify-content: center;

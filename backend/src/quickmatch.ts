@@ -29,8 +29,6 @@ export function setupLobby(io: Server) {
     const lobbyNamespace = io.of('/quickmatch');
 
     lobbyNamespace.on("connection", (socket: Socket) => {
-      console.log(`Player connected: ${socket.id}`);
-
       socket.on("name", (name: string | null, playerId: number | null, callback: Function) => {
         if (playerId && playersOnline.some(p => p.playerId === playerId))
           return callback({ error: "You're already in the lobby" });
@@ -48,7 +46,6 @@ export function setupLobby(io: Server) {
 
       // Handle sending invitations
       socket.on("send_invitation", (toSocketId: string, gameType: "pong" | "keyclash", callback: Function) => {
-        console.log(`Invitation from ${socket.id} to ${toSocketId} for ${gameType}`);
         
         // Find the sender and receiver
         const sender = playersOnline.find(p => p.socketId === socket.id);
@@ -103,8 +100,6 @@ export function setupLobby(io: Server) {
             // Notify both parties
             socket.emit("invitation_expired", { id: invitationId });
             receiverSocket.emit("invitation_expired", { id: invitationId });
-            
-            console.log(`Invitation ${invitationId} expired`);
           }
         }, 120000); // 2 minutes
 
@@ -125,15 +120,12 @@ export function setupLobby(io: Server) {
           gameType,
           message: `${sender.name} wants to play ${gameType}!`
         });
-
-        console.log(`Invitation ${invitationId} sent from ${sender.name} to ${receiver.name}`);
         callback({ success: true, invitationId });
       });
 
       // Handle invitation responses
       socket.on("respond_to_invitation", (invitationId: string, response: "accept" | "decline", callback: Function) => {
-        console.log(`Response to invitation ${invitationId}: ${response}`);
-        
+
         const invitation = activeInvitations.get(invitationId);
         if (!invitation) {
           return callback({ error: "Invitation not found or expired" });
@@ -164,7 +156,6 @@ export function setupLobby(io: Server) {
           }
           
           callback({ success: true });
-          console.log(`Invitation ${invitationId} declined`);
           return;
         }
 
@@ -192,8 +183,7 @@ export function setupLobby(io: Server) {
               
               if (p1Socket) p1Socket.emit("pairing_expired", { pairId });
               if (p2Socket) p2Socket.emit("pairing_expired", { pairId });
-              
-              console.log(`Pairing ${pairId} expired`);
+
             }
           }, 300000); // 5 minutes
 
@@ -222,14 +212,12 @@ export function setupLobby(io: Server) {
             opponent: invitation.from
           });
 
-          console.log(`Players paired: ${invitation.from.name} and ${invitation.to.name}`);
           callback({ success: true, pairId });
         }
       });
 
       // Handle starting game after pairing
       socket.on("start_paired_game", (gameType: "pong" | "keyclash", callback: Function) => {
-        console.log(`Starting paired game: ${gameType} for ${socket.id}`);
         
         // Find the pairing this player is part of
         const pairing = Array.from(pairedPlayers.values()).find(
@@ -278,7 +266,6 @@ export function setupLobby(io: Server) {
           }
 
           // Determine roles (sender is player1/left, receiver is player2/right)
-          const isPlayer1 = pairing.player1.socketId === socket.id;
           const player1Data = pairing.player1;
           const player2Data = pairing.player2;
 
@@ -312,7 +299,6 @@ export function setupLobby(io: Server) {
             });
           }
 
-          console.log(`Game ${gameId} created from pairing ${pairing.id}`);
           callback({ success: true, gameId });
           
         } catch (error) {
@@ -323,7 +309,6 @@ export function setupLobby(io: Server) {
 
       // Handle invitation cancellation
       socket.on("cancel_invitation", (invitationId: string, callback: Function) => {
-        console.log(`Cancelling invitation ${invitationId}`);
         
         const invitation = activeInvitations.get(invitationId);
         if (!invitation) {
@@ -354,13 +339,11 @@ export function setupLobby(io: Server) {
         }
 
         callback({ success: true });
-        console.log(`Invitation ${invitationId} cancelled`);
       });
 
       // Handle cancelling pairing
       socket.on("cancel_pairing", (callback: Function) => {
-        console.log(`Cancelling pairing for ${socket.id}`);
-        
+   
         const pairing = Array.from(pairedPlayers.values()).find(
           pair => pair.player1.socketId === socket.id || pair.player2.socketId === socket.id
         );
@@ -391,7 +374,6 @@ export function setupLobby(io: Server) {
         }
 
         callback({ success: true });
-        console.log(`Pairing ${pairing.id} cancelled`);
       });
 
       socket.on("create_game", (game: "pong" | "keyclash", mode: "local" | "remote") => {
@@ -443,8 +425,6 @@ export function setupLobby(io: Server) {
       });
   
       socket.on("disconnect", () => {
-        console.log(`Player disconnected: ${socket.id}`);
-
         // Clean up any invitations involving this player
         const invitationsToRemove: string[] = [];
         activeInvitations.forEach((invitation, id) => {

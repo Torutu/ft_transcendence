@@ -1,4 +1,4 @@
-import { Player, LobbyState, GameResult, pongGame } from "./types/lobby";
+import { Player, LobbyState, GameResult } from "./types/lobby";
 import PingPongGame, { GameState as PongState } from "./PingPongGame";
 import { state as KeyClashState } from "./KeyClashGame"
 import { PrismaClient } from '@prisma/client';
@@ -47,13 +47,9 @@ export function getTournamentLobbyState(): LobbyState {
 export async function saveGameResult(gameResult: GameResult, prisma: PrismaClient): Promise<void> {
     try {
       const { gameType, mode, player1, player2, winner, duration, rounds, gameId } = gameResult;
-      console.log('Saving game result:', { 
-        gameResult
-      });
 
       // Only save the result if one of the players is a logged in user
       if (!player1.playerId && !player2.playerId) {
-        console.log('Cannot save local game where a user is not a participant')
         return;
       }
 
@@ -106,8 +102,6 @@ export async function saveGameResult(gameResult: GameResult, prisma: PrismaClien
           });
         }
       }
-
-      console.log('Game result saved successfully');
       return ;
 
     } catch (error) {

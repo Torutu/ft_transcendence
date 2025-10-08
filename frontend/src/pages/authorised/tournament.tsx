@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../../contexts/AuthContext";
 import TournamentPlayerForm from "../../components/tournament-lobby/TournamentPlayerForm";
-import api from "../../utils/api";
 
 interface Player {
   socketId: string;
@@ -103,37 +102,29 @@ export default function TournamentPage() {
 		socketRef.current.on("created_game", (gameId, game, mode) => {
 			try {
 				const storedPlayers = sessionStorage.getItem('tournamentPlayers');
-				console.log("📦 Retrieved stored players:", storedPlayers);
-				
 				const playerNames = storedPlayers ? JSON.parse(storedPlayers) : {
 					player1: displayName || "You",
 					player2: "Guest2", 
 					player3: "Guest3",
 					player4: "Guest4"
 				};
-			if (socketRef.current) {
-				console.log("🔌 Disconnecting socket...");
-				socketRef.current.disconnect();
-				socketRef.current = null;
-			}
-			
-			const type = "tournament";
-			const routePath = `/${game}/${mode}/${type}/${gameId}`;
-			console.log("🎯 Navigating to:", routePath);
-			
-			navigate(routePath, { 
-				state: { 
-					name: playerNames,
-					playerId: playerId,
-					gameType: game,
-					mode: mode,
-					type: type,
-					gameId: gameId,
-				} 
-        	});
-        
-        	console.log("✅ Navigation completed");
-        
+				if (socketRef.current) {
+					socketRef.current.disconnect();
+					socketRef.current = null;
+				}
+				
+				const type = "tournament";
+				const routePath = `/${game}/${mode}/${type}/${gameId}`;		
+				navigate(routePath, { 
+					state: { 
+						name: playerNames,
+						playerId: playerId,
+						gameType: game,
+						mode: mode,
+						type: type,
+						gameId: gameId,
+					} 
+				});
       		} catch (error: any) {
         		console.error("❌ Error in created_game handler:", error);
         		alert("Navigation failed: " + error.message);
@@ -190,36 +181,25 @@ export default function TournamentPage() {
     playerNames: string[]
   ) => {
     try {
-      if (!socketRef.current) {
-        alert("Not connected to server");
-        return;
-      }
+		if (!socketRef.current) {
+        	alert("Not connected to server");
+        	return;
+      	}
 
-      console.log(
-        "Starting tournament:",
-        gameType,
-        "with players:",
-        playerNames
-      );
+      	// Ensure the authenticated user is always Player 1
+      	const playerNamesObject = {
+        	player1: displayName || "You",
+        	player2: playerNames[1] || "Guest2",
+        	player3: playerNames[2] || "Guest3",
+        	player4: playerNames[3] || "Guest4",
+      	};
 
-      // Ensure the authenticated user is always Player 1
-      const playerNamesObject = {
-        player1: displayName || "You",
-        player2: playerNames[1] || "Guest2",
-        player3: playerNames[2] || "Guest3",
-        player4: playerNames[3] || "Guest4",
-      };
-
-      sessionStorage.setItem(
-        "tournamentPlayers",
-        JSON.stringify(playerNamesObject)
-      );
-      console.log("Stored tournament players:", playerNamesObject);
-
-			socketRef.current.emit("create_game", gameType, "local");
-			console.log("Emitted create_game event");
-			
-			setShowPopup(false);
+    	sessionStorage.setItem(
+        	"tournamentPlayers",
+        	JSON.stringify(playerNamesObject)
+      	);
+		socketRef.current.emit("create_game", gameType, "local");
+		setShowPopup(false);
 
 		} catch (error: any) {
 			console.error("Error starting tournament:", error);

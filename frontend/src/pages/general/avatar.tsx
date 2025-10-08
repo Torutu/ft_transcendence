@@ -13,11 +13,11 @@ interface AvatarPageProps {
   closeForm: () => void;
   target: string;
   setUserAvatar: React.Dispatch<any>
-  setGuestAvatar: React.Dispatch<any>
+  setOpponentAvatar: React.Dispatch<any>
   selectedAvatars: Set<string>
 }
 
-export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, selectedAvatars}: AvatarPageProps) => {
+export const AvatarPage = ({closeForm, target, setUserAvatar, setOpponentAvatar, selectedAvatars}: AvatarPageProps) => {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +46,7 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
     selectedAvatars.add(userAvatar.name);
   }
 
-  // Check guest avatar (support both quickmatch and regular guest)
-  // const guestAvatarKey = state?.fromQuickMatch ? "quickmatch_guestAvatar" : "guestAvatar";
+  // Check guest avatar
   const guestAvatar = JSON.parse(localStorage.getItem("quickmatch_guestAvatar") || "null");
   if (guestAvatar?.name && !(target === "guest")) {
     selectedAvatars.add(guestAvatar.name);
@@ -77,7 +76,7 @@ export const AvatarPage = ({closeForm, target, setUserAvatar, setGuestAvatar, se
         setUserAvatar(avatarData);
         localStorage.setItem("userAvatar", JSON.stringify(avatarData));
       } else {
-        setGuestAvatar(avatarData);
+        setOpponentAvatar(avatarData);
         localStorage.setItem("quickmatch_guestAvatar", JSON.stringify(avatarData));
       }
     }

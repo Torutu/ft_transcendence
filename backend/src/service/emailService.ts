@@ -74,23 +74,6 @@ export async function sendVerificationCode(
   }
 }
 
-// BACKWARD COMPATIBILITY - function names as wrappers
-export async function sendVerificationEmail(
-  to: string,
-  code: string,
-  username: string
-): Promise<void> {
-  return sendVerificationCode(to, code, username, "email-verification");
-}
-
-export async function sendTwoFactorCode(
-  to: string,
-  code: string,
-  username: string
-): Promise<void> {
-  return sendVerificationCode(to, code, username, "login-2fa");
-}
-
 export async function sendPasswordResetEmail(
   to: string,
   resetLink: string

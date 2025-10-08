@@ -7,9 +7,6 @@ COPY . .
 COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npm install
 
-# Copy everything else (source code)
-#COPY . .
-
 # Generate Prisma client and build TypeScript
 RUN npx prisma generate
 RUN npm run build

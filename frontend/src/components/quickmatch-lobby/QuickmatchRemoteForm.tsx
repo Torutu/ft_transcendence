@@ -6,11 +6,10 @@ import {
   OnlineUser,
   Invitation, 
   SentInvitation,
-  Avatar,
   AvatarData
 } from "../../shared/types";
 import AvatarPage from "../../pages/general/avatar";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../utils/api";
 
@@ -133,7 +132,7 @@ export default function QuickmatchRemoteForm({ socket, name, selectedOpponent, i
           <AvatarPage closeForm={closeAvatarForm}
                       target={"user"}
                       setUserAvatar={setUserAvatar}
-                      setGuestAvatar={setUserAvatar}
+                      setOpponentAvatar={setOpponentAvatar}
                       selectedAvatars={selectedAvatars}
                       />
         </div> )

@@ -10,8 +10,6 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
 	const tournamentLobbyNamespace = io.of("/tournament");
 
     pongNamespace.on("connection", (socket) => {
-        console.log("Client joined game:", socket.id);
-
         socket.on("join_game_room", (roomId, playerId, callback) => {
 			const gameRoom = pongRooms.find(g => g.getId() === roomId)
 			if (!gameRoom){
@@ -42,7 +40,6 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                     gameRoom.state.timerDisplay = "Press SPACE to Start"
                 }
                 socket.emit('playerSide', playerSide);
-                console.log('players: ', gameRoom.state.players);
 
                 if (gameRoom.state.players.length === 2) {
 					gameRoom.resetGame();
@@ -89,7 +86,6 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                 gameRoom.updateScore();
 				gameRoom.state.status = "starting";
 				pongNamespace.to(roomId).emit("stateUpdate", gameRoom.state);
-				console.log("remote", gameRoom.state.status);	
             });
 
             function startGame() {
@@ -151,7 +147,6 @@ export function setupPongNamespace(io: Server, prisma: PrismaClient) {
                     gameRoom.setPlayer(null, names.player4, "p4", null);
                     gameRoom.state.timerDisplay = "Press SPACE to start the tournament!"
                 }
-                console.log('players: ', gameRoom.state.players);
             
                 if (gameRoom.state.players.length < 4)
                     gameRoom.state.scoreDisplay = `Waiting for opponents... (${gameRoom.state.players.length}/4)`;

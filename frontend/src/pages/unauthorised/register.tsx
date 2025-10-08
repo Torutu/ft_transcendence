@@ -68,7 +68,6 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
       });
-      console.log(response.data);
       if (response.data.requiresVerification) {
         sessionStorage.setItem("pendingUserId", response.data.userId);
         sessionStorage.setItem("pendingEmail", formData.email);

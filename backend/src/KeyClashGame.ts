@@ -63,8 +63,6 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
 	const tournament_lobby = io.of("tournament");
 
     keyClash.on("connection", (socket) => {
-        console.log(`Player connected on key clash: ${socket.id}`);
-
         socket.on("join_game_room", (roomId, mode, type, playerId, callback) => {
 			let roomState: state | undefined;
 			if (type === "1v1") {
@@ -128,8 +126,6 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
 				}
             
                 socket.join(roomId);
-
-                console.log('players: ', state.players);
 
                 if ((state.type === "1v1" && state.players.length < 2) || 
                 (state.type === "tournament" && state.players.length < 4)) {
@@ -326,8 +322,7 @@ export function setupKeyClash(io: Server, prisma: PrismaClient) {
 				}
             };
         });
-        socket.on("disconnect", () => {
-            console.log(`Player disconnected from key clash: ${socket.id}`);            
+        socket.on("disconnect", () => {      
             if (!socket.data.roomId) return;
             let game = keyClashRooms.find(g => g.id === socket.data.roomId);
             if (!game)

@@ -1,4 +1,4 @@
-// pong-app/backend/src/routes/authRoutes.ts
+// backend/src/routes/authRoutes.ts
 import {FastifyInstance, FastifyRequest, FastifyReply} from 'fastify';
 import {PrismaClient} from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -255,12 +255,16 @@ export default function authRoutes(
         if (!user) {
           // Generate unique username
           let username = payload.name.replace(/\s+/g, '');
-          let existingUser = await prisma.user.findUnique({where: {username}});
+          let existingUser = await prisma.user.findFirst({where: {
+															OR: [{username: username}, {nickname: username}]
+														}});
 
           while (existingUser) {
             const randomSuffix = Math.floor(Math.random() * 10000);
             username = `${payload.name.replace(/\s+/g, '')}${randomSuffix}`;
-            existingUser = await prisma.user.findUnique({where: {username}});
+            existingUser = await prisma.user.findFirst({where: {
+															OR: [{username: username}, {nickname: username}]
+														}});
           }
 
           // Create new user
@@ -360,12 +364,12 @@ export default function authRoutes(
         // Check if user already exists
         const existingUser = await prisma.user.findFirst({
           where: {
-            OR: [{username: username}, {email: email}],
+            OR: [{username: username}, {email: email}, {nickname: username}],
           },
         });
 
         if (existingUser) {
-          if (existingUser.username === username) {
+          if (existingUser.username === username || existingUser.nickname === username) {
             return reply
               .status(400)
               .send({
@@ -957,9 +961,6 @@ export default function authRoutes(
               where: {id: decoded.userId},
               data: {online_status: 'offline'},
             });
-            console.log(
-              `Marked user ${decoded.userId} offline during logout with expired token`,
-            );
           }
         } catch (decodeErr) {
           console.error('Could not decode token during logout:', decodeErr);

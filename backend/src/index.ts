@@ -45,7 +45,6 @@ async function buildServer() {
       certPath = currentCertPath;
       keyPath = currentKeyPath;
       sslFilesExist = true;
-      console.log(`SSL files found in: ${sslDir}`);
       break;
     }
   }

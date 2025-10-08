@@ -28,7 +28,7 @@ up:  ## Start the containers in detached mode
 	@if curl -s http://localhost:4040/api/tunnels >/dev/null 2>&1; then \
 		URL=$$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | head -n1 | cut -d'"' -f4); \
 		if [ -n "$$URL" ]; then \
-			echo "[$(shell date +%T)] $(GREEN)[✓] ngrok tunnel URL: $$URL$(RESET)"; \
+			echo "[$(shell date +%T)] $(GREEN)[✓] App running at URL: https://brave-widely-chigger.ngrok-free.app/$(RESET)"; \
 		else \
 			echo "[$(shell date +%T)] $(RED)[!] Could not extract tunnel URL$(RESET)"; \
 		fi; \
@@ -40,9 +40,9 @@ run: build up  ## Build and start containers
 	@echo "[$(shell date +%T)] $(GREEN)[✓] Application is ready. Use 'make logs' to view output.$(RESET)"
 
 down:  ## Stop and remove containers, networks
-	@echo "[$(shell date +%T)] $(RED)[x] Stopping and removing containers...$(RESET)"
+	@echo "[$(shell date +%T)] $(RED)[x] Stopping and removing containers, networks...$(RESET)"
 	docker compose -f $(COMPOSE_FILE) down
-	@echo "[$(shell date +%T)]  $(CYAN)[✓] Environment torn down.$(RESET)"
+	@echo "[$(shell date +%T)]  $(CYAN)[✓] Done.$(RESET)"
 
 stop:  ## Stop containers without removing them
 	@echo "[$(shell date +%T)] $(RED)[x] Stopping containers...$(RESET)"
@@ -74,16 +74,13 @@ clean:  ## Stop and remove containers (keep volumes)
 
 fclean:  ## Full clean: remove containers, volumes, orphans
 	@echo "[$(shell date +%T)] $(RED)[x] Performing full cleanup...$(RESET)"
-	docker compose -f $(COMPOSE_FILE) down -v --remove-orphans
-	docker system prune -f --volumes
-		@if [ -d "./frontend/node_modules" ]; then \
-		echo "[$(shell date +%T)] $(RED)[x] Removing frontend/node_modules...$(RESET)"; \
-		rm -rf ./frontend/node_modules; \
-	fi
-	@if [ -d "./backend/node_modules" ]; then \
-		echo "[$(shell date +%T)] $(RED)[x] Removing backend/node_modules...$(RESET)"; \
-		rm -rf ./backend/node_modules; \
-	fi
+	docker compose -f $(COMPOSE_FILE) down --rmi all -v --remove-orphans
+	docker system prune -a -f --volumes
+	echo "[$(shell date +%T)] $(RED)[x] Removing frontend/node_modules...$(RESET)";
+	rm -rf ./frontend/node_modules;
+	echo "[$(shell date +%T)] $(RED)[x] Removing backend/node_modules...$(RESET)";
+	rm -rf ./backend/node_modules;
+	rm -f ./backend/prisma/dev.db
 	@echo "[$(shell date +%T)] $(CYAN)[✓] Full cleanup completed.$(RESET)"
 
 logs:  ## Follow logs from all services
@@ -94,4 +91,4 @@ help:  ## Show this help message
 	@echo "Available commands:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(lastword $(MAKEFILE_LIST))
 
-.PHONY: all up down stop start build re clean fclean status logs help ngrok-url
+.PHONY: all up down stop start build re clean fclean status logs help

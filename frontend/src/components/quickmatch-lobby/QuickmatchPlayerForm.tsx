@@ -167,7 +167,7 @@ export default function QuickmatchPlayerForm({ onCreate, closeForm, username }: 
           <AvatarPage closeForm={closeAvatarForm}
                       target={target}
                       setUserAvatar={setUserAvatar}
-                      setGuestAvatar={setGuestAvatar}
+                      setOpponentAvatar={setGuestAvatar}
                       selectedAvatars={selectedAvatars}
           />
         </div>

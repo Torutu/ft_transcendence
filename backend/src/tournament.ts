@@ -7,7 +7,6 @@ export function setupTournamentLobby(io: Server) {
     const tournamentLobbyNamespace = io.of('/tournament');
 
     tournamentLobbyNamespace.on("connection", (socket: Socket) => {
-      console.log(`Player connected: ${socket.id}`);
 
       socket.on("name", (name: string | null, playerId: number | null, callback: Function) => {
         if (playerId && playersOnlineTournament.some(p => p.playerId === playerId))
@@ -72,8 +71,6 @@ export function setupTournamentLobby(io: Server) {
       });
   
       socket.on("disconnect", () => {
-        console.log(`Player disconnected: ${socket.id}`);
-
         const player = playersOnlineTournament.findIndex(p => p.socketId === socket.id);
         if (player !== -1) playersOnlineTournament.splice(player, 1);
   

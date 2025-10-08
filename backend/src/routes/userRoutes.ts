@@ -1,5 +1,5 @@
 // backend/src/routes/userRoutes.ts
-import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import validator from "validator";
 
