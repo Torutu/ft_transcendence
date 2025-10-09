@@ -1,0 +1,36 @@
+NGROK_AUTHTOKEN=31eDA04XK3Z8C1b55ihTWox7FVu_5UnmDV6GBjZ9mgiov1zxX
+VITE_PORT=5173
+VITE_HOST=https://frontend
+NGINX_PORT=4243
+NGINX_HOST=https://nginx
+DOMAIN_NAME=https://unprofessing-nonepithelial-lucian.ngrok-free.app
+
+# Frontend .env - HTTPS for internal Docker network
+VITE_API_URL=https://backend:3000  # HTTPS for internal Docker network
+VITE_GOOGLE_CLIENT_ID=384298599765-asml6u72lms0o0sbuhho5lbirori7e92.apps.googleusercontent.com
+
+
+# Backend .env - HTTPS with proper SSL handling
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="your-secret-key"
+COOKIE_SECRET="your-cookie-secret"
+FRONTEND_URL="https://frontend:5173"  # HTTPS for internal Docker network
+CP_URL="https://localhost:5173"
+
+# SSL Configuration
+NODE_TLS_REJECT_UNAUTHORIZED=0  # Allow self-signed certs (dev only)
+
+# Email configuration
+EMAIL_HOST="smtp.example.com"
+EMAIL_PORT="587"
+EMAIL_SECURE="false"
+EMAIL_SERVICE="gmail"
+EMAIL_USER="hivers5.asteroids@gmail.com"
+EMAIL_PASSWORD="kyyw xeog rvdl uwco"
+EMAIL_FROM="hivers5.asteroids@gmail.com"
+TEAM_NAME="Hivers5 Asteroids"
+
+# Google OAuth
+GOOGLE_CLIENT_ID="384298599765-asml6u72lms0o0sbuhho5lbirori7e92.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="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"
+GOOGLE_REDIRECT_URI="https://localhost:3000/auth/google/callback" # External URL for browser
