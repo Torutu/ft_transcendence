@@ -28,7 +28,7 @@ up:  ## Start the containers in detached mode
 	@if curl -s http://localhost:4040/api/tunnels >/dev/null 2>&1; then \
 		URL=$$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | head -n1 | cut -d'"' -f4); \
 		if [ -n "$$URL" ]; then \
-			echo "[$(shell date +%T)] $(GREEN)[✓] App running at URL: https://brave-widely-chigger.ngrok-free.app/$(RESET)"; \
+			echo "[$(shell date +%T)] $(GREEN)[✓] App running at URL: $$URL$(RESET)"; \
 		else \
 			echo "[$(shell date +%T)] $(RED)[!] Could not extract tunnel URL$(RESET)"; \
 		fi; \

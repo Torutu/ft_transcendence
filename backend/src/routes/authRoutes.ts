@@ -73,7 +73,7 @@ export default function authRoutes(
 
   const getBaseUrl = (request: FastifyRequest) => {
     const origin = request.headers.origin;
-    return origin?.includes('ngrok') ? env.FRONTEND_REMOTE_URL : env.CP_URL;
+    return origin?.includes('ngrok') ? env.DOMAIN_NAME : env.CP_URL;
   };
 
   // Helper function to generate random code
@@ -87,7 +87,7 @@ export default function authRoutes(
   const setAuthCookie = (reply: FastifyReply, token: string) => {
     reply.setCookie('authToken', token, {
       httpOnly: true,
-      secure: true, // HTTPS only
+      secure: true,  // HTTPS only
       sameSite: 'strict',
       maxAge: 60 * 60, // 1 hour
       path: '/',

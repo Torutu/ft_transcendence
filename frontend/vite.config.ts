@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
       },
       hmr: {
         protocol: "wss",
-        host: "brave-widely-chigger.ngrok-free.app",
+        host: env.DOMAIN_NAME,
         clientPort: 443, // wss runs over 443
       },
     },

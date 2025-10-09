@@ -36,7 +36,7 @@ RUN printf '#!/bin/sh\n' > /entrypoint.sh \
     && printf '    schemes: [ https ]\n' >> /entrypoint.sh \
     && printf 'EOF\n\n' >> /entrypoint.sh \
     && printf 'echo "Starting ngrok tunnel to ${NGROK_HOST}:${NGROK_PORT} (mode: $MODE)..."\n' >> /entrypoint.sh \
-    && printf 'exec ngrok http ${NGROK_HOST}:${NGROK_PORT} --config /tmp/ngrok.yml --log=stdout --url=https://default.internal\n' >> /entrypoint.sh \
+    && printf 'exec ngrok http ${NGROK_HOST}:${NGROK_PORT} --config /tmp/ngrok.yml --log=stdout --url=${DOMAIN_NAME}\n' >> /entrypoint.sh \
     && chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

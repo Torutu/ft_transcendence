@@ -12,7 +12,7 @@ services:
     ports:
       - '3000:3000'
     env_file:
-      - ./backend/.env # Load environment variables from file
+      - .env
     volumes:
       - ./backend:/app
       - ./tls:/app/tls
@@ -25,7 +25,7 @@ services:
     networks:
       - pong-network
     env_file:
-      - ./frontend/.env # Load environment variables from file
+      - .env
     volumes:
       - frontend-dist:/app/dist
       - ./tls:/app/tls
@@ -50,7 +50,7 @@ services:
   ngrok:
     build: ./ngrok
     container_name: ngrok
-    env_file: ./ngrok/.env
+    env_file: .env
     environment:
       - APP_MODE=prod
     depends_on:
