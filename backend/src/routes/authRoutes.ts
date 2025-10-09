@@ -87,20 +87,16 @@ export default function authRoutes(
   const setAuthCookie = (reply: FastifyReply, token: string) => {
     reply.setCookie('authToken', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // HTTPS only
       sameSite: 'strict',
       maxAge: 60 * 60, // 1 hour
       path: '/',
-      domain:
-        process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined,
     });
   };
 
   const clearAuthCookie = (reply: FastifyReply) => {
     reply.clearCookie('authToken', {
       path: '/',
-      domain:
-        process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined,
     });
   };
 
